@@ -49,3 +49,6 @@ jobs:
 
       - name: Typecheck
         run: npm run typecheck
+
+      - name: Test coverage
+        run: npm run test:coverage
