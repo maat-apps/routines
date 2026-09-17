@@ -1,6 +1,6 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 
 import {
   getServerSettingsSnapshot,
@@ -9,6 +9,7 @@ import {
   type AppSettings,
 } from "@/lib/settings";
 import {
+  emitChange,
   getRoutinesSnapshot,
   getServerRoutinesSnapshot,
   getServerStateSnapshot,
@@ -39,4 +40,26 @@ export function useAppSettings(): AppSettings {
     getSettingsSnapshot,
     getServerSettingsSnapshot,
   );
+}
+
+// The cached snapshot only recomputes on the next `emitChange()` (a write from
+// this tab), so a routine left open across midnight keeps showing yesterday's
+// checked steps until something else happens to trigger it — see
+// .claude/tasks/bugs/midnight-toggle-can-invert-check.md. Re-checking on
+// visibility/focus catches the common case (backgrounding overnight, coming
+// back the next morning) without a ticking clock.
+export function useRevalidateOnVisibility(): void {
+  useEffect(() => {
+    function revalidate() {
+      if (document.visibilityState === "visible") {
+        emitChange();
+      }
+    }
+    document.addEventListener("visibilitychange", revalidate);
+    window.addEventListener("focus", revalidate);
+    return () => {
+      document.removeEventListener("visibilitychange", revalidate);
+      window.removeEventListener("focus", revalidate);
+    };
+  }, []);
 }

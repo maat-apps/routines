@@ -24,7 +24,7 @@ function refreshSnapshots(): void {
   snapshotStale = false;
 }
 
-function emitChange(): void {
+export function emitChange(): void {
   snapshotStale = true;
   for (const listener of listeners) {
     listener();
