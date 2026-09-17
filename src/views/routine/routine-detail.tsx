@@ -71,7 +71,7 @@ export function RoutineDetail({
                 }}
               >
                 <Checkbox
-                  className="size-5.5 shrink-0 rounded-lg"
+                  className="size-5.5 shrink-0 rounded-full"
                   checked={checked}
                   inert
                 />
