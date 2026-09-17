@@ -16,11 +16,12 @@ on:
       - "**/*.md"
       - "**/*.yml"
       - "**/*.yaml"
+      - "**/*.html"
       # Tooling / dependency config that changes the outcome
       - "package.json"
       - "package-lock.json"
       - "tsconfig.json"
-      - ".prettierrc"
+      - ".prettierrc.json"
       - ".prettierignore"
       - "eslint.config.mjs"
   workflow_dispatch:
