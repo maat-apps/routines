@@ -10,6 +10,21 @@ export default defineConfig({
   },
   test: {
     environment: "jsdom",
+    // jsdom setup dominated CI time (11 files -> 11 fresh environments,
+    // ~85% of the run). Tried pool: "vmThreads" first (Vitest's other
+    // suggestion) but it runs jsdom inside a Node vm context, where
+    // window.location is permanently non-configurable — breaks the
+    // legitimate need to stub it in app-update.test.ts (any technique,
+    // including vi.stubGlobal, hits the same "Cannot redefine property").
+    // isolate: false reuses one plain jsdom instance across every file
+    // instead (no vm wrapping), so location stays configurable. The
+    // cross-file leakage that would otherwise risk (globals mutated in one
+    // file bleeding into another) is already covered: every file that
+    // stubs a global restores it in its own afterEach
+    // (locale-store.test.ts, use-translation.test.ts, app-lock.test.ts,
+    // use-install-prompt.test.ts, app-update.test.ts), and every file
+    // clears localStorage in beforeEach.
+    isolate: false,
     // Test files live under tests/unit/, mirroring src/'s structure, not
     // co-located with source — kept explicit rather than relying on
     // Vitest's default project-wide glob, so a stray *.test.ts dropped
