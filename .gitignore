@@ -40,10 +40,14 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 
-# Claude Code local state — most of .claude/ is local-only (pattern log,
-# dev-server launch config, task notes). The shared workflow (hooks,
-# commands, hook wiring) is tracked so it ships with the repo as a blueprint.
+# Claude Code local state — most of .claude/ is local-only (dev-server
+# launch config, task notes: personal/ephemeral, not meant for other
+# contributors to read). The shared workflow (hooks, commands, hook wiring)
+# and the pattern log (docs/patterns.md: verified facts about the codebase,
+# meant to persist across sessions/clones/contributors, not scratch notes)
+# are tracked so they ship with the repo as a blueprint.
 /.claude/*
 !/.claude/hooks/
 !/.claude/commands/
 !/.claude/settings.json
+!/.claude/docs/
