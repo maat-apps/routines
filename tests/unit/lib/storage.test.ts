@@ -2,6 +2,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DATA_KEY } from "@/lib/storage-keys";
 
+// getRawData's `typeof window === "undefined"` guard is tested in
+// ssr-guards.test.ts, not here — it needs a Node environment (no window at
+// all), which this file can't switch to without breaking every other test
+// below that relies on jsdom.
+//
 // storage.ts caches its snapshot in module-level state, so each test needs a
 // fresh module instance — otherwise one test's cached snapshot would bleed
 // into the next.
@@ -148,6 +153,18 @@ describe("toggleStep", () => {
     const result = toggleStep("r1", "s1");
     expect(result.r1.checkedStepIds).toEqual(["s1"]);
     expect(result.r1.lastResetDate).toBe(todayStr());
+  });
+
+  it("initializes fresh state instead of throwing for a routine with no existing entry", async () => {
+    // normalizeState always seeds state for every real routine, so this only
+    // happens for an id that doesn't match any routine at all — a defensive
+    // path, same spirit as deleteRoutine's no-op-for-unknown-id case.
+    const { toggleStep } = await freshStorage();
+    const result = toggleStep("ghost", "s1");
+    expect(result.ghost).toEqual({
+      checkedStepIds: ["s1"],
+      lastResetDate: todayStr(),
+    });
   });
 });
 
