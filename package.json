@@ -19,7 +19,8 @@
     "typecheck": "tsc -b",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
-    "validate": "npm run lint && npm run format:check && npm run typecheck && npm run test:unit && npm run build && npm audit",
+    "test:coverage": "vitest run --coverage",
+    "validate": "npm run lint && npm run format:check && npm run typecheck && npm run test:coverage && npm run build && npm audit",
     "validate:fix": "npm run lint:fix && npm run format && npm audit fix"
   },
   "dependencies": {
@@ -45,6 +46,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^5.0.4",
+    "@vitest/coverage-v8": "^5.0.1",
     "cross-env": "^10.1.0",
     "eslint": "^9",
     "eslint-config-prettier": "^10.1.8",
