@@ -1,16 +1,23 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   applyBackup,
   BackupError,
   backupFileName,
+  downloadBackup,
   parseBackup,
+  type Backup,
 } from "@/lib/backup";
-import { getRawData } from "@/lib/storage";
+import { getRawData, saveRoutine } from "@/lib/storage";
 import { LOCALE_KEY } from "@/lib/storage-keys";
 
 beforeEach(() => {
   localStorage.clear();
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.useRealTimers();
 });
 
 describe("parseBackup", () => {
@@ -136,5 +143,77 @@ describe("backupFileName", () => {
     expect(backupFileName(new Date(2026, 0, 5))).toBe(
       "routines-backup-2026-01-05.json",
     );
+  });
+});
+
+describe("downloadBackup", () => {
+  // jsdom doesn't implement URL.createObjectURL/revokeObjectURL at all, so
+  // calling downloadBackup unstubbed throws — spy on just those two methods
+  // rather than replacing the whole URL global (still a real constructor
+  // for everything else).
+  function stubObjectUrl(url: string) {
+    const createObjectURL = vi
+      .spyOn(URL, "createObjectURL")
+      .mockReturnValue(url);
+    const revokeObjectURL = vi
+      .spyOn(URL, "revokeObjectURL")
+      .mockImplementation(() => {});
+    return { createObjectURL, revokeObjectURL };
+  }
+
+  const backup: Backup = {
+    app: "routines",
+    version: 1,
+    exportedAt: "2026-09-17T12:00:00.000Z",
+    locale: null,
+    data: { routines: [], state: {} },
+  };
+
+  it("creates a download link for the backup and clicks it", () => {
+    const { createObjectURL } = stubObjectUrl("blob:mock-url");
+    let capturedHref = "";
+    let capturedDownload = "";
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      capturedHref = this.href;
+      capturedDownload = this.download;
+    });
+
+    downloadBackup(backup);
+
+    expect(createObjectURL).toHaveBeenCalledTimes(1);
+    expect(capturedHref).toBe("blob:mock-url");
+    expect(capturedDownload).toBe("routines-backup-2026-09-17.json");
+  });
+
+  it("revokes the object URL after a delay, not immediately", () => {
+    vi.useFakeTimers();
+    const { revokeObjectURL } = stubObjectUrl("blob:mock-url");
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+
+    downloadBackup(backup);
+    expect(revokeObjectURL).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(10_000);
+    expect(revokeObjectURL).toHaveBeenCalledWith("blob:mock-url");
+  });
+
+  it("defaults to a fresh createBackup() snapshot when none is given", () => {
+    saveRoutine({ id: "r1", name: "Morning", order: 0, steps: [] });
+    stubObjectUrl("blob:mock-url");
+    let capturedDownload = "";
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      capturedDownload = this.download;
+    });
+
+    downloadBackup();
+
+    // No explicit backup passed — falls back to createBackup(), whose
+    // exportedAt is "now", so just check the filename reflects today.
+    const today = backupFileName();
+    expect(capturedDownload).toBe(today);
   });
 });
