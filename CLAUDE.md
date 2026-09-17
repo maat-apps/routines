@@ -32,15 +32,18 @@ them in mind when writing or reviewing code:
   ESLint rule_ (`prettier/prettier: error`), so a formatting slip fails lint too.
 - `npm run typecheck` — `tsc -b` (project references: `tsconfig.app.json` for
   `src/`, `tsconfig.node.json` for `vite.config.ts`).
-- `npm run validate` — lint + format:check + typecheck + build + `npm audit`; the
-  same gates CI runs. `npm run validate:fix` applies the autofixable ones.
+- `npm run test:unit` / `npm run test:unit:watch` — Vitest, `src/lib/`
+  (and, once `feature/unit-tests-react` lands, `src/hooks/`/`src/i18n/`).
+  `npm run test:coverage` runs the same suite with a coverage report and
+  enforces the threshold in `vitest.config.ts`. See Architecture below.
+- `npm run validate` — lint + format:check + typecheck + test:coverage +
+  build + `npm audit`; the same gates CI runs. `npm run validate:fix`
+  applies the autofixable ones.
 - `npm run build:analyze` — same production build, plus `dist/stats.html`, a
   `rollup-plugin-visualizer` treemap of what's inside each chunk (opens
   automatically). Wraps `npm run build` in `cross-env ANALYZE=1` so it works
   the same in PowerShell and bash; opt-in only — plain `npm run build` never
   runs it.
-
-There is no test suite.
 
 ## Architecture
 
@@ -150,6 +153,30 @@ The only network traffic is the service worker fetching the app's own files.
   need no equivalent — `navigate(...)` already gives them a real history
   entry, so native back lands wherever the `AppBar` arrow would.
 
+- **Unit tests (Vitest).** `vitest.config.ts` is deliberately separate from
+  `vite.config.ts` so the PWA/build plugins never run during tests; `jsdom`
+  environment for the functions that touch `localStorage`/`navigator`/
+  WebAuthn directly. Scope is split by what it actually exercises, not by
+  file location alone: `src/lib/**` (pure logic — schemas, storage, backup,
+  locale-store, settings, app-lock, app-update, routine-utils),
+  `src/hooks/**` and `src/i18n/**` (the `useSyncExternalStore` store/hook
+  bridge, via `@testing-library/react`'s `renderHook` — no JSX/`.tsx`
+  needed, so this still stays out of component-rendering territory).
+  Views/components are **not** covered here on purpose — that's e2e's job
+  (see `.claude/tasks/features/e2e-user-flow-tests.md`); including them in
+  `vitest.config.ts`'s `coverage.include` would just show a permanently low
+  number for code this suite was never meant to exercise. `coverage.include`
+  enforces a 75% threshold (lines/statements/functions/branches) via
+  `@vitest/coverage-v8`, scoped to exactly the dirs above.
+  `storage.ts`/`settings.ts`/`locale-store.ts` cache state in module-level
+  singletons, so their tests use `vi.resetModules()` + a dynamic `import()`
+  per test rather than exporting internal reset hooks just for testing.
+  This landed in two branches, not one — `feature/unit-tests-ts` (lib/
+  only, zero React-testing dependencies) merged first, then
+  `feature/unit-tests-react` (hooks/i18n, needs `@testing-library/react`)
+  as a deliberately separate follow-up — see
+  `.claude/tasks/features/unit-tests-react.md` for why they were split.
+
 ## Product context
 
 See `PRODUCT.md` for the design intent: a calm, quiet checklist — no history,
@@ -167,7 +194,9 @@ do not reintroduce it.
 | Lint (fix) | `npm run lint:fix`  | PostToolUse hook, per edited file |
 | Typecheck  | `npm run typecheck` | Stop hook, summary only           |
 
-No test script exists — `/check` runs format:check, lint, typecheck, build only.
+`/check` also runs `test:coverage` (Vitest + the coverage threshold), not
+just format:check/lint/typecheck/build — it isn't in the table above
+because it isn't wired to a hook, only to `/check` and CI.
 
 ## Conventions
 
