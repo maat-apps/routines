@@ -282,6 +282,15 @@ tied to a hook.
 - Check the current branch before editing or committing anything — never
   edit or commit directly on `main`, including doc-only changes. Branch
   first, always.
+- **Commit automatically once a task's changes are verified** (`/check`
+  passing) — don't wait to be asked, and don't leave verified work
+  sitting uncommitted for the user to commit by hand. Decided 2026-09-18,
+  superseding the earlier per-session default of asking first. Then run
+  `/open-pr` to push and open the PR — it still pauses once, right before
+  actually creating the PR, to show the drafted title/description and get
+  an explicit go-ahead; that single checkpoint stays even though
+  committing itself no longer does, since opening a PR is a visible,
+  public action in a way a local commit isn't.
 - When a change touches something CLAUDE.md or README.md describes
   (architecture, stack, file locations), update those docs in the same
   session rather than leaving them to drift until a later cleanup pass finds
