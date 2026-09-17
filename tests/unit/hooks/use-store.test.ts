@@ -142,4 +142,22 @@ describe("useRevalidateOnVisibility", () => {
     // Still stale — nothing forced a recompute.
     expect(result.current.r1.checkedStepIds).toEqual(["s1"]);
   });
+
+  it("removes its event listeners on unmount", async () => {
+    const { useRevalidateOnVisibility } = await freshUseStore();
+    const removeDocListener = vi.spyOn(document, "removeEventListener");
+    const removeWindowListener = vi.spyOn(window, "removeEventListener");
+
+    const { unmount } = renderHook(() => useRevalidateOnVisibility());
+    unmount();
+
+    expect(removeDocListener).toHaveBeenCalledWith(
+      "visibilitychange",
+      expect.any(Function),
+    );
+    expect(removeWindowListener).toHaveBeenCalledWith(
+      "focus",
+      expect.any(Function),
+    );
+  });
 });

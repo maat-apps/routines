@@ -110,4 +110,19 @@ describe("useInstallPrompt", () => {
     });
     expect(result.current.state).toBe("installed");
   });
+
+  it("removes its event listeners on unmount", () => {
+    const removeListener = vi.spyOn(window, "removeEventListener");
+    const { unmount } = renderHook(() => useInstallPrompt());
+    unmount();
+
+    expect(removeListener).toHaveBeenCalledWith(
+      "beforeinstallprompt",
+      expect.any(Function),
+    );
+    expect(removeListener).toHaveBeenCalledWith(
+      "appinstalled",
+      expect.any(Function),
+    );
+  });
 });

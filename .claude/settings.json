@@ -29,8 +29,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/session-typecheck.sh\"",
-            "timeout": 30
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/session-validate.sh\"",
+            "timeout": 60
           }
         ]
       }

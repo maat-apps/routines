@@ -275,3 +275,12 @@ describe("subscribe / emitChange", () => {
     expect(listener).not.toHaveBeenCalled();
   });
 });
+
+describe("server snapshots (useSyncExternalStore's SSR fallback)", () => {
+  it("getServerRoutinesSnapshot/getServerStateSnapshot return empty data", async () => {
+    const { getServerRoutinesSnapshot, getServerStateSnapshot } =
+      await freshStorage();
+    expect(getServerRoutinesSnapshot()).toEqual([]);
+    expect(getServerStateSnapshot()).toEqual({});
+  });
+});
