@@ -1,5 +1,5 @@
 import { act, renderHook } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DATA_KEY } from "@/lib/storage-keys";
 
@@ -23,6 +23,13 @@ function setDocumentVisibility(state: DocumentVisibilityState) {
 
 beforeEach(() => {
   localStorage.clear();
+  setDocumentVisibility("visible");
+});
+
+afterEach(() => {
+  // With isolate: false, document is shared across every test file in the
+  // run — leaving this at "hidden" (the last test below sets it) would
+  // otherwise bleed into whichever file runs next.
   setDocumentVisibility("visible");
 });
 

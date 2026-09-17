@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   discardUpdateSnapshot,
@@ -15,6 +15,10 @@ import { SNAPSHOT_KEY } from "@/lib/storage-keys";
 
 beforeEach(() => {
   localStorage.clear();
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
 });
 
 describe("hasUpdateSnapshot / hasNoUpdateSnapshotOnServer", () => {
@@ -97,13 +101,12 @@ describe("updateApp", () => {
   it("saves a snapshot and reloads the page", async () => {
     saveRoutine({ id: "r1", name: "Morning", order: 0, steps: [] });
     // jsdom's window.location.reload isn't configurable, so it can't be
-    // spied on directly — replace the whole location object with a minimal
-    // stub instead. Nothing else in updateApp touches other location fields.
+    // spied on directly — vi.stubGlobal replaces the whole object instead,
+    // and (unlike a raw Object.defineProperty) restores it safely even when
+    // the environment is reused across files (pool: "vmThreads"). Nothing
+    // else in updateApp touches other location fields.
     const reload = vi.fn();
-    Object.defineProperty(window, "location", {
-      value: { reload },
-      configurable: true,
-    });
+    vi.stubGlobal("location", { reload });
 
     await updateApp();
 
