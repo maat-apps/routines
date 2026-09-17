@@ -19,6 +19,11 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  // vi.spyOn(Storage.prototype, ...) isn't undone by unstubAllGlobals — with
+  // isolate: false, Storage.prototype is the same real object shared across
+  // every test file in the run, so an un-restored spy here would otherwise
+  // leak into whatever runs next.
+  vi.restoreAllMocks();
 });
 
 describe("hasUpdateSnapshot / hasNoUpdateSnapshotOnServer", () => {
@@ -31,8 +36,25 @@ describe("hasUpdateSnapshot / hasNoUpdateSnapshotOnServer", () => {
     expect(hasUpdateSnapshot()).toBe(true);
   });
 
+  it("is false instead of throwing when localStorage is unavailable", () => {
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new Error("storage blocked");
+    });
+    expect(hasUpdateSnapshot()).toBe(false);
+  });
+
   it("the server snapshot is always false", () => {
     expect(hasNoUpdateSnapshotOnServer()).toBe(false);
+  });
+});
+
+describe("subscribeToUpdateSnapshot", () => {
+  it("stops notifying after unsubscribing", () => {
+    const listener = vi.fn();
+    const unsubscribe = subscribeToUpdateSnapshot(listener);
+    unsubscribe();
+    saveUpdateSnapshot();
+    expect(listener).not.toHaveBeenCalled();
   });
 });
 
@@ -49,6 +71,13 @@ describe("saveUpdateSnapshot / readUpdateSnapshot", () => {
     ]);
     expect(hasUpdateSnapshot()).toBe(true);
     expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns null instead of throwing when localStorage is unavailable", () => {
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("storage blocked");
+    });
+    expect(saveUpdateSnapshot()).toBeNull();
   });
 
   it("reads back what was saved", () => {
