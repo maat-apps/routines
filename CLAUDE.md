@@ -131,7 +131,12 @@ The only network traffic is the service worker fetching the app's own files.
 
 - **UI stack.** shadcn (`base-nova` style, see `components.json`, `rsc: false`)
   built on `@base-ui/react` — primitives live in `src/components/ui`, generated
-  and not hand-edited. Tailwind v4 (via `@tailwindcss/postcss`) with design
+  and not hand-edited. Always import through the aliases `components.json`
+  declares (`utils`, `ui`, `components`, `lib`, `hooks`) rather than straight
+  from the underlying package — e.g. `cn` from `@/lib/utils`, not directly
+  from the `cn` package — so a future `npx shadcn add` or hand-adjustment
+  doesn't quietly bypass the alias the way the generated components once did.
+  Tailwind v4 (via `@tailwindcss/postcss`) with design
   tokens in `src/app/globals.css`; icons from `lucide-react`. The font is
   self-hosted via `@fontsource-variable/outfit` (imported in `src/main.tsx`,
   used for both `--font-sans` and `--font-heading`) rather than fetched from
