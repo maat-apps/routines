@@ -1,5 +1,5 @@
+import { cn } from "@/lib/utils";
 import { Select as SelectPrimitive } from "@base-ui/react/select";
-import { cn } from "cn";
 import { CheckIcon, ChevronDownIcon } from "lucide-react";
 
 function Select({ ...props }: SelectPrimitive.Root.Props<string>) {
