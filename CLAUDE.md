@@ -181,8 +181,18 @@ The only network traffic is the service worker fetching the app's own files.
   This landed in two branches, not one — `feature/unit-tests-ts` (lib/
   only, zero React-testing dependencies) merged first, then
   `feature/unit-tests-react` (hooks/i18n, needs `@testing-library/react`)
-  as a deliberately separate follow-up — see
-  `.claude/tasks/features/unit-tests-react.md` for why they were split.
+  as a deliberately separate follow-up.
+  Missing browser globals (`navigator.serviceWorker`, `caches`,
+  `URL.createObjectURL`/`revokeObjectURL`, `matchMedia`) are not a reason
+  to skip coverage on the code that uses them — stub/mock them with
+  `vi.stubGlobal`/`vi.spyOn` (see `app-update.test.ts`'s service-worker/
+  cache-clearing tests, `backup.test.ts`'s `downloadBackup` tests, and
+  `use-install-prompt.test.ts`'s hand-rolled `matchMedia` fake) rather than
+  leaving that code untested by default. Do this even at medium effort —
+  only skip a gap after actually weighing it against a specific reason not
+  to (e.g. a jsdom-unreachable SSR guard, or pure DOM plumbing with no
+  branching logic), not by default because mocking looks like more setup
+  than a plain assertion.
 
 ## Product context
 
