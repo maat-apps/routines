@@ -2,14 +2,20 @@ import {
   closestCenter,
   DndContext,
   type DragEndEvent,
+  KeyboardSensor,
   PointerSensor,
   TouchSensor,
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
 import {
+  restrictToParentElement,
+  restrictToVerticalAxis,
+} from "@dnd-kit/modifiers";
+import {
   arrayMove,
   SortableContext,
+  sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
@@ -75,6 +81,9 @@ export function RoutineList({
     useSensor(TouchSensor, {
       activationConstraint: { delay: 180, tolerance: 8 },
     }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
   );
 
   function handleDragEnd({ active, over }: DragEndEvent) {
@@ -113,6 +122,7 @@ export function RoutineList({
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
+          modifiers={[restrictToVerticalAxis, restrictToParentElement]}
           onDragEnd={handleDragEnd}
         >
           <SortableContext
