@@ -286,5 +286,10 @@ tied to a hook.
   it before assuming there's a real regression; Vite's module graph can go
   stale across branch changes and the error is almost always the restart,
   not the code.
+- Add a new import in the same `Edit` call as its first usage, not as a
+  separate edit beforehand — the PostToolUse format/lint hook runs
+  `eslint --fix` after every edit, and it will strip an import that's
+  unused at that intermediate moment, before the usage lands in a later
+  edit. Hit repeatedly across sessions; always costs an extra edit to fix.
 
 <!-- END AUTO-GENERATED: setup-claude-workflow -->
