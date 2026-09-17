@@ -80,16 +80,22 @@ npm run dev      # dev server (note the /routines base path, see below)
 Other useful scripts:
 
 ```bash
-npm run build         # production build to dist/ (also the deploy build)
-npm run lint          # ESLint (Prettier runs as a lint rule, so format slips fail lint)
-npm run format        # Prettier --write
-npm run format:check  # Prettier --check
-npm run typecheck     # tsc -b (project references, no emit)
-npm run validate      # lint + format:check + typecheck + build + npm audit
+npm run build          # production build to dist/ (also the deploy build)
+npm run lint           # ESLint (Prettier runs as a lint rule, so format slips fail lint)
+npm run format         # Prettier --write
+npm run format:check   # Prettier --check
+npm run typecheck      # tsc -b (project references, no emit)
+npm run test:unit      # Vitest — pure logic + hook/i18n store bridge, no browser
+npm run test:coverage  # same suite, with a coverage report and enforced threshold
+npm run validate       # lint + format:check + typecheck + test:coverage + build + npm audit
 npm run build:analyze  # production build + a dist/stats.html bundle treemap
 ```
 
-There is no test suite.
+Unit tests (Vitest, `jsdom`) cover `src/lib/`'s pure logic and the
+`src/hooks/`/`src/i18n/` store bridge — no served build, no real browser.
+UI/navigation flows are covered separately by an e2e suite when that lands
+(see `.claude/tasks/features/e2e-user-flow-tests.md`); `vitest.config.ts`
+enforces a 75% coverage threshold on the dirs it actually targets.
 
 ## Deployment (static build + `/routines` base path)
 
