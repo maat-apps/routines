@@ -31,6 +31,9 @@ afterEach(() => {
   // run — leaving this at "hidden" (the last test below sets it) would
   // otherwise bleed into whichever file runs next.
   setDocumentVisibility("visible");
+  // Same reasoning for the vi.spyOn(document/window, "removeEventListener")
+  // calls below — not undone automatically once the environment is shared.
+  vi.restoreAllMocks();
 });
 
 describe("useRoutines", () => {

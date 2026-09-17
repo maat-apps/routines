@@ -19,6 +19,11 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  // vi.spyOn(Storage.prototype, ...) isn't undone by unstubAllGlobals — with
+  // isolate: false, Storage.prototype is the same real object shared across
+  // every test file in the run, so an un-restored spy here would otherwise
+  // leak into whatever runs next.
+  vi.restoreAllMocks();
 });
 
 describe("hasUpdateSnapshot / hasNoUpdateSnapshotOnServer", () => {
@@ -31,8 +36,25 @@ describe("hasUpdateSnapshot / hasNoUpdateSnapshotOnServer", () => {
     expect(hasUpdateSnapshot()).toBe(true);
   });
 
+  it("is false instead of throwing when localStorage is unavailable", () => {
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new Error("storage blocked");
+    });
+    expect(hasUpdateSnapshot()).toBe(false);
+  });
+
   it("the server snapshot is always false", () => {
     expect(hasNoUpdateSnapshotOnServer()).toBe(false);
+  });
+});
+
+describe("subscribeToUpdateSnapshot", () => {
+  it("stops notifying after unsubscribing", () => {
+    const listener = vi.fn();
+    const unsubscribe = subscribeToUpdateSnapshot(listener);
+    unsubscribe();
+    saveUpdateSnapshot();
+    expect(listener).not.toHaveBeenCalled();
   });
 });
 
@@ -49,6 +71,13 @@ describe("saveUpdateSnapshot / readUpdateSnapshot", () => {
     ]);
     expect(hasUpdateSnapshot()).toBe(true);
     expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns null instead of throwing when localStorage is unavailable", () => {
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("storage blocked");
+    });
+    expect(saveUpdateSnapshot()).toBeNull();
   });
 
   it("reads back what was saved", () => {
@@ -103,14 +132,76 @@ describe("updateApp", () => {
     // jsdom's window.location.reload isn't configurable, so it can't be
     // spied on directly — vi.stubGlobal replaces the whole object instead,
     // and (unlike a raw Object.defineProperty) restores it safely even when
-    // the environment is reused across files (pool: "vmThreads"). Nothing
-    // else in updateApp touches other location fields.
+    // the environment is reused across files (isolate: false).
     const reload = vi.fn();
     vi.stubGlobal("location", { reload });
 
     await updateApp();
 
     expect(hasUpdateSnapshot()).toBe(true);
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  it("updates a waiting service worker registration", async () => {
+    // jsdom has no ServiceWorkerContainer at all, so "serviceWorker" in
+    // navigator is normally false and this branch is never exercised —
+    // stub navigator wholesale (as app-lock.test.ts already does) rather
+    // than trying to patch a container that doesn't exist.
+    const update = vi.fn().mockResolvedValue(undefined);
+    const postMessage = vi.fn();
+    const getRegistration = vi.fn().mockResolvedValue({
+      update,
+      waiting: { postMessage },
+    });
+    vi.stubGlobal("navigator", { serviceWorker: { getRegistration } });
+    vi.stubGlobal("location", { reload: vi.fn() });
+
+    await updateApp();
+
+    expect(update).toHaveBeenCalledTimes(1);
+    expect(postMessage).toHaveBeenCalledWith({ type: "SKIP_WAITING" });
+  });
+
+  it("still reloads if the service worker check throws", async () => {
+    vi.stubGlobal("navigator", {
+      serviceWorker: {
+        getRegistration: vi.fn().mockRejectedValue(new Error("nope")),
+      },
+    });
+    const reload = vi.fn();
+    vi.stubGlobal("location", { reload });
+
+    await updateApp();
+
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  it("clears every cache", async () => {
+    // jsdom has no Cache Storage API either, so "caches" in window is
+    // normally false — same reasoning as the service worker case above.
+    const deleteCache = vi.fn().mockResolvedValue(true);
+    vi.stubGlobal("caches", {
+      keys: vi.fn().mockResolvedValue(["cache-a", "cache-b"]),
+      delete: deleteCache,
+    });
+    vi.stubGlobal("location", { reload: vi.fn() });
+
+    await updateApp();
+
+    expect(deleteCache).toHaveBeenCalledWith("cache-a");
+    expect(deleteCache).toHaveBeenCalledWith("cache-b");
+    expect(deleteCache).toHaveBeenCalledTimes(2);
+  });
+
+  it("still reloads if clearing caches throws", async () => {
+    vi.stubGlobal("caches", {
+      keys: vi.fn().mockRejectedValue(new Error("nope")),
+    });
+    const reload = vi.fn();
+    vi.stubGlobal("location", { reload });
+
+    await updateApp();
+
     expect(reload).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,7 +1,10 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { useInstallPrompt } from "@/hooks/use-install-prompt";
+import {
+  getServerStandaloneSnapshot,
+  useInstallPrompt,
+} from "@/hooks/use-install-prompt";
 
 // jsdom doesn't implement matchMedia at all, so a controllable fake stands in
 // for the real MediaQueryList — one shared instance per test so subscribe()
@@ -44,6 +47,10 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  // vi.spyOn(window, "removeEventListener") below isn't undone by
+  // unstubAllGlobals — with isolate: false, window is the same real object
+  // shared across every test file in the run.
+  vi.restoreAllMocks();
 });
 
 describe("useInstallPrompt", () => {
@@ -52,8 +59,24 @@ describe("useInstallPrompt", () => {
     expect(result.current.state).toBe("unavailable");
   });
 
+  it("install() is a no-op when there is no pending prompt", async () => {
+    const { result } = renderHook(() => useInstallPrompt());
+    await act(async () => {
+      await result.current.install();
+    });
+    expect(result.current.state).toBe("unavailable");
+  });
+
   it("reports installed immediately when already running standalone", () => {
     mql.set(true);
+    const { result } = renderHook(() => useInstallPrompt());
+    expect(result.current.state).toBe("installed");
+  });
+
+  it("falls back to navigator.standalone for iOS Safari", () => {
+    // matchMedia's display-mode query predates iOS Safari, which sets its
+    // own navigator.standalone flag instead — isStandalone() checks both.
+    vi.stubGlobal("navigator", { standalone: true });
     const { result } = renderHook(() => useInstallPrompt());
     expect(result.current.state).toBe("installed");
   });
@@ -124,5 +147,11 @@ describe("useInstallPrompt", () => {
       "appinstalled",
       expect.any(Function),
     );
+  });
+});
+
+describe("getServerStandaloneSnapshot", () => {
+  it("is always false", () => {
+    expect(getServerStandaloneSnapshot()).toBe(false);
   });
 });

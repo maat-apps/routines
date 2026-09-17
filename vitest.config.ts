@@ -40,10 +40,10 @@ export default defineConfig({
       // @vitejs/plugin-react + .tsx test files, a separate, undecided step.
       include: ["src/lib/**/*.ts", "src/hooks/**/*.ts", "src/i18n/**/*.ts"],
       thresholds: {
-        lines: 75,
-        statements: 75,
-        functions: 75,
-        branches: 75,
+        statements: 95,
+        branches: 95,
+        functions: 95,
+        lines: 95,
       },
     },
   },

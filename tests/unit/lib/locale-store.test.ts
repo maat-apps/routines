@@ -2,6 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { LOCALE_KEY } from "@/lib/storage-keys";
 
+// readStoredLocale's `typeof window === "undefined"` guard is tested in
+// ssr-guards.test.ts, not here — see storage.test.ts's equivalent comment
+// for why it needs its own file (a Node environment, not jsdom — and this
+// file in particular relies on window.navigator, which Node doesn't have).
+//
 // getLocaleSnapshot caches into a module-level singleton on first read, so
 // each test needs a fresh module instance to control what it reads.
 async function freshLocaleStore() {
@@ -50,6 +55,15 @@ describe("first launch (nothing stored)", () => {
     expect(getLocaleSnapshot()).toBe(DEFAULT_LOCALE);
   });
 
+  it("falls back to the default locale when navigator.language is unset", async () => {
+    Object.defineProperty(window.navigator, "language", {
+      value: undefined,
+      configurable: true,
+    });
+    const { getLocaleSnapshot, DEFAULT_LOCALE } = await freshLocaleStore();
+    expect(getLocaleSnapshot()).toBe(DEFAULT_LOCALE);
+  });
+
   it("persists the detected value, not just returns it", async () => {
     setNavigatorLanguage("pl-PL");
     const { getLocaleSnapshot } = await freshLocaleStore();
@@ -64,6 +78,19 @@ describe("a stored value always wins over navigator.language", () => {
     setNavigatorLanguage("pl-PL");
     const { getLocaleSnapshot } = await freshLocaleStore();
     expect(getLocaleSnapshot()).toBe("en");
+  });
+});
+
+describe("when localStorage is unavailable (e.g. private mode)", () => {
+  it("falls back to the default locale instead of throwing", async () => {
+    const getItem = vi
+      .spyOn(Storage.prototype, "getItem")
+      .mockImplementation(() => {
+        throw new Error("storage blocked");
+      });
+    const { getLocaleSnapshot, DEFAULT_LOCALE } = await freshLocaleStore();
+    expect(getLocaleSnapshot()).toBe(DEFAULT_LOCALE);
+    getItem.mockRestore();
   });
 });
 

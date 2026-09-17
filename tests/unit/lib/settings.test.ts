@@ -2,6 +2,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PREFERENCE_KEYS, SETTINGS_KEY } from "@/lib/storage-keys";
 
+// read()'s `typeof window === "undefined"` guard is tested in
+// ssr-guards.test.ts, not here — see storage.test.ts's equivalent comment
+// for why it needs its own file (a Node environment, not jsdom).
+//
 // settings.ts caches its snapshot in module-level state, so each test needs a
 // fresh module instance.
 async function freshSettings() {
@@ -45,6 +49,23 @@ describe("getSettingsSnapshot", () => {
     );
     const { getSettingsSnapshot } = await freshSettings();
     expect(getSettingsSnapshot()).toEqual({ lock: null });
+  });
+
+  it("drops a lock that isn't an object at all", async () => {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify({ lock: "oops" }));
+    const { getSettingsSnapshot } = await freshSettings();
+    expect(getSettingsSnapshot()).toEqual({ lock: null });
+  });
+
+  it("generates a createdAt when the stored lock is missing one", async () => {
+    localStorage.setItem(
+      SETTINGS_KEY,
+      JSON.stringify({ lock: { credentialId: "c1", userId: "u1" } }),
+    );
+    const { getSettingsSnapshot } = await freshSettings();
+    const { createdAt } = getSettingsSnapshot().lock!;
+    expect(typeof createdAt).toBe("string");
+    expect(() => new Date(createdAt).toISOString()).not.toThrow();
   });
 });
 

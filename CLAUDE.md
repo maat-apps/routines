@@ -173,16 +173,46 @@ The only network traffic is the service worker fetching the app's own files.
   (see `.claude/tasks/features/e2e-user-flow-tests.md`); including them in
   `vitest.config.ts`'s `coverage.include` would just show a permanently low
   number for code this suite was never meant to exercise. `coverage.include`
-  enforces a 75% threshold (lines/statements/functions/branches) via
-  `@vitest/coverage-v8`, scoped to exactly the dirs above.
+  enforces a 95% threshold (lines/statements/functions/branches) via
+  `@vitest/coverage-v8`, scoped to exactly the dirs above — deliberately not
+  100% even though the suite currently clears 100%, since a literal 100%
+  gate has zero slack for any future line landing in these dirs without a
+  test in the same change.
   `storage.ts`/`settings.ts`/`locale-store.ts` cache state in module-level
   singletons, so their tests use `vi.resetModules()` + a dynamic `import()`
   per test rather than exporting internal reset hooks just for testing.
   This landed in two branches, not one — `feature/unit-tests-ts` (lib/
   only, zero React-testing dependencies) merged first, then
   `feature/unit-tests-react` (hooks/i18n, needs `@testing-library/react`)
-  as a deliberately separate follow-up — see
-  `.claude/tasks/features/unit-tests-react.md` for why they were split.
+  as a deliberately separate follow-up.
+  Missing browser globals (`navigator.serviceWorker`, `caches`,
+  `URL.createObjectURL`/`revokeObjectURL`, `matchMedia`) are not a reason
+  to skip coverage on the code that uses them — stub/mock them with
+  `vi.stubGlobal`/`vi.spyOn` (see `app-update.test.ts`'s service-worker/
+  cache-clearing tests, `backup.test.ts`'s `downloadBackup` tests, and
+  `use-install-prompt.test.ts`'s hand-rolled `matchMedia` fake) rather than
+  leaving that code untested by default. Do this even at medium effort —
+  only skip a gap after actually weighing it against a specific reason not
+  to, not by default because mocking looks like more setup than a plain
+  assertion. Even a `typeof window === "undefined"` SSR guard — which
+  jsdom (every other test file's environment) can never produce — turned
+  out testable: `ssr-guards.test.ts` uses Vitest's per-file
+  `// @vitest-environment node` docblock override to exercise those
+  branches for real, rather than leaving them permanently uncovered as a
+  default "not worth it."
+  `vitest.config.ts` also sets `isolate: false`, reusing one plain jsdom
+  environment across every test file instead of a fresh one per file
+  (cut CI time — jsdom setup was ~85% of the run). The real consequence:
+  globals like `document`/`window`/`Storage.prototype` are the _same
+  object_ shared across the whole run, not per-file. Every test that
+  mutates or spies on one must restore it in its own `afterEach`
+  (`vi.stubGlobal` values via `vi.unstubAllGlobals()`, `vi.spyOn` mocks via
+  `vi.restoreAllMocks()` — the two are not interchangeable, and a missed
+  restore fails a _different_, unrelated test rather than the one that
+  leaked it). This already caused one real bug: an un-restored
+  `vi.spyOn(Storage.prototype, ...)` in `app-update.test.ts` broke a
+  different test in the same file until the missing `restoreAllMocks()`
+  was added.
 
 ## Product context
 
