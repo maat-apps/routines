@@ -153,12 +153,19 @@ The only network traffic is the service worker fetching the app's own files.
   need no equivalent — `navigate(...)` already gives them a real history
   entry, so native back lands wherever the `AppBar` arrow would.
 
-- **Unit tests (Vitest).** `vitest.config.ts` is deliberately separate from
+- **Unit tests (Vitest).** Test files live under `tests/unit/`, mirroring
+  `src/`'s structure (`tests/unit/lib/storage.test.ts` for
+  `src/lib/storage.ts`, etc.) rather than co-located with the source —
+  `vitest.config.ts`'s `test.include` is scoped to `tests/unit/**/*.test.ts`
+  explicitly, so a stray test file dropped elsewhere is never picked up.
+  `vitest.config.ts` is deliberately separate from
   `vite.config.ts` so the PWA/build plugins never run during tests; `jsdom`
   environment for the functions that touch `localStorage`/`navigator`/
-  WebAuthn directly. Scope is split by what it actually exercises, not by
-  file location alone: `src/lib/**` (pure logic — schemas, storage, backup,
-  locale-store, settings, app-lock, app-update, routine-utils),
+  WebAuthn directly. `coverage.include` (what gets _measured_, independent
+  of where the tests themselves live) is split by what it actually
+  exercises, not by file location alone: `src/lib/**` (pure logic —
+  schemas, storage, backup, locale-store, settings, app-lock, app-update,
+  routine-utils),
   `src/hooks/**` and `src/i18n/**` (the `useSyncExternalStore` store/hook
   bridge, via `@testing-library/react`'s `renderHook` — no JSX/`.tsx`
   needed, so this still stays out of component-rendering territory).
