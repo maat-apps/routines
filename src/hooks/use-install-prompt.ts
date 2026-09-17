@@ -30,13 +30,17 @@ function isStandalone(): boolean {
   );
 }
 
+export function getServerStandaloneSnapshot(): boolean {
+  return false;
+}
+
 export function useInstallPrompt() {
   // Whether we are already running installed is external browser state, so it is
   // read through a store rather than synced into state from an effect.
   const standalone = useSyncExternalStore(
     subscribeToDisplayMode,
     isStandalone,
-    () => false,
+    getServerStandaloneSnapshot,
   );
   const [prompt, setPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [installed, setInstalled] = useState(false);
