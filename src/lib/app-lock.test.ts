@@ -26,6 +26,43 @@ describe("isSessionUnlocked", () => {
   });
 });
 
+describe("isLockedOnServer", () => {
+  it("is always false", async () => {
+    const { isLockedOnServer } = await freshAppLock();
+    expect(isLockedOnServer()).toBe(false);
+  });
+});
+
+describe("subscribeToUnlock", () => {
+  it("notifies a subscribed listener when the session unlocks", async () => {
+    vi.stubGlobal("navigator", {
+      credentials: {
+        create: vi
+          .fn()
+          .mockResolvedValue(fakeCredential(new Uint8Array([1]).buffer)),
+      },
+    });
+    const { enrolAppLock, subscribeToUnlock } = await freshAppLock();
+    const listener = vi.fn();
+    subscribeToUnlock(listener);
+
+    await enrolAppLock();
+
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it("stops notifying after unsubscribing", async () => {
+    const { disableAppLock, subscribeToUnlock } = await freshAppLock();
+    const listener = vi.fn();
+    const unsubscribe = subscribeToUnlock(listener);
+    unsubscribe();
+
+    disableAppLock();
+
+    expect(listener).not.toHaveBeenCalled();
+  });
+});
+
 describe("isAppLockSupported", () => {
   it("is false without a secure context", async () => {
     vi.stubGlobal("isSecureContext", false);

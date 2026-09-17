@@ -78,4 +78,21 @@ describe("setStoredLocale", () => {
     expect(localStorage.getItem(LOCALE_KEY)).toBe("pl");
     expect(listener).toHaveBeenCalledTimes(1);
   });
+
+  it("stops notifying after unsubscribing", async () => {
+    const { setStoredLocale, subscribeToLocale } = await freshLocaleStore();
+    const listener = vi.fn();
+    const unsubscribe = subscribeToLocale(listener);
+    unsubscribe();
+    setStoredLocale("pl");
+    expect(listener).not.toHaveBeenCalled();
+  });
+});
+
+describe("getServerLocaleSnapshot", () => {
+  it("returns the default locale", async () => {
+    const { getServerLocaleSnapshot, DEFAULT_LOCALE } =
+      await freshLocaleStore();
+    expect(getServerLocaleSnapshot()).toBe(DEFAULT_LOCALE);
+  });
 });

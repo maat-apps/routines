@@ -48,6 +48,13 @@ describe("getSettingsSnapshot", () => {
   });
 });
 
+describe("getServerSettingsSnapshot", () => {
+  it("returns the defaults (no lock)", async () => {
+    const { getServerSettingsSnapshot } = await freshSettings();
+    expect(getServerSettingsSnapshot()).toEqual({ lock: null });
+  });
+});
+
 describe("setLockEnrolment / clearLockEnrolment", () => {
   it("persists a lock, updates the snapshot, and notifies listeners", async () => {
     const { setLockEnrolment, getSettingsSnapshot, subscribeToSettings } =
@@ -59,6 +66,15 @@ describe("setLockEnrolment / clearLockEnrolment", () => {
       lock: { credentialId: "c1", userId: "u1", createdAt: "now" },
     });
     expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it("stops notifying after unsubscribing", async () => {
+    const { setLockEnrolment, subscribeToSettings } = await freshSettings();
+    const listener = vi.fn();
+    const unsubscribe = subscribeToSettings(listener);
+    unsubscribe();
+    setLockEnrolment({ credentialId: "c1", userId: "u1", createdAt: "now" });
+    expect(listener).not.toHaveBeenCalled();
   });
 
   it("clears the lock and notifies listeners", async () => {
