@@ -3,6 +3,18 @@ name: Deploy
 on:
   push:
     branches: [main]
+    paths:
+      # Anything that actually reaches dist/ — app source, static assets
+      # served as-is, and the build's own inputs/config.
+      - "src/**"
+      - "public/**"
+      - "index.html"
+      - "vite.config.ts"
+      - "postcss.config.mjs"
+      - "tsconfig.json"
+      - "tsconfig.app.json"
+      - "package.json"
+      - "package-lock.json"
   workflow_dispatch:
 
 permissions:
