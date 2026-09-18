@@ -242,11 +242,9 @@ every turn (cheap enough to tolerate constantly); the test suite only runs
 when this turn actually touched `src/`/`tests/` — most turns (planning,
 docs, git operations, pure Q&A) don't, and skipping them avoids paying the
 ~10-15s test cost for nothing to check. Neither blocks the turn — both are
-summary-only warnings pointing at `/check` for details.
-
-`/check` additionally runs `build` + `npm audit`, which nothing runs
-automatically — those stay a deliberate, run-when-actually-done step, not
-tied to a hook.
+summary-only warnings. `build`/`npm audit` aren't tied to any hook, but
+`validate.yml` covers both in CI on every PR. For a full manual check
+(all six steps at once), run `npm run validate` directly.
 
 ## Conventions
 
@@ -274,8 +272,8 @@ tied to a hook.
 
 - Formatting and lint --fix run automatically after every file edit via
   hooks — don't manually re-run them or narrate that you're about to.
-- `/check` is for manual/debugging use only, not a required step before
-  committing or pushing — see below.
+- `npm run validate` is for manual/debugging use only, not a required
+  step before committing or pushing — see below.
 - Prefer `Grep`/`Glob` over reading whole files; read only what a task needs.
 - For broad codebase audits, use `/find-antipatterns` instead of reading many
   files inline.
