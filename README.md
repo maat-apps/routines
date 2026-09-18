@@ -87,7 +87,8 @@ npm run format:check   # Prettier --check
 npm run typecheck      # tsc -b (project references, no emit)
 npm run test:unit      # Vitest — pure logic + hook/i18n store bridge, no browser
 npm run test:coverage  # same suite, with a coverage report and enforced threshold
-npm run test:e2e       # Playwright, against the real production build
+npm run test:e2e       # Playwright, against the real production build (incl. axe-core a11y checks)
+npm run test:lighthouse # Lighthouse score audit — separate, not in validate (manual/workflow_dispatch only)
 npm run validate       # lint + format:check + typecheck + test:coverage + test:e2e + build + npm audit
 npm run build:analyze  # production build + a dist/stats.html bundle treemap
 ```

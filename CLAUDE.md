@@ -42,6 +42,11 @@ them in mind when writing or reviewing code:
 - `npm run test:e2e` — Playwright, `e2e/`, against the real production
   build (`npm run build` + `vite preview`) rather than the dev server. See
   Architecture below.
+- `npm run test:a11y` — just `e2e/a11y.spec.ts` (axe-core), for a quick
+  accessibility-only run; already included in `test:e2e`'s full sweep too.
+- `npm run test:lighthouse` — Lighthouse score audit (`e2e/lighthouse.spec.ts`),
+  a separate Playwright project so it never runs as part of `test:e2e`/
+  `validate` — see Architecture below for why.
 - `npm run validate` — lint + format:check + typecheck + test:coverage +
   test:e2e + build + `npm audit`; the same gates CI runs. `npm run
 validate:fix` applies the autofixable ones.
@@ -254,14 +259,19 @@ The only network traffic is the service worker fetching the app's own files.
   `tsconfig.app.json` nor `tsconfig.node.json` covers it. Runs against the
   real production build (`webServer` does `npm run build` + `vite preview`,
   not the dev server), same phone-sized-viewport constraint as the Mobile
-  gate bullet above. Two projects, two OSes, deliberately not a third (a
-  Playwright device preset only changes viewport/UA, never the engine, so
-  another Android profile would be redundant with `mobile-chromium`):
-  `mobile-chromium` (`devices["Galaxy A55"]`) and `mobile-iphone`
-  (`devices["iPhone 13"]`, real **WebKit** — the reasoning behind both
-  specific models is in git history, not reproduced here since it'll only
-  go stale). `test:e2e` runs both, no `--project` filter; CI installs both
-  `chromium` and `webkit` binaries. WebKit has no CDP session API, so
+  gate bullet above. Two device projects, two OSes, deliberately not a
+  third (a Playwright device preset only changes viewport/UA, never the
+  engine, so another Android profile would be redundant with
+  `mobile-chromium`): `mobile-chromium` (`devices["Galaxy A55"]`) and
+  `mobile-iphone` (`devices["iPhone 13"]`, real **WebKit** — the reasoning
+  behind both specific models is in git history, not reproduced here since
+  it'll only go stale). A third project, `lighthouse`, exists solely to
+  scope `lighthouse.spec.ts` to its own `npm run test:lighthouse` — see the
+  Accessibility + Lighthouse audits bullet below. `test:e2e` selects
+  `mobile-chromium`/`mobile-iphone` explicitly (`--project` twice) rather
+  than running `playwright test` bare, specifically so it never picks up
+  `lighthouse`; CI installs both `chromium` and `webkit` binaries. WebKit
+  has no CDP session API, so
   `mobile-iphone` excludes `drawer-dismissal.spec.ts` (raw CDP touch
   events, no native Playwright touch-drag primitive exists yet) via its
   own `testIgnore` rather than that one hard-failing there; **remember to
@@ -279,6 +289,39 @@ The only network traffic is the service worker fetching the app's own files.
   relative navigation replaces the whole path. Always navigate with no
   leading slash (`page.goto("new")`, `page.goto("")` for home). Debugging a
   failure locally: `npm run test:e2e:report`.
+
+- **Accessibility + Lighthouse audits.** Two different kinds of check,
+  deliberately split by how they gate: `e2e/a11y.spec.ts`
+  (`@axe-core/playwright`, `AxeBuilder` against each screen — home, empty
+  home, routine detail, edit, the settings drawer open — scoped to
+  `wcag2a`/`wcag2aa`/`wcag21a`/`wcag21aa`/`wcag22aa`, zero violations
+  asserted) is cheap and deterministic, so it's a normal spec in the
+  `mobile-chromium` project — it runs as part of `npm run test:e2e` and
+  therefore `validate`/CI with no extra wiring. Excluded from
+  `mobile-iphone` via `testIgnore` (same reasoning as not adding a third
+  device elsewhere): axe-core scans the DOM/ARIA tree, which doesn't
+  meaningfully differ by rendering engine, so running it on both would just
+  be redundant. `e2e/lighthouse.spec.ts`
+  (`playwright-lighthouse` + `lighthouse`) is its own Playwright project
+  (`playwright.config.ts`'s `testIgnore`/`testMatch` split) specifically so
+  it's excluded from `test:e2e` — Lighthouse's own timing-based scoring is
+  slower and can be flaky on shared runners, so it only runs via `npm run
+test:lighthouse` / `.github/workflows/lighthouse.yml`
+  (`workflow_dispatch`-only, not on every PR). It launches its own
+  `chromium` instance with a fixed `--remote-debugging-port` rather than
+  using the test runner's managed `page` fixture, since Lighthouse drives
+  Chrome directly over that CDP port — this is a `playAudit` requirement,
+  not a stylistic choice. `playwright-lighthouse` is unmaintained since
+  early 2024 and its own default thresholds/categories still list `pwa`,
+  which current `lighthouse` versions reject outright (the category was
+  removed) — the spec always passes an explicit `thresholds` object
+  covering only `performance`/`accessibility`/`best-practices`/`seo` to
+  route around this, not `opts.onlyCategories` directly (the package
+  derives `onlyCategories` from `thresholds`'s own keys when `opts` is
+  omitted). Thresholds are set from a real baseline run against the home
+  screen (2026-09-18: performance 96, accessibility/best-practices/seo all 100) — performance's threshold (85) leaves real slack since it's the one
+  timing-based, flakiness-prone category; the other three stay at the
+  baseline they already clear.
 
 ## Product context
 

@@ -23,17 +23,40 @@ export default defineConfig({
   // most popular mobile operating systems.
   projects: [
     {
+      // Functional flows + the axe-core accessibility checks — both cheap
+      // and deterministic enough to gate every PR (npm run test:e2e, wired
+      // into validate/CI). Lighthouse is scored, slower, and can be flaky
+      // on shared runners, so it stays out of this project entirely — see
+      // the "lighthouse" project below and npm run test:lighthouse.
       name: "mobile-chromium",
+      testIgnore: /lighthouse\.spec\.ts$/,
       use: { ...devices["Galaxy A55"] },
     },
     {
-      // Only drawer-dismissal.spec.ts is excluded here now — it's the one
-      // spec still on the CDP-only touch-event path (no native replacement
-      // exists yet). app-lock.spec.ts moved to context.credentials, which
-      // is cross-browser (unlike newCDPSession), so it runs here too.
+      // drawer-dismissal.spec.ts is the one spec still on the CDP-only
+      // touch-event path (no native replacement exists yet). a11y.spec.ts
+      // runs its axe-core checks against the DOM/ARIA tree, which doesn't
+      // meaningfully differ by rendering engine, so running it on both
+      // devices would just be redundant (same reasoning CLAUDE.md gives for
+      // not adding a third device). lighthouse.spec.ts has its own
+      // dedicated project below — package.json's test:e2e selects
+      // mobile-chromium/mobile-iphone explicitly rather than running
+      // `playwright test` bare, but this project's own file matching would
+      // otherwise still pick lighthouse.spec.ts up on its own.
+      // app-lock.spec.ts moved to context.credentials, which is
+      // cross-browser (unlike newCDPSession), so it runs here too.
       name: "mobile-iphone",
-      testIgnore: [/drawer-dismissal\.spec\.ts$/],
+      testIgnore: [
+        /drawer-dismissal\.spec\.ts$/,
+        /a11y\.spec\.ts$/,
+        /lighthouse\.spec\.ts$/,
+      ],
       use: { ...devices["iPhone 13"] },
+    },
+    {
+      name: "lighthouse",
+      testMatch: /lighthouse\.spec\.ts$/,
+      use: { ...devices["Galaxy A55"] },
     },
   ],
   webServer: {
