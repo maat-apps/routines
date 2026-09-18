@@ -10,10 +10,12 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
-  // "github" annotates the PR; "html" is what validate.yml uploads as an
-  // artifact on failure, since a failed run otherwise leaves nothing to
-  // inspect beyond the log.
-  reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : "list",
+  // "github" annotates the PR inline; no CI artifact upload, so no reason
+  // to also generate the HTML report there. It's still one command away
+  // locally when actually debugging a failure: `npx playwright test
+  // --reporter=html && npx playwright show-report` (traces are captured
+  // either way via `trace: "on-first-retry"` below).
+  reporter: process.env.CI ? "github" : "list",
   use: {
     baseURL: "http://localhost:4173/routines/",
     trace: "on-first-retry",
