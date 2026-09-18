@@ -282,20 +282,25 @@ tied to a hook.
 - Check the current branch before editing or committing anything — never
   edit or commit directly on `main`, including doc-only changes. Branch
   first, always.
-- **Commit automatically once a task's changes are verified** (`npm run
-validate` passing) — don't wait to be asked, and don't leave verified
-  work sitting uncommitted for the user to commit by hand.
+- **Commit automatically once a task's changes are complete** — don't
+  wait to be asked, and don't leave finished work sitting uncommitted for
+  the user to commit by hand.
 - **Push and open the PR automatically too, via `/open-pr`** — no draft
   preview, no confirmation pause before `gh pr create`. Decided
   2026-09-18: the human checkpoint in this workflow is merge, not PR
   creation — the user reviews/merges from the GitHub mobile app, and
   auto-merge itself stays opt-in per PR (never enabled by default; see
   `.claude/tasks/ecosystem/standardize-branch-protection-rules.md`).
-- **Keep verification output terse.** Run `npm run validate` as one
-  command, not five separate ones with full logs pasted per step — report
-  only ✅/❌ per stage, with ~10 lines of context on a ❌, the same rule
-  `/check` already follows. Don't paste full build/coverage/lint output
-  when it passed.
+- **Don't re-run what CI already runs.** `.github/workflows/validate.yml`
+  runs lint/format:check/typecheck/test:coverage on every PR, identically
+  to the local commands, and Auto-fix reacts to a failure there
+  automatically — running `npm run validate` locally before pushing is
+  redundant token cost, not added safety. The one exception: `build` (and
+  `npm audit`) aren't in CI at all — they only run in `deploy.yml`,
+  _after_ merge — so `/open-pr` runs `npm run build` alone before opening
+  a PR, since nothing else ever checks it first. When you do run
+  something locally, report only ✅/❌ per stage with ~10 lines of context
+  on a ❌, never full logs on a pass (same rule `/check` follows).
 - When a change touches something CLAUDE.md or README.md describes
   (architecture, stack, file locations), update those docs in the same
   session rather than leaving them to drift until a later cleanup pass finds

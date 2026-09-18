@@ -39,13 +39,6 @@ one-line summary in `CLAUDE.md`'s Conventions section and removed from here.
   `restrictToParentElement`, `afterEach` in three different test files, `getServerStandaloneSnapshot`).
   Promoted to CLAUDE.md's Workflow Rules — always add a new import in the same `Edit` call as its
   first usage.
-- Dead re-export: [src/lib/utils.ts](../../src/lib/utils.ts) is `export { cn } from "cn";`, but
-  every actual usage (`src/components/ui/*.tsx`, 6 files) imports `cn` directly from the `cn`
-  package instead of through this file — confirmed via repo-wide grep, the only reference to
-  `@/lib/utils` anywhere is `components.json`'s `aliases.utils` field. 0% coverage because it's
-  never executed, not undertested. Tracked as
-  [.claude/tasks/features/align-cn-imports-with-utils.md](../tasks/features/align-cn-imports-with-utils.md)
-  (gitignored, local only).
 - Borderline size: [src/views/home/settings-panel.tsx](../../src/views/home/settings-panel.tsx)
   is 408 lines — worth a look next time it grows, not yet a real problem.
 

@@ -11,11 +11,16 @@ Do NOT proceed past step 1 or step 2 without stopping and telling the user why.
    - `git status --short` — refuse if there are uncommitted changes. Tell the
      user to commit or stash first; never commit on their behalf here.
 
-2. **Verify, if not already done this session.** If `npm run validate`
-   hasn't already passed earlier in this conversation, run it now as one
-   command (same as `/check`) — report only ✅/❌ per stage, ~10 lines of
-   context on a ❌, never full logs on a pass. Fix failures using
-   CLAUDE.md and `.claude/docs/patterns.md` conventions, then continue.
+2. **Run `npm run build` only** — not the full `npm run validate`. CI's
+   `validate.yml` already runs lint/format:check/typecheck/test:coverage
+   on every PR, identically to the local versions, and Auto-fix reacts to
+   a failure there automatically — running them again here first is pure
+   token cost with no added safety. `build` (and `npm audit`) are the
+   exception: `validate.yml` doesn't run either, so `build` is the one
+   local gate standing between this branch and a broken `deploy.yml` run
+   on `main` after merge. Decided 2026-09-18. On a build failure, fix it
+   using CLAUDE.md and `.claude/docs/patterns.md` conventions, then
+   continue; report only ✅/❌, ~10 lines of context on a ❌.
 
 3. **Push the branch.**
    - `git rev-parse --abbrev-ref --symbolic-full-name @{u}` to check if it
