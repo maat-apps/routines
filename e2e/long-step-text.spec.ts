@@ -16,8 +16,13 @@ test("a long step wraps instead of being truncated", async ({ page }) => {
 
   const step = page.getByRole("checkbox", { name: longText });
   await expect(step).toContainText(longText);
+  // Not just .locator("span") — Base UI's own <Checkbox> renders its
+  // visual indicator as a nested <span role="checkbox">, a second span
+  // inside this row alongside the step text's own; filter to the one that
+  // actually holds the text.
   const whiteSpace = await step
     .locator("span")
+    .filter({ hasText: longText })
     .evaluate((el) => getComputedStyle(el).whiteSpace);
   expect(whiteSpace).not.toBe("nowrap");
   const box = await step.boundingBox();
