@@ -2,24 +2,21 @@ name: Deploy PR preview
 
 # Publishes each open PR under its own "/routines/pr-<n>/" subpath on the
 # same GitHub Pages site main deploys to (see deploy.yml), so a change can be
-# checked on a phone before merging instead of only after. Closing/merging
-# the PR removes its subdirectory again. Shares deploy.yml's "pages-content"
+# checked on a phone before merging instead of only after. Building a new
+# preview is gated on validate.yml's own run for that same commit via
+# workflow_run — no point publishing a build that doesn't pass CI, and this
+# also inherits validate.yml's path filter for free instead of duplicating
+# it. Closing/merging the PR removes its subdirectory unconditionally on a
+# direct pull_request trigger instead — that's just cleanup and shouldn't
+# depend on validate having run at all. Shares deploy.yml's "pages-content"
 # storage branch and its "pages" concurrency group so a main deploy and a
 # preview deploy never race each other's push to that branch.
 on:
+  workflow_run:
+    workflows: ["Validate"]
+    types: [completed]
   pull_request:
-    types: [opened, synchronize, reopened, closed]
-    paths:
-      # Same "reaches dist/" set deploy.yml watches.
-      - "src/**"
-      - "public/**"
-      - "index.html"
-      - "vite.config.ts"
-      - "postcss.config.mjs"
-      - "tsconfig.json"
-      - "tsconfig.app.json"
-      - "package.json"
-      - "package-lock.json"
+    types: [closed]
 
 permissions:
   contents: write
@@ -33,30 +30,34 @@ concurrency:
 
 jobs:
   build:
+    if: (github.event_name == 'workflow_run' && github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion == 'success') || (github.event_name == 'pull_request' && github.event.action == 'closed')
     runs-on: ubuntu-latest
     env:
-      PR_NUM: ${{ github.event.pull_request.number }}
+      IS_CLOSE: ${{ github.event_name == 'pull_request' && github.event.action == 'closed' }}
+      PR_NUM: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.pull_requests[0].number || github.event.pull_request.number }}
     steps:
       - name: Checkout PR
-        if: github.event.action != 'closed'
+        if: env.IS_CLOSE != 'true'
         uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Setup Node
-        if: github.event.action != 'closed'
+        if: env.IS_CLOSE != 'true'
         uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: npm
 
       - name: Install dependencies
-        if: github.event.action != 'closed'
+        if: env.IS_CLOSE != 'true'
         run: npm ci
 
       - name: Build preview
-        if: github.event.action != 'closed'
+        if: env.IS_CLOSE != 'true'
         run: npm run build
         env:
-          DEPLOY_BASE_PATH: /routines/pr-${{ github.event.pull_request.number }}/
+          DEPLOY_BASE_PATH: /routines/pr-${{ env.PR_NUM }}/
 
       # See deploy.yml for why this branch exists: it's this workflow's own
       # storage for assembling the whole Pages tree (main's root + every
@@ -81,7 +82,7 @@ jobs:
       - name: Update this PR's preview subdirectory
         run: |
           rm -rf "pages-content/pr-$PR_NUM"
-          if [ "${{ github.event.action }}" != "closed" ]; then
+          if [ "$IS_CLOSE" != "true" ]; then
             mkdir -p "pages-content/pr-$PR_NUM"
             rsync -a dist/ "pages-content/pr-$PR_NUM/"
           fi
@@ -92,11 +93,10 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
-          git commit -m "Preview for PR #$PR_NUM (${{ github.event.action }})" --allow-empty
+          git commit -m "Preview for PR #$PR_NUM" --allow-empty
           git push origin HEAD:pages-content
 
       - name: Configure Pages
-        if: github.event.action != 'closed'
         uses: actions/configure-pages@v5
         with:
           enablement: true
@@ -110,7 +110,7 @@ jobs:
           path: pages-content
 
       - name: Add preview link to PR description
-        if: github.event.action != 'closed'
+        if: env.IS_CLOSE != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
