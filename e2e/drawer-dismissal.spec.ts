@@ -13,6 +13,19 @@ test.describe("drawer dismissal", () => {
     const dialog = page.getByRole("dialog");
     await expect(dialog).toBeVisible();
 
+    // The drawer's open transition is a 450ms CSS transform (see
+    // drawer.tsx's `duration-450` popup class); `toBeVisible()` only proves
+    // the dialog is in the DOM and painted, not that it's finished sliding
+    // in. Reading boundingBox() mid-slide can put startY below the still-
+    // arriving drawer's real on-screen position, so `canStart`'s
+    // point-inside-popup check (useSwipeDismiss.js) silently rejects the
+    // touchstart and the whole gesture never begins — the swipe API itself
+    // has no bearing on this, since the gesture is never even recognized.
+    // Wait for the transition to finish so the box we measure is final.
+    await dialog.evaluate((el) =>
+      Promise.all(el.getAnimations().map((animation) => animation.finished)),
+    );
+
     // CLAUDE.md: Base UI's drawer reacts to real touch gestures, not
     // synthetic mouse drags — drive raw CDP touch events over the drawer's
     // body, from just under its grab handle down past the viewport edge.

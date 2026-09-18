@@ -27,14 +27,20 @@ test.describe("settings", () => {
     );
     // Not just the select's own value: confirm already-rendered UI outside
     // the select actually re-rendered too — the settings drawer's own
-    // title, and the home screen underneath it (still mounted behind the
-    // drawer, not replaced by it). A bug that updates the stored locale and
-    // the select but misses re-rendering other already-mounted text (a
-    // stale closure, a missed t() call) wouldn't be caught by the select
-    // check alone.
+    // title here, and the home screen underneath it below. A bug that
+    // updates the stored locale and the select but misses re-rendering
+    // other already-mounted text (a stale closure, a missed t() call)
+    // wouldn't be caught by the select check alone.
     await expect(
       dialog.getByRole("heading", { name: pl.settings }),
     ).toBeVisible();
+
+    // The home heading is still mounted behind the drawer, not replaced by
+    // it, but Base UI marks background content aria-hidden/inert while a
+    // dialog is open (correct accessibility behavior) — getByRole can't see
+    // it until the drawer closes. Close it first (phone back gesture, same
+    // as drawer-dismissal.spec.ts) rather than querying past aria-hidden.
+    await page.goBack();
     await expect(page.getByRole("heading", { name: pl.appName })).toBeVisible();
   });
 

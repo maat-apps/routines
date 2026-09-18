@@ -88,15 +88,12 @@ export function todayIso(): string {
  * synthetic mouse drags (see CLAUDE.md's Drawer notes) — Playwright has no
  * high-level touch-drag API, so this drives the CDP Input domain directly.
  *
- * The per-step delay matters, not just the path: firing all touchmove
- * events back-to-back (no delay) let the gesture's distance/velocity
- * tracking depend on incidental IPC round-trip jitter between CDP calls to
- * produce a plausible touch cadence — fine on a fast machine, but flaky on
- * a slower/busier CI runner, where that jitter isn't consistent enough to
- * reliably cross the drawer's dismiss threshold (observed: this test
- * failed the same way, same assertion, on two consecutive CI runs before
- * this fix). A fixed ~16ms delay between steps (roughly one frame at 60Hz)
- * gives it a realistic, consistent cadence instead of relying on chance.
+ * Base UI dismisses on either a fast flick (average velocity past
+ * `FAST_SWIPE_VELOCITY`) or a plain drag past 50% of the popup's own
+ * height (`getBaseSwipeThreshold`, DrawerViewport.js) — a ~16ms per-step
+ * delay just gives the gesture a realistic touch cadence for the former;
+ * it isn't load-bearing for dismissal itself as long as the total drag
+ * distance clears the latter, distance-only threshold.
  */
 export async function swipeDown(
   page: Page,
