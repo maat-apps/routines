@@ -3,7 +3,7 @@ description: Push the current branch and open a GitHub PR with a generated descr
 allowed-tools: Bash(git:*), Bash(gh:*), Read
 ---
 
-Do NOT proceed past step 1 or step 2 without stopping and telling the user why.
+Do NOT proceed past step 1 without stopping and telling the user why.
 
 1. **Preconditions.**
    - `git branch --show-current` — refuse if it's `main`. Tell the user to
@@ -11,24 +11,19 @@ Do NOT proceed past step 1 or step 2 without stopping and telling the user why.
    - `git status --short` — refuse if there are uncommitted changes. Tell the
      user to commit or stash first; never commit on their behalf here.
 
-2. **Run `npm run build` only** — not the full `npm run validate`. CI's
-   `validate.yml` already runs lint/format:check/typecheck/test:coverage
-   on every PR, identically to the local versions, and Auto-fix reacts to
-   a failure there automatically — running them again here first is pure
-   token cost with no added safety. `build` (and `npm audit`) are the
-   exception: `validate.yml` doesn't run either, so `build` is the one
-   local gate standing between this branch and a broken `deploy.yml` run
-   on `main` after merge. Decided 2026-09-18. On a build failure, fix it
-   using CLAUDE.md and `.claude/docs/patterns.md` conventions, then
-   continue; report only ✅/❌, ~10 lines of context on a ❌.
-
-3. **Push the branch.**
+2. **Push the branch — no local verification first.**
+   `.github/workflows/validate.yml` runs the full
+   lint/format:check/typecheck/test:coverage/build/audit set as a
+   required, no-bypass check on every PR, and Auto-fix reacts to a
+   failure there automatically. Running any of that locally here first is
+   pure token cost with no added safety — push straight from a completed,
+   committed change. Decided 2026-09-18.
    - `git rev-parse --abbrev-ref --symbolic-full-name @{u}` to check if it
      already tracks a remote branch.
    - If untracked: `git push -u origin <branch>`. If tracked: `git push`
      (only if local is ahead of remote — check first, don't force).
 
-4. **Draft the PR title and description**, then create it immediately —
+3. **Draft the PR title and description**, then create it immediately —
    no preview shown in chat, no confirmation pause. Decided 2026-09-18:
    the human checkpoint in this workflow is merge (via the GitHub mobile
    app, or explicitly requesting auto-merge on a specific PR), not PR
@@ -50,10 +45,10 @@ Do NOT proceed past step 1 or step 2 without stopping and telling the user why.
      End the body with the attribution lines given in this conversation's
      system-reminder, when one is present.
 
-5. **Wire up CI monitoring.** Use the `ccd_pr` tools (`bind_pr`, then
+4. **Wire up CI monitoring.** Use the `ccd_pr` tools (`bind_pr`, then
    `set_monitor`) on the newly created PR so its checks are watched and
    Auto-fix can be offered if something fails — instead of polling `gh` by
    hand. Do not enable auto-merge unless the user explicitly asks for it
    on that specific PR.
 
-6. Report only the PR URL back to the user — not the title/body again.
+5. Report only the PR URL back to the user — not the title/body again.

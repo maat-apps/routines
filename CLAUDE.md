@@ -292,15 +292,19 @@ tied to a hook.
   auto-merge itself stays opt-in per PR (never enabled by default; see
   `.claude/tasks/ecosystem/standardize-branch-protection-rules.md`).
 - **Don't re-run what CI already runs.** `.github/workflows/validate.yml`
-  runs lint/format:check/typecheck/test:coverage on every PR, identically
-  to the local commands, and Auto-fix reacts to a failure there
-  automatically — running `npm run validate` locally before pushing is
-  redundant token cost, not added safety. The one exception: `build` (and
-  `npm audit`) aren't in CI at all — they only run in `deploy.yml`,
-  _after_ merge — so `/open-pr` runs `npm run build` alone before opening
-  a PR, since nothing else ever checks it first. When you do run
-  something locally, report only ✅/❌ per stage with ~10 lines of context
-  on a ❌, never full logs on a pass (same rule `/check` follows).
+  runs lint/format:check/typecheck/test:coverage/build/audit on every PR
+  — the full `npm run validate` set, as a required, no-bypass check —
+  and Auto-fix reacts to a failure there automatically. Running any of
+  that locally before pushing via `/open-pr` is redundant token cost, not
+  added safety; push straight from a completed, committed change and let
+  CI + Auto-fix do the verifying. CI's `Audit` step uses
+  `--audit-level=high` specifically (stricter than that locally, where
+  plain `npm audit` still applies via `npm run validate`), since a
+  required no-bypass check would otherwise block every future merge on a
+  single low/moderate finding in some transitive dependency. When you do
+  run something locally anyway (debugging a failure, say), report only
+  ✅/❌ per stage with ~10 lines of context on a ❌, never full logs on a
+  pass (same rule `/check` follows).
 - When a change touches something CLAUDE.md or README.md describes
   (architecture, stack, file locations), update those docs in the same
   session rather than leaving them to drift until a later cleanup pass finds
