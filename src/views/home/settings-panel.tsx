@@ -45,7 +45,14 @@ import {
   parseBackup,
   type Backup,
 } from "@/lib/backup";
+import {
+  getDriveSyncMeta,
+  restoreFromDrive,
+  syncToDrive,
+} from "@/lib/drive/drive-sync";
 import { resetPreferences } from "@/lib/settings";
+
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? "";
 
 function SettingsSection({
   title,
@@ -151,6 +158,9 @@ export function SettingsPanel() {
   const [confirmUpdate, setConfirmUpdate] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
   const [updating, setUpdating] = useState(false);
+  const [driveMeta, setDriveMeta] = useState(getDriveSyncMeta());
+  const [driveBusy, setDriveBusy] = useState<"sync" | "restore" | null>(null);
+  const [confirmDriveRestore, setConfirmDriveRestore] = useState(false);
   const hasSnapshot = useSyncExternalStore(
     subscribeToUpdateSnapshot,
     hasUpdateSnapshot,
@@ -203,6 +213,35 @@ export function SettingsPanel() {
     // Other stores cache their own snapshots, so a reload is the honest way to
     // land on a clean state.
     window.location.reload();
+  }
+
+  async function handleDriveSync() {
+    setStatus(null);
+    setDriveBusy("sync");
+    try {
+      await syncToDrive(GOOGLE_CLIENT_ID);
+      setDriveMeta(getDriveSyncMeta());
+      setStatus(t("driveSyncDone"));
+    } catch {
+      setStatus(t("driveSyncFailed"));
+    } finally {
+      setDriveBusy(null);
+    }
+  }
+
+  async function confirmDriveRestoreAction() {
+    setConfirmDriveRestore(false);
+    setStatus(null);
+    setDriveBusy("restore");
+    try {
+      await restoreFromDrive(GOOGLE_CLIENT_ID);
+      setDriveMeta(getDriveSyncMeta());
+      setStatus(t("driveRestoreDone"));
+    } catch {
+      setStatus(t("driveRestoreFailed"));
+    } finally {
+      setDriveBusy(null);
+    }
   }
 
   return (
@@ -358,6 +397,48 @@ export function SettingsPanel() {
         )}
       </SettingsSection>
 
+      <SettingsSection title={t("sectionCloud")}>
+        <SettingsRow
+          title={t("driveSyncTitle")}
+          description={
+            GOOGLE_CLIENT_ID
+              ? driveMeta.lastSyncedAt
+                ? t("driveLastSynced", {
+                    date: new Intl.DateTimeFormat(locale, {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    }).format(new Date(driveMeta.lastSyncedAt)),
+                  })
+                : t("driveNeverSynced")
+              : t("driveUnconfigured")
+          }
+          action={
+            <Button
+              variant="outline"
+              className="min-h-10.5 px-4"
+              disabled={!GOOGLE_CLIENT_ID || driveBusy !== null}
+              onClick={() => void handleDriveSync()}
+            >
+              {t("driveSyncAction")}
+            </Button>
+          }
+        />
+        <SettingsRow
+          title={t("driveRestore")}
+          description={t("driveRestoreDescription")}
+          action={
+            <Button
+              variant="outline"
+              className="min-h-10.5 px-4"
+              disabled={!GOOGLE_CLIENT_ID || driveBusy !== null}
+              onClick={() => setConfirmDriveRestore(true)}
+            >
+              {t("driveRestoreAction")}
+            </Button>
+          }
+        />
+      </SettingsSection>
+
       <SettingsSection>
         <Button
           variant="destructive"
@@ -402,6 +483,14 @@ export function SettingsPanel() {
         description={t("resetSettingsConfirmDescription")}
         confirmLabel={t("resetSettingsAction")}
         onConfirm={confirmResetSettings}
+      />
+      <ConfirmDrawer
+        open={confirmDriveRestore}
+        onOpenChange={setConfirmDriveRestore}
+        title={t("driveRestoreTitle")}
+        description={t("driveRestoreConfirmDescription")}
+        confirmLabel={t("driveRestoreAction")}
+        onConfirm={() => void confirmDriveRestoreAction()}
       />
     </div>
   );

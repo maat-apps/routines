@@ -26,4 +26,17 @@ describe('typeof window === "undefined" guards', () => {
       await import("@/lib/locale-store");
     expect(getLocaleSnapshot()).toBe(DEFAULT_LOCALE);
   });
+
+  it("drive-auth.ts's requestDriveAccessToken rejects instead of touching `window`", async () => {
+    const { requestDriveAccessToken, DriveAuthError } =
+      await import("@/lib/drive/drive-auth");
+    await expect(requestDriveAccessToken("client-id")).rejects.toThrow(
+      DriveAuthError,
+    );
+  });
+
+  it("drive-sync.ts's getDriveSyncMeta returns the defaults", async () => {
+    const { getDriveSyncMeta } = await import("@/lib/drive/drive-sync");
+    expect(getDriveSyncMeta()).toEqual({ fileId: null, lastSyncedAt: null });
+  });
 });
