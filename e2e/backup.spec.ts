@@ -72,8 +72,10 @@ test.describe("backup export / import", () => {
     await dialog.getByRole("button", { name: en.importConfirm }).click();
 
     await expect(page.getByText(en.importDone)).toBeVisible();
-    // Close the settings drawer and check the list underneath.
-    await page.keyboard.press("Escape");
+    // Close the settings drawer via the phone back gesture (see
+    // drawer-dismissal.spec.ts) and check the list underneath — not
+    // Escape, which has no equivalent on a phone with no hardware keyboard.
+    await page.goBack();
     await expect(
       page.getByRole("button", { name: /Imported routine/ }),
     ).toBeVisible();
@@ -96,7 +98,7 @@ test.describe("backup export / import", () => {
     });
 
     await expect(page.getByText(en.importFailed)).toBeVisible();
-    await page.keyboard.press("Escape");
+    await page.goBack();
     await expect(page.getByRole("button", { name: /Keep me/ })).toBeVisible();
   });
 });

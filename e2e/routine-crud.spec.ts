@@ -15,6 +15,9 @@ test.describe("create / edit / reorder / delete a routine", () => {
     await page.getByRole("button", { name: en.addStep }).click();
     await page.getByLabel(t("stepNumber", { number: 1 })).fill("Brush teeth");
     // Enter on a step commits it and focuses a newly-inserted row below.
+    // Unlike Escape (see backup.spec.ts), this is representative of a real
+    // phone: a virtual keyboard's Return/Next key dispatches a genuine
+    // Enter keydown on a focused text input on both Android and iOS.
     await page.getByLabel(t("stepNumber", { number: 1 })).press("Enter");
     await page.getByLabel(t("stepNumber", { number: 2 })).fill("Read");
 
