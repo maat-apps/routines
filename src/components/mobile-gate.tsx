@@ -8,9 +8,12 @@ export function MobileGate({ children }: { children: ReactNode }) {
   useEffect(() => {
     // sw.js is only built in production (see vite.config.ts); registering it
     // in dev would also fight Vite's own HMR with a caching service worker.
+    // BASE_URL (not a hardcoded "/routines/") so a PR preview built under
+    // "/routines/pr-<n>/" registers its own worker scoped to that subpath
+    // instead of colliding with main's.
     if (import.meta.env.PROD && "serviceWorker" in navigator) {
       navigator.serviceWorker
-        .register("/routines/sw.js")
+        .register(`${import.meta.env.BASE_URL}sw.js`)
         .catch(() => undefined);
     }
   }, []);

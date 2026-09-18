@@ -28,7 +28,10 @@ const RoutineEditView = lazy(() =>
 // downloads the screen it needs.
 export function AppRouter() {
   return (
-    <BrowserRouter basename="/routines">
+    // BASE_URL (not a hardcoded "/routines") so a PR preview built under
+    // "/routines/pr-<n>/" (see vite.config.ts) routes correctly there too.
+    // BrowserRouter's basename has no trailing slash; BASE_URL always does.
+    <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, "")}>
       <Suspense fallback={null}>
         <Routes>
           <Route path="/" element={<HomeView />} />

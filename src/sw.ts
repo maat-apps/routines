@@ -10,7 +10,11 @@ declare const self: ServiceWorkerGlobalScope & {
 };
 
 const CACHE_NAME = "routines-v7";
-const APP_SHELL = ["/routines/"];
+// BASE_URL (not a hardcoded "/routines/") so a PR preview built under
+// "/routines/pr-<n>/" (see vite.config.ts) precaches and falls back to its
+// own shell instead of main's.
+const BASE_URL = import.meta.env.BASE_URL;
+const APP_SHELL = [BASE_URL];
 const PRECACHE_URLS = self.__WB_MANIFEST.map((entry) =>
   typeof entry === "string" ? entry : entry.url,
 );
@@ -67,7 +71,7 @@ function networkFirst(request: Request): Promise<Response> {
         caches
           .match(request)
           .then(
-            (cached) => cached || caches.match("/routines/"),
+            (cached) => cached || caches.match(BASE_URL),
           ) as Promise<Response>,
     );
 }
@@ -100,7 +104,7 @@ self.addEventListener("fetch", (event) => {
   // indefinitely until an unrelated shell change happened to bump CACHE_NAME.
   event.respondWith(
     event.request.mode === "navigate" ||
-      requestUrl.pathname === "/routines/manifest.json"
+      requestUrl.pathname === `${BASE_URL}manifest.json`
       ? networkFirst(event.request)
       : cacheFirst(event.request),
   );
