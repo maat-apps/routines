@@ -274,7 +274,8 @@ tied to a hook.
 
 - Formatting and lint --fix run automatically after every file edit via
   hooks — don't manually re-run them or narrate that you're about to.
-- Before calling a task done, run `/check`.
+- `/check` is for manual/debugging use only, not a required step before
+  committing or pushing — see below.
 - Prefer `Grep`/`Glob` over reading whole files; read only what a task needs.
 - For broad codebase audits, use `/find-antipatterns` instead of reading many
   files inline.
@@ -283,34 +284,19 @@ tied to a hook.
   edit or commit directly on `main`, including doc-only changes. Branch
   first, always.
 - **Commit automatically once a task's changes are complete** — don't
-  wait to be asked, and don't leave finished work sitting uncommitted for
-  the user to commit by hand.
-- **Push and open the PR automatically too, via `/open-pr`** — no draft
-  preview, no confirmation pause before `gh pr create`. Decided
-  2026-09-18: the human checkpoint in this workflow is merge, not PR
-  creation — auto-merge itself stays opt-in per PR (never enabled by
-  default; see
-  `.claude/tasks/ecosystem/standardize-branch-protection-rules.md`). Two
-  equally fine ways for that checkpoint to resolve once a PR is ready:
-  the user merges it themselves from the GitHub mobile app, or tells
-  Claude Code to merge/enable auto-merge on that specific PR. If checks
-  have already passed by then (`mergeStateStatus: CLEAN`), GitHub's
-  auto-merge API refuses to arm on a PR with nothing left to wait for —
-  merge it directly instead (`gh pr merge <n> --squash`).
-- **Don't re-run what CI already runs.** `.github/workflows/validate.yml`
-  runs lint/format:check/typecheck/test:coverage/build/audit on every PR
-  — the full `npm run validate` set, as a required, no-bypass check —
-  and Auto-fix reacts to a failure there automatically. Running any of
-  that locally before pushing via `/open-pr` is redundant token cost, not
-  added safety; push straight from a completed, committed change and let
-  CI + Auto-fix do the verifying. CI's `Audit` step uses
-  `--audit-level=high` specifically (stricter than that locally, where
-  plain `npm audit` still applies via `npm run validate`), since a
-  required no-bypass check would otherwise block every future merge on a
-  single low/moderate finding in some transitive dependency. When you do
-  run something locally anyway (debugging a failure, say), report only
-  ✅/❌ per stage with ~10 lines of context on a ❌, never full logs on a
-  pass (same rule `/check` follows).
+  wait to be asked.
+- **Push and open the PR immediately via `/open-pr`** — no draft preview,
+  no confirmation pause. Merge is the human checkpoint, not PR creation:
+  the user merges from the GitHub mobile app, or tells Claude Code to
+  merge/enable auto-merge on a specific PR. If checks already passed,
+  auto-merge can't arm (nothing left to wait for) — use
+  `gh pr merge <n> --squash` directly instead.
+- **Skip local lint/format/typecheck/test/build/audit before pushing.**
+  `.github/workflows/validate.yml` runs the full set as a required check,
+  and Auto-fix handles failures. CI's `Audit` step uses
+  `--audit-level=high`; local `npm run validate` stays plain `npm audit`.
+  Only run checks locally when actively debugging, and keep that output
+  to ✅/❌ with ~10 lines of context on a ❌ — never full logs on a pass.
 - When a change touches something CLAUDE.md or README.md describes
   (architecture, stack, file locations), update those docs in the same
   session rather than leaving them to drift until a later cleanup pass finds

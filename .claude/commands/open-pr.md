@@ -11,23 +11,16 @@ Do NOT proceed past step 1 without stopping and telling the user why.
    - `git status --short` — refuse if there are uncommitted changes. Tell the
      user to commit or stash first; never commit on their behalf here.
 
-2. **Push the branch — no local verification first.**
-   `.github/workflows/validate.yml` runs the full
-   lint/format:check/typecheck/test:coverage/build/audit set as a
-   required, no-bypass check on every PR, and Auto-fix reacts to a
-   failure there automatically. Running any of that locally here first is
-   pure token cost with no added safety — push straight from a completed,
-   committed change. Decided 2026-09-18.
+2. **Push the branch — no local verification first.** CI runs the full
+   check set (lint/format/typecheck/test/build/audit) and Auto-fix
+   handles any failure automatically.
    - `git rev-parse --abbrev-ref --symbolic-full-name @{u}` to check if it
      already tracks a remote branch.
    - If untracked: `git push -u origin <branch>`. If tracked: `git push`
      (only if local is ahead of remote — check first, don't force).
 
-3. **Draft the PR title and description**, then create it immediately —
-   no preview shown in chat, no confirmation pause. Decided 2026-09-18:
-   the human checkpoint in this workflow is merge (via the GitHub mobile
-   app, or explicitly requesting auto-merge on a specific PR), not PR
-   creation, so drafting and creating are one step, not two.
+3. **Draft the PR title and description, then create it immediately** —
+   no preview shown in chat, no confirmation pause.
    - Title: short (under 70 chars), imperative, no trailing period.
    - Description: follow the exact rules from `/pr-description` — inspect
      `git log --oneline main..HEAD`, `git diff main --stat`, and the actual
@@ -51,6 +44,4 @@ Do NOT proceed past step 1 without stopping and telling the user why.
    hand. Do not enable auto-merge unless the user explicitly asks for it
    on that specific PR.
 
-5. Confirm briefly that the PR was opened — no title/body, no URL. The
-   user checks GitHub/the mobile app directly and doesn't need the link
-   repeated back.
+5. Confirm briefly that the PR was opened — no title/body, no URL.
