@@ -260,8 +260,6 @@ gamification, or notifications. Keep the UI restrained: the accent is a neutral
 **white** on dark surfaces. The earlier coral accent was removed deliberately —
 do not reintroduce it.
 
-<!-- BEGIN AUTO-GENERATED: setup-claude-workflow -->
-
 ## Automation
 
 | Purpose          | npm script              | Runs automatically via                                                      |
@@ -294,11 +292,11 @@ directly.
   shared by 2+ views only (gates, `app-bar.tsx`, `ui/` primitives).
 - Validate anything crossing a trust boundary (backup imports, localStorage
   read-back) with Valibot schemas (`src/lib/schemas.ts`), not hand-rolled
-  `typeof`/`isRecord` checks — schemas are the single source of truth for
-  both runtime validation and the inferred TS types (`v.InferOutput`), and
-  this is the standard validation library across the maat-apps ecosystem, not
-  just this repo (see `.claude/tasks/ecosystem/adopt-valibot-for-validation.md`).
-  Validate array/record entries independently rather than handing a whole
+  `typeof`/`isRecord` checks — see the State bullet above for why schemas are
+  the single source of truth here. Also the standard validation library
+  across the maat-apps ecosystem, not just this repo (see
+  `.claude/tasks/ecosystem/adopt-valibot-for-validation.md`). Validate
+  array/record entries independently rather than handing a whole
   array/record to `v.array()`/`v.record()` in one call, so one malformed
   entry doesn't take an otherwise-valid whole down with it.
 - Full pattern log: `.claude/docs/patterns.md` — read by `/find-antipatterns`
@@ -306,19 +304,13 @@ directly.
 
 ## Workflow Rules
 
-- Formatting and lint --fix run automatically after every file edit via
-  hooks — don't manually re-run them or narrate that you're about to.
-- `npm run validate` is for manual/debugging use only, not a required
-  step before committing or pushing — see below.
-- Don't run `npm run typecheck`/`lint`/`build`/`test:coverage`/`test:e2e`
-  locally to double-check a change before committing or pushing — the Stop
-  hook already runs typecheck every turn and coverage when `src/`/`tests/`
-  changed, and `validate.yml` runs the full set (including `test:e2e`) in
-  CI on every PR. Running them again locally is redundant work against
-  what's already covered, not extra safety. This applies to `test:e2e`
-  specifically, not just the cheaper checks — a full Playwright run
-  (build + serve + browser) is exactly the kind of repeated local
-  verification CI already exists to replace.
+- Don't manually re-run format/lint/typecheck/build/test:coverage/test:e2e
+  (individually or via `npm run validate`) to double-check a change before
+  committing or pushing, or narrate that you're about to — see the
+  Automation table above for what already runs per-edit/per-turn, and
+  `validate.yml` for what CI covers on every PR. Running any of it again
+  locally is redundant work against what's already covered, not extra
+  safety.
 - Prefer `Grep`/`Glob` over reading whole files; read only what a task needs.
 - For broad codebase audits, use `/find-antipatterns` instead of reading many
   files inline.
@@ -349,5 +341,3 @@ directly.
   `eslint --fix` after every edit, and it will strip an import that's
   unused at that intermediate moment, before the usage lands in a later
   edit. Hit repeatedly across sessions; always costs an extra edit to fix.
-
-<!-- END AUTO-GENERATED: setup-claude-workflow -->
