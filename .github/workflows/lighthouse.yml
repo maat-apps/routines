@@ -1,0 +1,41 @@
+name: Lighthouse
+
+# Manual/scheduled only, deliberately not on every PR — Lighthouse's own
+# timing-based scoring is slower and more flaky on shared CI runners than
+# the deterministic checks in validate.yml (lint/typecheck/tests/axe-core),
+# per this task's own notes.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Lighthouse audit
+        run: npm run test:lighthouse
+
+      - name: Upload Lighthouse report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-report
+          path: lighthouse-report/
+          retention-days: 30
