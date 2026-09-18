@@ -2,6 +2,7 @@ import { startTransition, useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 
 import { RoutineEditForm } from "@/components/routine-edit-form";
+import { useSmartBack } from "@/hooks/use-smart-back";
 import { useRoutines } from "@/hooks/use-store";
 import { useTranslation } from "@/i18n/use-translation";
 import { createId } from "@/lib/routine-utils";
@@ -10,6 +11,7 @@ import type { Routine } from "@/types";
 
 export function NewRoutineView() {
   const navigate = useNavigate();
+  const smartBack = useSmartBack("/");
   const { t } = useTranslation();
   const routines = useRoutines();
   const [routine, setRoutine] = useState<Routine | null>(null);
@@ -31,11 +33,18 @@ export function NewRoutineView() {
     <RoutineEditForm
       routine={routine}
       title={t("newRoutineTitle")}
-      onBack={() => startTransition(() => navigate("/"))}
+      onBack={() => startTransition(smartBack)}
       onSave={saveRoutine}
       onComplete={() =>
         startTransition(() =>
-          navigate(`/routine?id=${encodeURIComponent(routine.id)}`),
+          // replace, not push: this draft's own "/new" entry was never a
+          // real back-target (remounting it seeds a brand new blank
+          // routine, per the effect above) — replacing it means back from
+          // the created routine's view lands on home in one step instead
+          // of resurrecting an empty draft.
+          navigate(`/routine?id=${encodeURIComponent(routine.id)}`, {
+            replace: true,
+          }),
         )
       }
       onDelete={() => startTransition(() => navigate("/"))}

@@ -84,9 +84,19 @@ The only network traffic is the service worker fetching the app's own files.
   `src/app/router.tsx` maps them to routes with React Router
   (`<BrowserRouter basename="/routines">`), and each view is `lazy()`-loaded as
   its own chunk. Views read the target id from the `?id=` search param via
-  `useSearchParams`. Navigation is plain `navigate(...)` between `/`,
-  `/routine?id=`, `/routine/edit?id=`, and `/new`. Settings is a drawer opened
-  from the home view's state, not a route — `src/views/home/settings-panel.tsx`.
+  `useSearchParams`. Drilling deeper (`/` → `/routine?id=` → `/routine/edit?id=`,
+  and `/` → `/new`) is a plain forward `navigate(...)`. Returning is
+  `src/hooks/use-smart-back.ts`'s `useSmartBack(fallback)`: every route here is
+  also a valid deep link (hard refresh, PWA relaunch, a bookmark), so a "Back"
+  action can't assume a real entry sits behind it — the hook pops real history
+  (`navigate(-1)`) when this location was actually pushed (React Router's
+  `location.key !== "default"`) and replaces to `fallback` otherwise, so
+  repeated edit/confirm round trips don't grow the stack and native back keeps
+  landing where the AppBar arrow would. `new-routine-view.tsx`'s onComplete is
+  the one exception — creating a routine is a forward transition to a
+  different screen, not a "back," so it just replaces the disposable `/new`
+  draft entry directly. Settings is a drawer opened from the home view's
+  state, not a route — `src/views/home/settings-panel.tsx`.
   A component used by 2+ views lives in `src/components/` instead of a view
   folder (e.g. `app-bar.tsx`, `routine-edit-form.tsx`, `missing-routine.tsx`).
 
