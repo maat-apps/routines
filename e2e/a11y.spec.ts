@@ -1,7 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page, test } from "@playwright/test";
 
-import { seedData } from "./utils";
+import { en, seedData } from "./utils";
 
 // Zero violations against WCAG 2.0/2.1 A+AA, scanned per screen rather than
 // once for the whole app — a violation's exact location (which screen, which

@@ -259,14 +259,19 @@ The only network traffic is the service worker fetching the app's own files.
   `tsconfig.app.json` nor `tsconfig.node.json` covers it. Runs against the
   real production build (`webServer` does `npm run build` + `vite preview`,
   not the dev server), same phone-sized-viewport constraint as the Mobile
-  gate bullet above. Two projects, two OSes, deliberately not a third (a
-  Playwright device preset only changes viewport/UA, never the engine, so
-  another Android profile would be redundant with `mobile-chromium`):
-  `mobile-chromium` (`devices["Galaxy A55"]`) and `mobile-iphone`
-  (`devices["iPhone 13"]`, real **WebKit** — the reasoning behind both
-  specific models is in git history, not reproduced here since it'll only
-  go stale). `test:e2e` runs both, no `--project` filter; CI installs both
-  `chromium` and `webkit` binaries. WebKit has no CDP session API, so
+  gate bullet above. Two device projects, two OSes, deliberately not a
+  third (a Playwright device preset only changes viewport/UA, never the
+  engine, so another Android profile would be redundant with
+  `mobile-chromium`): `mobile-chromium` (`devices["Galaxy A55"]`) and
+  `mobile-iphone` (`devices["iPhone 13"]`, real **WebKit** — the reasoning
+  behind both specific models is in git history, not reproduced here since
+  it'll only go stale). A third project, `lighthouse`, exists solely to
+  scope `lighthouse.spec.ts` to its own `npm run test:lighthouse` — see the
+  Accessibility + Lighthouse audits bullet below. `test:e2e` selects
+  `mobile-chromium`/`mobile-iphone` explicitly (`--project` twice) rather
+  than running `playwright test` bare, specifically so it never picks up
+  `lighthouse`; CI installs both `chromium` and `webkit` binaries. WebKit
+  has no CDP session API, so
   `mobile-iphone` excludes `drawer-dismissal.spec.ts` (raw CDP touch
   events, no native Playwright touch-drag primitive exists yet) via its
   own `testIgnore` rather than that one hard-failing there; **remember to
