@@ -16,7 +16,9 @@ them in mind when writing or reviewing code:
   prefer true black (`#000000`) backgrounds, which save power on OLED screens.
   This is about the shipped app's runtime behavior, not the footprint of
   building it — the project is developed with Claude Code, which has its own
-  energy cost (see README's "Built with Claude").
+  energy cost (see README's "Built with Claude"). The build/verify side of
+  that cost is why CI runs each check exactly once instead of locally too
+  — see the Automation section below.
 - **Ease of use.** Favor solutions that keep the app simple and predictable
   for the user.
 - **Accessibility.** Keep components accessible — semantic markup,
