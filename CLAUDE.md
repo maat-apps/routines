@@ -16,7 +16,9 @@ them in mind when writing or reviewing code:
   prefer true black (`#000000`) backgrounds, which save power on OLED screens.
   This is about the shipped app's runtime behavior, not the footprint of
   building it — the project is developed with Claude Code, which has its own
-  energy cost (see README's "Built with Claude").
+  energy cost (see README's "Built with Claude"). The build/verify side of
+  that cost is why CI runs each check exactly once instead of locally too
+  — see the Automation section below.
 - **Ease of use.** Favor solutions that keep the app simple and predictable
   for the user.
 - **Accessibility.** Keep components accessible — semantic markup,
@@ -242,11 +244,9 @@ every turn (cheap enough to tolerate constantly); the test suite only runs
 when this turn actually touched `src/`/`tests/` — most turns (planning,
 docs, git operations, pure Q&A) don't, and skipping them avoids paying the
 ~10-15s test cost for nothing to check. Neither blocks the turn — both are
-summary-only warnings pointing at `/check` for details.
-
-`/check` additionally runs `build` + `npm audit`, which nothing runs
-automatically — those stay a deliberate, run-when-actually-done step, not
-tied to a hook.
+summary-only warnings. `build`/`npm audit` aren't tied to any hook, but
+`validate.yml` covers both in CI on every PR. For a full manual check
+(all six steps at once), run `npm run validate` directly.
 
 ## Conventions
 
@@ -274,7 +274,8 @@ tied to a hook.
 
 - Formatting and lint --fix run automatically after every file edit via
   hooks — don't manually re-run them or narrate that you're about to.
-- Before calling a task done, run `/check`.
+- `npm run validate` is for manual/debugging use only, not a required
+  step before committing or pushing — see below.
 - Prefer `Grep`/`Glob` over reading whole files; read only what a task needs.
 - For broad codebase audits, use `/find-antipatterns` instead of reading many
   files inline.
@@ -282,6 +283,15 @@ tied to a hook.
 - Check the current branch before editing or committing anything — never
   edit or commit directly on `main`, including doc-only changes. Branch
   first, always.
+- Delete local branches once their PR is confirmed merged on GitHub —
+  `git branch -d`, or `-D` when a squash-merge or an already-deleted
+  remote branch blocks the safe check (git's ancestry check doesn't
+  understand squash merges). Don't wait to be asked; verify via GitHub
+  first (`gh pr view`/`gh api`), not just local heuristics.
+- Commit automatically once a task's changes are complete, then use
+  `/open-pr` to push and open the PR — see that command for the full
+  flow (no local re-verification, no confirmation pause, merge is the
+  human checkpoint).
 - When a change touches something CLAUDE.md or README.md describes
   (architecture, stack, file locations), update those docs in the same
   session rather than leaving them to drift until a later cleanup pass finds
