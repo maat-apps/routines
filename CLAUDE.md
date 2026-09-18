@@ -225,48 +225,33 @@ The only network traffic is the service worker fetching the app's own files.
   different test in the same file until the missing `restoreAllMocks()`
   was added.
 
-- **E2E tests (Playwright).** `e2e/*.spec.ts` + `playwright.config.ts`
-  (its own `tsconfig.e2e.json` project reference, separate from
-  `tsconfig.app.json`/`tsconfig.node.json`, since neither of those covers
-  it). Runs against the real production build — `webServer` in
-  `playwright.config.ts` runs `npm run build` then `vite preview`, not the
-  Vite dev server — under a phone-sized viewport across two device
-  projects, two OSes, deliberately not more (the mobile gate hides the app
-  at CSS widths ≥481px regardless of the device's own touch/UA emulation):
+- **E2E tests (Playwright).** `e2e/*.spec.ts` + `playwright.config.ts` — its
+  own `tsconfig.e2e.json` project reference, since neither
+  `tsconfig.app.json` nor `tsconfig.node.json` covers it. Runs against the
+  real production build (`webServer` does `npm run build` + `vite preview`,
+  not the dev server), same phone-sized-viewport constraint as the Mobile
+  gate bullet above. Two projects, two OSes, deliberately not a third (a
+  Playwright device preset only changes viewport/UA, never the engine, so
+  another Android profile would be redundant with `mobile-chromium`):
   `mobile-chromium` (`devices["Galaxy A55"]`) and `mobile-iphone`
-  (`devices["iPhone 13"]`, real **WebKit**). A Playwright device preset only
-  ever changes viewport/UA, never the rendering engine — every `"iPhone *"`
-  preset drives the same bundled WebKit, every Android preset the same
-  bundled Chromium — so a third project (e.g. a second Android profile)
-  would only add a different viewport width, not real engine coverage,
-  given WebKit is the one project here actually exercising a different
-  engine. Both models were picked for real-world usage share rather than
-  "newest"/flagship — see git history (`feature/e2e-user-flow-tests`) for
-  the actual data behind the choice, not reproduced here since it'll only
-  go stale with time; re-check before assuming it still holds if it ever
-  matters. `test:e2e` runs both (no `--project` filter); `npm ci`/CI installs both
-  `chromium` and `webkit` browser binaries accordingly. WebKit doesn't
-  support Playwright's CDP session API (Chromium-only), so `mobile-iphone`
-  excludes the two specs built on it via its own `testIgnore` —
-  `drawer-dismissal.spec.ts` (raw CDP touch events) and `app-lock.spec.ts`
-  (a CDP virtual WebAuthn authenticator) — rather than those hard-failing
-  there; everything else still runs for real on WebKit. `e2e/fixtures.ts`
-  seeds `localStorage` directly via
-  `page.addInitScript` for tests that aren't exercising the create/edit UI
-  itself, and holds those two CDP-based helpers raw Playwright APIs don't
-  cover: the touch-swipe simulator (Base UI's drawer swipe-to-dismiss
-  reacts to real touch events, not synthetic mouse drags — see the Drawer
-  bullet above) and the virtual WebAuthn authenticator (for the app-lock
-  enrol/unlock flow). One easy trap when
-  writing new specs: `page.goto("/new")` against this `baseURL` (which
-  itself already ends in `/routines/`) resolves to the _origin_ root
+  (`devices["iPhone 13"]`, real **WebKit** — the reasoning behind both
+  specific models is in git history, not reproduced here since it'll only
+  go stale). `test:e2e` runs both, no `--project` filter; CI installs both
+  `chromium` and `webkit` binaries. WebKit has no CDP session API, so
+  `mobile-iphone` excludes the two specs built on it via its own
+  `testIgnore` — `drawer-dismissal.spec.ts` (raw CDP touch events) and
+  `app-lock.spec.ts` (a CDP virtual WebAuthn authenticator) — rather than
+  those hard-failing there; **remember to add the same exclusion if a
+  future spec needs CDP too.** `e2e/fixtures.ts` holds reusable helpers —
+  `seedData` (seeds `localStorage` via `page.addInitScript`, skipping the
+  create/edit UI), `swipeDown` and `addVirtualAuthenticator` (the two
+  CDP-based ones above, raw Playwright APIs don't cover either). One easy
+  trap: `page.goto("/new")` against this `baseURL` (already ending in
+  `/routines/`) resolves to the _origin_ root
   (`http://localhost:4173/new`), not `/routines/new` — a leading `/` in a
-  relative navigation replaces the whole path per URL-resolution rules.
-  Always navigate with no leading slash (`page.goto("new")`,
-  `page.goto("routine?id=…")`, `page.goto("")` for home). No CI artifact
-  upload for failures (removed deliberately — not worth the storage for a
-  debugging aid that's one command away locally): `npm run test:e2e:report`
-  regenerates and opens the same HTML report, traces and all, on demand.
+  relative navigation replaces the whole path. Always navigate with no
+  leading slash (`page.goto("new")`, `page.goto("")` for home). Debugging a
+  failure locally: `npm run test:e2e:report`.
 
 ## Product context
 
