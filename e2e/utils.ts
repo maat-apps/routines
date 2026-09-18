@@ -60,7 +60,7 @@ export async function seedData(
 ): Promise<void> {
   await page.addInitScript(
     ([key, value]) => {
-      window.localStorage.setItem(key as string, value as string);
+      window.localStorage.setItem(key, value);
     },
     [DATA_KEY, JSON.stringify({ routines, state })],
   );
