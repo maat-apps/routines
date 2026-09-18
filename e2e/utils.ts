@@ -5,6 +5,15 @@ import { type Page } from "@playwright/test";
 
 const DATA_KEY = "routines-data";
 
+function loadCatalog(relativePath: string): Record<string, string> {
+  return JSON.parse(
+    readFileSync(
+      fileURLToPath(new URL(relativePath, import.meta.url)),
+      "utf-8",
+    ),
+  ) as Record<string, string>;
+}
+
 // The real strings, read from their actual source rather than retyped by
 // hand into each spec — playwright.config.ts pins `locale: "en-US"` so the
 // app's own navigator.language-based detection (locale-store.ts) always
@@ -14,12 +23,12 @@ const DATA_KEY = "routines-data";
 // the CI runner's Chromium happened to default to, and a wording change in
 // en.json could silently stop matching hand-copied strings without any
 // test catching the drift.
-export const en = JSON.parse(
-  readFileSync(
-    fileURLToPath(new URL("../src/i18n/en.json", import.meta.url)),
-    "utf-8",
-  ),
-) as Record<string, string>;
+export const en = loadCatalog("../src/i18n/en.json");
+
+// Only for asserting the *other* locale actually took effect after
+// switching (settings.spec.ts) — the suite otherwise stays on "en"
+// throughout (see the locale pin above), this isn't a second default.
+export const pl = loadCatalog("../src/i18n/pl.json");
 
 /** Mirrors use-translation.ts's own `{placeholder}` substitution. */
 export function t(key: string, params: Record<string, string | number> = {}) {

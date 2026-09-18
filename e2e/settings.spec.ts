@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { en, seedData } from "./utils";
+import { en, pl, seedData } from "./utils";
 
 test.describe("settings", () => {
   test("switching language updates the visible label", async ({ page }) => {
@@ -8,6 +8,7 @@ test.describe("settings", () => {
     await page.goto("");
     await page.getByRole("button", { name: en.settings }).click();
 
+    const dialog = page.getByRole("dialog");
     const languageTrigger = page.getByRole("combobox", {
       name: en.language,
     });
@@ -24,6 +25,17 @@ test.describe("settings", () => {
     await expect(page.locator('[data-slot="select-value"]')).toHaveText(
       "Polski",
     );
+    // Not just the select's own value: confirm already-rendered UI outside
+    // the select actually re-rendered too — the settings drawer's own
+    // title, and the home screen underneath it (still mounted behind the
+    // drawer, not replaced by it). A bug that updates the stored locale and
+    // the select but misses re-rendering other already-mounted text (a
+    // stale closure, a missed t() call) wouldn't be caught by the select
+    // check alone.
+    await expect(
+      dialog.getByRole("heading", { name: pl.settings }),
+    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: pl.appName })).toBeVisible();
   });
 
   test("reset settings clears preferences but leaves routine data alone", async ({
