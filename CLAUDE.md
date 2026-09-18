@@ -33,14 +33,18 @@ them in mind when writing or reviewing code:
 - `npm run format:check` / `npm run format` — Prettier. Prettier also runs _as an
   ESLint rule_ (`prettier/prettier: error`), so a formatting slip fails lint too.
 - `npm run typecheck` — `tsc -b` (project references: `tsconfig.app.json` for
-  `src/`, `tsconfig.node.json` for `vite.config.ts`).
-- `npm run test:unit` / `npm run test:unit:watch` — Vitest, `src/lib/`
-  (and, once `feature/unit-tests-react` lands, `src/hooks/`/`src/i18n/`).
-  `npm run test:coverage` runs the same suite with a coverage report and
-  enforces the threshold in `vitest.config.ts`. See Architecture below.
+  `src/`, `tsconfig.node.json` for `vite.config.ts`, `tsconfig.e2e.json` for
+  `e2e/` and `playwright.config.ts`).
+- `npm run test:unit` / `npm run test:unit:watch` — Vitest, covering
+  `src/lib/`, `src/hooks/`, and `src/i18n/`. `npm run test:coverage` runs
+  the same suite with a coverage report and enforces the threshold in
+  `vitest.config.ts`. See Architecture below.
+- `npm run test:e2e` — Playwright, `e2e/`, against the real production
+  build (`npm run build` + `vite preview`) rather than the dev server. See
+  Architecture below.
 - `npm run validate` — lint + format:check + typecheck + test:coverage +
-  build + `npm audit`; the same gates CI runs. `npm run validate:fix`
-  applies the autofixable ones.
+  test:e2e + build + `npm audit`; the same gates CI runs. `npm run
+validate:fix` applies the autofixable ones.
 - `npm run build:analyze` — same production build, plus `dist/stats.html`, a
   `rollup-plugin-visualizer` treemap of what's inside each chunk (opens
   automatically). Wraps `npm run build` in `cross-env ANALYZE=1` so it works
@@ -80,9 +84,19 @@ The only network traffic is the service worker fetching the app's own files.
   `src/app/router.tsx` maps them to routes with React Router
   (`<BrowserRouter basename="/routines">`), and each view is `lazy()`-loaded as
   its own chunk. Views read the target id from the `?id=` search param via
-  `useSearchParams`. Navigation is plain `navigate(...)` between `/`,
-  `/routine?id=`, `/routine/edit?id=`, and `/new`. Settings is a drawer opened
-  from the home view's state, not a route — `src/views/home/settings-panel.tsx`.
+  `useSearchParams`. Drilling deeper (`/` → `/routine?id=` → `/routine/edit?id=`,
+  and `/` → `/new`) is a plain forward `navigate(...)`. Returning is
+  `src/hooks/use-smart-back.ts`'s `useSmartBack(fallback)`: every route here is
+  also a valid deep link (hard refresh, PWA relaunch, a bookmark), so a "Back"
+  action can't assume a real entry sits behind it — the hook pops real history
+  (`navigate(-1)`) when this location was actually pushed (React Router's
+  `location.key !== "default"`) and replaces to `fallback` otherwise, so
+  repeated edit/confirm round trips don't grow the stack and native back keeps
+  landing where the AppBar arrow would. `new-routine-view.tsx`'s onComplete is
+  the one exception — creating a routine is a forward transition to a
+  different screen, not a "back," so it just replaces the disposable `/new`
+  draft entry directly. Settings is a drawer opened from the home view's
+  state, not a route — `src/views/home/settings-panel.tsx`.
   A component used by 2+ views lives in `src/components/` instead of a view
   folder (e.g. `app-bar.tsx`, `routine-edit-form.tsx`, `missing-routine.tsx`).
 
@@ -221,14 +235,43 @@ The only network traffic is the service worker fetching the app's own files.
   different test in the same file until the missing `restoreAllMocks()`
   was added.
 
+- **E2E tests (Playwright).** `e2e/*.spec.ts` + `playwright.config.ts` — its
+  own `tsconfig.e2e.json` project reference, since neither
+  `tsconfig.app.json` nor `tsconfig.node.json` covers it. Runs against the
+  real production build (`webServer` does `npm run build` + `vite preview`,
+  not the dev server), same phone-sized-viewport constraint as the Mobile
+  gate bullet above. Two projects, two OSes, deliberately not a third (a
+  Playwright device preset only changes viewport/UA, never the engine, so
+  another Android profile would be redundant with `mobile-chromium`):
+  `mobile-chromium` (`devices["Galaxy A55"]`) and `mobile-iphone`
+  (`devices["iPhone 13"]`, real **WebKit** — the reasoning behind both
+  specific models is in git history, not reproduced here since it'll only
+  go stale). `test:e2e` runs both, no `--project` filter; CI installs both
+  `chromium` and `webkit` binaries. WebKit has no CDP session API, so
+  `mobile-iphone` excludes `drawer-dismissal.spec.ts` (raw CDP touch
+  events, no native Playwright touch-drag primitive exists yet) via its
+  own `testIgnore` rather than that one hard-failing there; **remember to
+  add the same exclusion if a future spec needs raw CDP too.**
+  `app-lock.spec.ts` used to need the same exclusion (a CDP virtual
+  WebAuthn authenticator) but moved to `context.credentials` (Playwright
+  1.61+, cross-browser unlike `newCDPSession`), so it now runs on both
+  projects. `e2e/utils.ts` holds reusable helpers — `seedData` (seeds
+  `localStorage` via `page.addInitScript`, skipping the create/edit UI)
+  and `swipeDown` (the one still-CDP-based helper, raw Playwright APIs
+  don't cover touch drag). One easy trap: `page.goto("/new")` against this
+  `baseURL` (already ending in
+  `/routines/`) resolves to the _origin_ root
+  (`http://localhost:4173/new`), not `/routines/new` — a leading `/` in a
+  relative navigation replaces the whole path. Always navigate with no
+  leading slash (`page.goto("new")`, `page.goto("")` for home). Debugging a
+  failure locally: `npm run test:e2e:report`.
+
 ## Product context
 
 See `PRODUCT.md` for the design intent: a calm, quiet checklist — no history,
 gamification, or notifications. Keep the UI restrained: the accent is a neutral
 **white** on dark surfaces. The earlier coral accent was removed deliberately —
 do not reintroduce it.
-
-<!-- BEGIN AUTO-GENERATED: setup-claude-workflow -->
 
 ## Automation
 
@@ -244,9 +287,11 @@ every turn (cheap enough to tolerate constantly); the test suite only runs
 when this turn actually touched `src/`/`tests/` — most turns (planning,
 docs, git operations, pure Q&A) don't, and skipping them avoids paying the
 ~10-15s test cost for nothing to check. Neither blocks the turn — both are
-summary-only warnings. `build`/`npm audit` aren't tied to any hook, but
-`validate.yml` covers both in CI on every PR. For a full manual check
-(all six steps at once), run `npm run validate` directly.
+summary-only warnings. `test:e2e`/`build`/`npm audit` aren't tied to any
+hook (e2e needs a real browser + a built app, too slow/heavy for a
+per-turn hook), but `validate.yml` covers all three in CI on every PR. For
+a full manual check (all seven steps at once), run `npm run validate`
+directly.
 
 ## Conventions
 
@@ -258,13 +303,18 @@ summary-only warnings. `build`/`npm audit` aren't tied to any hook, but
   free of `react`/`react-dom` imports.
 - View-level UI lives in `src/views/<name>/`; `src/components/` is for UI
   shared by 2+ views only (gates, `app-bar.tsx`, `ui/` primitives).
+- Playwright test helpers live in `e2e/utils.ts`, not `fixtures.ts` —
+  a cross-project convention (all maat-apps projects, not just this one),
+  chosen because these are plain reusable functions the specs call
+  directly, not Playwright's own `test.extend()` fixture-injection system;
+  naming the file "fixtures" would suggest the latter.
 - Validate anything crossing a trust boundary (backup imports, localStorage
   read-back) with Valibot schemas (`src/lib/schemas.ts`), not hand-rolled
-  `typeof`/`isRecord` checks — schemas are the single source of truth for
-  both runtime validation and the inferred TS types (`v.InferOutput`), and
-  this is the standard validation library across the maat-apps ecosystem, not
-  just this repo (see `.claude/tasks/ecosystem/adopt-valibot-for-validation.md`).
-  Validate array/record entries independently rather than handing a whole
+  `typeof`/`isRecord` checks — see the State bullet above for why schemas are
+  the single source of truth here. Also the standard validation library
+  across the maat-apps ecosystem, not just this repo (see
+  `.claude/tasks/ecosystem/adopt-valibot-for-validation.md`). Validate
+  array/record entries independently rather than handing a whole
   array/record to `v.array()`/`v.record()` in one call, so one malformed
   entry doesn't take an otherwise-valid whole down with it.
 - Full pattern log: `.claude/docs/patterns.md` — read by `/find-antipatterns`
@@ -272,10 +322,13 @@ summary-only warnings. `build`/`npm audit` aren't tied to any hook, but
 
 ## Workflow Rules
 
-- Formatting and lint --fix run automatically after every file edit via
-  hooks — don't manually re-run them or narrate that you're about to.
-- `npm run validate` is for manual/debugging use only, not a required
-  step before committing or pushing — see below.
+- Don't manually re-run format/lint/typecheck/build/test:coverage/test:e2e
+  (individually or via `npm run validate`) to double-check a change before
+  committing or pushing, or narrate that you're about to — see the
+  Automation table above for what already runs per-edit/per-turn, and
+  `validate.yml` for what CI covers on every PR. Running any of it again
+  locally is redundant work against what's already covered, not extra
+  safety.
 - Prefer `Grep`/`Glob` over reading whole files; read only what a task needs.
 - For broad codebase audits, use `/find-antipatterns` instead of reading many
   files inline.
@@ -306,5 +359,3 @@ summary-only warnings. `build`/`npm audit` aren't tied to any hook, but
   `eslint --fix` after every edit, and it will strip an import that's
   unused at that intermediate moment, before the usage lands in a later
   edit. Hit repeatedly across sessions; always costs an extra edit to fix.
-
-<!-- END AUTO-GENERATED: setup-claude-workflow -->
