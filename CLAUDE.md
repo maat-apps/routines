@@ -255,7 +255,11 @@ The only network traffic is the service worker fetching the app's own files.
   (`http://localhost:4173/new`), not `/routines/new` — a leading `/` in a
   relative navigation replaces the whole path per URL-resolution rules.
   Always navigate with no leading slash (`page.goto("new")`,
-  `page.goto("routine?id=…")`, `page.goto("")` for home).
+  `page.goto("routine?id=…")`, `page.goto("")` for home). No CI artifact
+  upload for failures (removed deliberately — not worth the storage for a
+  debugging aid that's one command away locally): `npx playwright test
+--reporter=html && npx playwright show-report` regenerates and opens the
+  same HTML report, traces and all, on demand.
 
 ## Product context
 
