@@ -57,7 +57,7 @@ export function RoutineDetail({
             const checked = checkedStepIds.includes(step.id);
             return (
               <div
-                className="border-border text-card-foreground active:bg-muted flex min-h-15 cursor-pointer items-center gap-3.5 border-b px-2.5 py-3 text-left transition-colors"
+                className="border-border text-card-foreground active:bg-muted flex min-h-15 cursor-pointer items-start gap-3.5 border-b px-2.5 py-3 text-left transition-colors"
                 key={step.id}
                 role="checkbox"
                 aria-checked={checked}
@@ -76,7 +76,7 @@ export function RoutineDetail({
                   inert
                 />
                 <span
-                  className={`min-w-0 flex-1 overflow-hidden text-base leading-snug text-ellipsis whitespace-nowrap ${
+                  className={`min-w-0 flex-1 text-base leading-snug break-words ${
                     checked ? "text-muted-foreground line-through" : ""
                   }`}
                 >
