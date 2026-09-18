@@ -19,16 +19,14 @@ export default defineConfig({
     // language from navigator.language, and specs assert en.json's strings.
     locale: "en-US",
   },
-  // Two projects, two OSes, deliberately not more — see CLAUDE.md's e2e
-  // bullet for why a third would be redundant and how these two were picked.
+  // Two devices, each the best available representation of one of the two
+  // most popular mobile operating systems.
   projects: [
     {
       name: "mobile-chromium",
       use: { ...devices["Galaxy A55"] },
     },
     {
-      // The one project on a genuinely different engine (WebKit) — no CDP
-      // session API there, so the two specs built on it are excluded here.
       name: "mobile-iphone",
       testIgnore: [/drawer-dismissal\.spec\.ts$/, /app-lock\.spec\.ts$/],
       use: { ...devices["iPhone 13"] },
