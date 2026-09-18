@@ -1,11 +1,16 @@
-name: Deploy
+name: Deploy PR preview
 
+# Publishes each open PR under its own "/routines/pr-<n>/" subpath on the
+# same GitHub Pages site main deploys to (see deploy.yml), so a change can be
+# checked on a phone before merging instead of only after. Closing/merging
+# the PR removes its subdirectory again. Shares deploy.yml's "pages-content"
+# storage branch and its "pages" concurrency group so a main deploy and a
+# preview deploy never race each other's push to that branch.
 on:
-  push:
-    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
     paths:
-      # Anything that actually reaches dist/ — app source, static assets
-      # served as-is, and the build's own inputs/config.
+      # Same "reaches dist/" set deploy.yml watches.
       - "src/**"
       - "public/**"
       - "index.html"
@@ -15,12 +20,12 @@ on:
       - "tsconfig.app.json"
       - "package.json"
       - "package-lock.json"
-  workflow_dispatch:
 
 permissions:
   contents: write
   pages: write
   id-token: write
+  pull-requests: write
 
 concurrency:
   group: pages
@@ -29,38 +34,33 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      PR_NUM: ${{ github.event.pull_request.number }}
     steps:
-      - name: Checkout
+      - name: Checkout PR
+        if: github.event.action != 'closed'
         uses: actions/checkout@v5
 
       - name: Setup Node
+        if: github.event.action != 'closed'
         uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: npm
 
       - name: Install dependencies
+        if: github.event.action != 'closed'
         run: npm ci
 
-      - name: Cache Vite build
-        uses: actions/cache@v4
-        with:
-          path: ${{ github.workspace }}/node_modules/.vite
-          # Bust the cache when dependencies or source change; otherwise reuse it.
-          key: vite-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('**/*.[jt]s', '**/*.[jt]sx', '**/*.css') }}
-          restore-keys: |
-            vite-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}-
-
-      - name: Build
+      - name: Build preview
+        if: github.event.action != 'closed'
         run: npm run build
+        env:
+          DEPLOY_BASE_PATH: /routines/pr-${{ github.event.pull_request.number }}/
 
-      # main's own deploy shares the Pages site with any open PR previews
-      # (see deploy-preview.yml), which live in their own pr-<n>/ subpath.
-      # The `pages-content` branch is this workflow's own storage — not the
-      # Pages source (that's still "GitHub Actions", set via configure-pages
-      # below) — used only to assemble main's root alongside whatever preview
-      # subdirectories currently exist before every deploy re-uploads the
-      # whole tree as one artifact.
+      # See deploy.yml for why this branch exists: it's this workflow's own
+      # storage for assembling the whole Pages tree (main's root + every
+      # active preview subdirectory), not the Pages source itself.
       - name: Checkout pages-content workspace
         uses: actions/checkout@v5
         with:
@@ -78,9 +78,13 @@ jobs:
             git rm -rf . > /dev/null
           fi
 
-      - name: Sync main build into pages-content root
+      - name: Update this PR's preview subdirectory
         run: |
-          rsync -a --delete --exclude 'pr-*' --exclude '.git' dist/ pages-content/
+          rm -rf "pages-content/pr-$PR_NUM"
+          if [ "${{ github.event.action }}" != "closed" ]; then
+            mkdir -p "pages-content/pr-$PR_NUM"
+            rsync -a dist/ "pages-content/pr-$PR_NUM/"
+          fi
 
       - name: Commit and push pages-content
         working-directory: pages-content
@@ -88,10 +92,11 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
-          git commit -m "Deploy main (${{ github.sha }})" --allow-empty
+          git commit -m "Preview for PR #$PR_NUM (${{ github.event.action }})" --allow-empty
           git push origin HEAD:pages-content
 
       - name: Configure Pages
+        if: github.event.action != 'closed'
         uses: actions/configure-pages@v5
         with:
           enablement: true
@@ -103,6 +108,17 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: pages-content
+
+      - name: Add preview link to PR description
+        if: github.event.action != 'closed'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PREVIEW_URL="https://maat-apps.github.io/routines/pr-$PR_NUM/"
+          BODY=$(gh pr view "$PR_NUM" --json body -q .body)
+          if ! printf '%s' "$BODY" | grep -qF "$PREVIEW_URL"; then
+            { printf '%s\n\n**Preview:** %s\n' "$BODY" "$PREVIEW_URL"; } | gh pr edit "$PR_NUM" --body-file -
+          fi
 
   deploy:
     needs: build

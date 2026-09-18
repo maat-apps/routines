@@ -57,14 +57,27 @@ A private, phone-first PWA for daily checklists. No accounts and no backend —
 everything lives in the browser, and nothing about the user leaves the device.
 The only network traffic is the service worker fetching the app's own files.
 
-- **Vite + base path, no server.** `vite.config.ts` sets `base: "/routines/"`
-  (deployed to GitHub Pages under `/routines`) and builds a plain static SPA —
-  no server at runtime. GitHub Pages has no server-side rewrites, so a hard
-  refresh or deep link into a client-routed path would 404; a `closeBundle`
-  plugin in `vite.config.ts` copies the built `index.html` to `dist/404.html`
-  after every build so Pages' 404 fallback boots the app instead. Every
-  absolute in-app URL (service worker registration, manifest, icons) must stay
-  root-relative so Vite can rewrite it with the `/routines/` prefix at build time.
+- **Vite + base path, no server.** `vite.config.ts` sets `base` from
+  `DEPLOY_BASE_PATH` (defaulting to `/routines/`, deployed to GitHub Pages
+  under `/routines`) and builds a plain static SPA — no server at runtime.
+  A PR preview build (`.github/workflows/deploy-preview.yml`) overrides it to
+  `/routines/pr-<n>/` so an open PR can be checked on a phone under its own
+  subpath alongside `main`'s deployment — see that workflow and `deploy.yml`
+  for how both share one GitHub Pages site via a `pages-content` storage
+  branch that isn't itself the Pages source. GitHub Pages has no server-side
+  rewrites, so a hard refresh or deep link into a client-routed path would
+  404; a `closeBundle` plugin in `vite.config.ts` copies the built
+  `index.html` to `dist/404.html` after every build so Pages' 404 fallback
+  boots the app instead (this 404 fallback is untested under a PR preview's
+  subpath — GitHub Pages' behavior for a nested `404.html` isn't guaranteed
+  the same way as one at the site root). Every absolute in-app URL (service
+  worker registration in `mobile-gate.tsx`, the router's `basename`,
+  `sw.ts`'s own precache/fallback paths) reads `import.meta.env.BASE_URL`
+  rather than hardcoding `/routines/`, so both the real deploy and a preview
+  resolve correctly. `public/manifest.json` is the one exception — its
+  `start_url`/`scope`/icon paths stay hardcoded to `/routines/`, since it's a
+  static file Vite copies as-is rather than rewriting; a PR preview is not
+  expected to be independently installable as a scoped PWA, only viewable.
 
 - **State = localStorage only.** `src/lib/storage.ts` is the single source of
   truth, persisting one JSON blob under the `routines-data` key. All reads go

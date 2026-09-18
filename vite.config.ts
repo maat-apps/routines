@@ -25,8 +25,14 @@ function spaFallback(): Plugin {
   };
 }
 
+// Base path is normally the site root ("/routines/"), but a PR preview
+// build (see .github/workflows/deploy-preview.yml) publishes under its own
+// subpath ("/routines/pr-<n>/") so it can live alongside main's deployment
+// on the same GitHub Pages site instead of overwriting it.
+const base = process.env.DEPLOY_BASE_PATH ?? "/routines/";
+
 export default defineConfig({
-  base: "/routines/",
+  base,
   resolve: {
     alias: {
       "@": resolve(import.meta.dirname, "src"),
