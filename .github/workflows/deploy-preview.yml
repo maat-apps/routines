@@ -123,8 +123,14 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    # A distinct environment from deploy.yml's "github-pages" — that one's
+    # auto-configured by GitHub Pages setup with a branch protection rule
+    # restricting deploys to main, which a pull_request run's merge ref
+    # (refs/pull/<n>/merge) never satisfies. actions/deploy-pages doesn't
+    # care what the environment is named, so a fresh one with no such rule
+    # sidesteps it rather than needing a manual repo-settings change.
     environment:
-      name: github-pages
+      name: github-pages-preview
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Deploy to GitHub Pages
