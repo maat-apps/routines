@@ -288,9 +288,15 @@ tied to a hook.
 - **Push and open the PR automatically too, via `/open-pr`** — no draft
   preview, no confirmation pause before `gh pr create`. Decided
   2026-09-18: the human checkpoint in this workflow is merge, not PR
-  creation — the user reviews/merges from the GitHub mobile app, and
-  auto-merge itself stays opt-in per PR (never enabled by default; see
-  `.claude/tasks/ecosystem/standardize-branch-protection-rules.md`).
+  creation — auto-merge itself stays opt-in per PR (never enabled by
+  default; see
+  `.claude/tasks/ecosystem/standardize-branch-protection-rules.md`). Two
+  equally fine ways for that checkpoint to resolve once a PR is ready:
+  the user merges it themselves from the GitHub mobile app, or tells
+  Claude Code to merge/enable auto-merge on that specific PR. If checks
+  have already passed by then (`mergeStateStatus: CLEAN`), GitHub's
+  auto-merge API refuses to arm on a PR with nothing left to wait for —
+  merge it directly instead (`gh pr merge <n> --squash`).
 - **Don't re-run what CI already runs.** `.github/workflows/validate.yml`
   runs lint/format:check/typecheck/test:coverage/build/audit on every PR
   — the full `npm run validate` set, as a required, no-bypass check —
