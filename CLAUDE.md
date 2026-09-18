@@ -60,11 +60,12 @@ The only network traffic is the service worker fetching the app's own files.
 - **Vite + base path, no server.** `vite.config.ts` sets `base` from
   `DEPLOY_BASE_PATH` (defaulting to `/routines/`, deployed to GitHub Pages
   under `/routines`) and builds a plain static SPA — no server at runtime.
-  A PR preview build (`.github/workflows/deploy-preview.yml`) overrides it to
-  `/routines/pr-<n>/` so an open PR can be checked on a phone under its own
-  subpath alongside `main`'s deployment — see that workflow and `deploy.yml`
-  for how both share one GitHub Pages site via a `pages-content` storage
-  branch that isn't itself the Pages source. GitHub Pages has no server-side
+  A PR preview build (the `preview`/`deploy` jobs in `validate.yml`, gated on
+  `validate` itself passing) overrides it to `/routines/pr-<n>/` so an open PR
+  can be checked on a phone under its own subpath alongside `main`'s
+  deployment — see that workflow and `deploy.yml` for how both share one
+  GitHub Pages site via a `pages-content` storage branch that isn't itself
+  the Pages source. GitHub Pages has no server-side
   rewrites, so a hard refresh or deep link into a client-routed path would
   404; a `closeBundle` plugin in `vite.config.ts` copies the built
   `index.html` to `dist/404.html` after every build so Pages' 404 fallback
