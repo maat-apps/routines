@@ -51,4 +51,6 @@ Do NOT proceed past step 1 without stopping and telling the user why.
    hand. Do not enable auto-merge unless the user explicitly asks for it
    on that specific PR.
 
-5. Report only the PR URL back to the user — not the title/body again.
+5. Confirm briefly that the PR was opened — no title/body, no URL. The
+   user checks GitHub/the mobile app directly and doesn't need the link
+   repeated back.
