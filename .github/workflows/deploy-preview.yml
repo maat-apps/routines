@@ -1,0 +1,146 @@
+name: Deploy PR preview
+
+# Publishes each open PR under its own "/routines/pr-<n>/" subpath on the
+# same GitHub Pages site main deploys to (see deploy.yml), so a change can be
+# checked on a phone before merging instead of only after. Building a new
+# preview is gated on validate.yml's own run for that same commit via
+# workflow_run — no point publishing a build that doesn't pass CI, and this
+# also inherits validate.yml's path filter for free instead of duplicating
+# it. Closing/merging the PR removes its subdirectory unconditionally on a
+# direct pull_request trigger instead — that's just cleanup and shouldn't
+# depend on validate having run at all. Shares deploy.yml's "pages-content"
+# storage branch and its "pages" concurrency group so a main deploy and a
+# preview deploy never race each other's push to that branch.
+#
+# workflow_run only fires for a workflow file that already exists on the
+# default branch — so this build/deploy path can't run on the PR that first
+# introduces this file (there's nothing on main for GitHub to have
+# registered the trigger against yet). That's expected, not broken: once
+# this merges, it fires normally for every PR opened afterward. The
+# pull_request(closed) cleanup trigger has no such restriction and works
+# immediately, including on this introducing PR.
+on:
+  workflow_run:
+    workflows: ["Validate"]
+    types: [completed]
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+  pull-requests: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: (github.event_name == 'workflow_run' && github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion == 'success') || (github.event_name == 'pull_request' && github.event.action == 'closed')
+    runs-on: ubuntu-latest
+    env:
+      IS_CLOSE: ${{ github.event_name == 'pull_request' && github.event.action == 'closed' }}
+      PR_NUM: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.pull_requests[0].number || github.event.pull_request.number }}
+    steps:
+      - name: Checkout PR
+        if: env.IS_CLOSE != 'true'
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Setup Node
+        if: env.IS_CLOSE != 'true'
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        if: env.IS_CLOSE != 'true'
+        run: npm ci
+
+      - name: Build preview
+        if: env.IS_CLOSE != 'true'
+        run: npm run build
+        env:
+          DEPLOY_BASE_PATH: /routines/pr-${{ env.PR_NUM }}/
+
+      # See deploy.yml for why this branch exists: it's this workflow's own
+      # storage for assembling the whole Pages tree (main's root + every
+      # active preview subdirectory), not the Pages source itself.
+      - name: Checkout pages-content workspace
+        uses: actions/checkout@v5
+        with:
+          path: pages-content
+          fetch-depth: 0
+
+      - name: Switch to pages-content branch (create if missing)
+        working-directory: pages-content
+        run: |
+          git fetch origin pages-content:refs/remotes/origin/pages-content || true
+          if git show-ref --verify --quiet refs/remotes/origin/pages-content; then
+            git checkout pages-content
+          else
+            git checkout --orphan pages-content
+            git rm -rf . > /dev/null
+          fi
+
+      - name: Update this PR's preview subdirectory
+        run: |
+          rm -rf "pages-content/pr-$PR_NUM"
+          if [ "$IS_CLOSE" != "true" ]; then
+            mkdir -p "pages-content/pr-$PR_NUM"
+            rsync -a dist/ "pages-content/pr-$PR_NUM/"
+          fi
+
+      - name: Commit and push pages-content
+        working-directory: pages-content
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Preview for PR #$PR_NUM" --allow-empty
+          git push origin HEAD:pages-content
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - name: Remove git metadata before upload
+        run: rm -rf pages-content/.git
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: pages-content
+
+      - name: Add preview link to PR description
+        if: env.IS_CLOSE != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PREVIEW_URL="https://maat-apps.github.io/routines/pr-$PR_NUM/"
+          BODY=$(gh pr view "$PR_NUM" --json body -q .body)
+          if ! printf '%s' "$BODY" | grep -qF "$PREVIEW_URL"; then
+            { printf '%s\n\n**Preview:** %s\n' "$BODY" "$PREVIEW_URL"; } | gh pr edit "$PR_NUM" --body-file -
+          fi
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    # A distinct environment from deploy.yml's "github-pages" — that one's
+    # auto-configured by GitHub Pages setup with a branch protection rule
+    # restricting deploys to main, which a pull_request run's merge ref
+    # (refs/pull/<n>/merge) never satisfies. actions/deploy-pages doesn't
+    # care what the environment is named, so a fresh one with no such rule
+    # sidesteps it rather than needing a manual repo-settings change.
+    environment:
+      name: github-pages-preview
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
