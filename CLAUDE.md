@@ -238,15 +238,18 @@ The only network traffic is the service worker fetching the app's own files.
   specific models is in git history, not reproduced here since it'll only
   go stale). `test:e2e` runs both, no `--project` filter; CI installs both
   `chromium` and `webkit` binaries. WebKit has no CDP session API, so
-  `mobile-iphone` excludes the two specs built on it via its own
-  `testIgnore` — `drawer-dismissal.spec.ts` (raw CDP touch events) and
-  `app-lock.spec.ts` (a CDP virtual WebAuthn authenticator) — rather than
-  those hard-failing there; **remember to add the same exclusion if a
-  future spec needs CDP too.** `e2e/utils.ts` holds reusable helpers —
-  `seedData` (seeds `localStorage` via `page.addInitScript`, skipping the
-  create/edit UI), `swipeDown` and `addVirtualAuthenticator` (the two
-  CDP-based ones above, raw Playwright APIs don't cover either). One easy
-  trap: `page.goto("/new")` against this `baseURL` (already ending in
+  `mobile-iphone` excludes `drawer-dismissal.spec.ts` (raw CDP touch
+  events, no native Playwright touch-drag primitive exists yet) via its
+  own `testIgnore` rather than that one hard-failing there; **remember to
+  add the same exclusion if a future spec needs raw CDP too.**
+  `app-lock.spec.ts` used to need the same exclusion (a CDP virtual
+  WebAuthn authenticator) but moved to `context.credentials` (Playwright
+  1.61+, cross-browser unlike `newCDPSession`), so it now runs on both
+  projects. `e2e/utils.ts` holds reusable helpers — `seedData` (seeds
+  `localStorage` via `page.addInitScript`, skipping the create/edit UI)
+  and `swipeDown` (the one still-CDP-based helper, raw Playwright APIs
+  don't cover touch drag). One easy trap: `page.goto("/new")` against this
+  `baseURL` (already ending in
   `/routines/`) resolves to the _origin_ root
   (`http://localhost:4173/new`), not `/routines/new` — a leading `/` in a
   relative navigation replaces the whole path. Always navigate with no

@@ -1,12 +1,17 @@
 import { expect, test } from "@playwright/test";
 
-import { addVirtualAuthenticator, en, seedData } from "./utils";
+import { en, seedData } from "./utils";
 
 test.describe("app lock", () => {
   test("enrolling turns the lock on and unlocking with the same authenticator works", async ({
     page,
   }) => {
-    await addVirtualAuthenticator(page);
+    // Native virtual WebAuthn authenticator (Playwright 1.61+), cross-browser
+    // unlike the CDP WebAuthn domain — install() before navigation so the
+    // app's own real navigator.credentials.create()/.get() calls (enrolling,
+    // then unlocking) succeed against it. No credential is pre-seeded: the
+    // app's real enrol ceremony is what should create one.
+    await page.context().credentials.install();
     await seedData(page, []);
     await page.goto("");
 

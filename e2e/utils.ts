@@ -107,36 +107,3 @@ export async function swipeDown(
     touchPoints: [],
   });
 }
-
-/**
- * Registers a CDP virtual WebAuthn platform authenticator so app-lock's
- * navigator.credentials.create/get calls (src/lib/app-lock.ts) succeed
- * without a real device authenticator.
- */
-export async function addVirtualAuthenticator(page: Page): Promise<{
-  authenticatorId: string;
-  remove: () => Promise<void>;
-}> {
-  const client = await page.context().newCDPSession(page);
-  await client.send("WebAuthn.enable");
-  const { authenticatorId } = await client.send(
-    "WebAuthn.addVirtualAuthenticator",
-    {
-      options: {
-        protocol: "ctap2",
-        transport: "internal",
-        hasResidentKey: true,
-        hasUserVerification: true,
-        isUserVerified: true,
-      },
-    },
-  );
-  return {
-    authenticatorId,
-    remove: async () => {
-      await client.send("WebAuthn.removeVirtualAuthenticator", {
-        authenticatorId,
-      });
-    },
-  };
-}

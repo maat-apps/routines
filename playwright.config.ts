@@ -27,8 +27,12 @@ export default defineConfig({
       use: { ...devices["Galaxy A55"] },
     },
     {
+      // Only drawer-dismissal.spec.ts is excluded here now — it's the one
+      // spec still on the CDP-only touch-event path (no native replacement
+      // exists yet). app-lock.spec.ts moved to context.credentials, which
+      // is cross-browser (unlike newCDPSession), so it runs here too.
       name: "mobile-iphone",
-      testIgnore: [/drawer-dismissal\.spec\.ts$/, /app-lock\.spec\.ts$/],
+      testIgnore: [/drawer-dismissal\.spec\.ts$/],
       use: { ...devices["iPhone 13"] },
     },
   ],
