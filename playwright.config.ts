@@ -12,9 +12,8 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   // "github" annotates the PR inline; no CI artifact upload, so no reason
   // to also generate the HTML report there. It's still one command away
-  // locally when actually debugging a failure: `npx playwright test
-  // --reporter=html && npx playwright show-report` (traces are captured
-  // either way via `trace: "on-first-retry"` below).
+  // locally when actually debugging a failure: `npm run test:e2e:report`
+  // (traces are captured either way via `trace: "on-first-retry"` below).
   reporter: process.env.CI ? "github" : "list",
   use: {
     baseURL: "http://localhost:4173/routines/",

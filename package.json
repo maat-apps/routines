@@ -21,6 +21,7 @@
     "test:unit:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
+    "test:e2e:report": "playwright test --reporter=html && playwright show-report",
     "validate": "npm run lint && npm run format:check && npm run typecheck && npm run test:coverage && npm run test:e2e && npm run build && npm audit",
     "validate:fix": "npm run lint:fix && npm run format && npm audit fix"
   },

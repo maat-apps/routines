@@ -257,9 +257,8 @@ The only network traffic is the service worker fetching the app's own files.
   Always navigate with no leading slash (`page.goto("new")`,
   `page.goto("routine?id=…")`, `page.goto("")` for home). No CI artifact
   upload for failures (removed deliberately — not worth the storage for a
-  debugging aid that's one command away locally): `npx playwright test
---reporter=html && npx playwright show-report` regenerates and opens the
-  same HTML report, traces and all, on demand.
+  debugging aid that's one command away locally): `npm run test:e2e:report`
+  regenerates and opens the same HTML report, traces and all, on demand.
 
 ## Product context
 
