@@ -15,7 +15,9 @@ test.describe("route navigation", () => {
     // meaningfully present rather than the page going blank mid-transition
     // (the startTransition + idle-prefetch change this suite exists to
     // guard, per the task's own motivation).
-    await page.getByRole("button", { name: en.newRoutine }).click();
+    // Two "New routine" buttons exist when the list is empty (the FAB and
+    // the empty state's own) — either works identically here.
+    await page.getByRole("button", { name: en.newRoutine }).first().click();
     await expect(page).toHaveURL(/\/routines\/new$/);
     await expect(
       page.getByRole("heading", { name: en.newRoutineTitle }),
@@ -80,7 +82,7 @@ test.describe("native back button", () => {
     await seedData(page, []);
     await page.goto("");
 
-    await page.getByRole("button", { name: en.newRoutine }).click();
+    await page.getByRole("button", { name: en.newRoutine }).first().click();
     await expect(page).toHaveURL(/\/routines\/new$/);
     await fillMinimalRoutine(page);
     await page.getByRole("button", { name: en.done }).click();
@@ -99,7 +101,14 @@ test.describe("native back button", () => {
   test("editing and confirming an existing routine, twice, then going back lands on home", async ({
     page,
   }) => {
-    await seedData(page, [{ id: "r1", name: "Morning", order: 0, steps: [] }]);
+    await seedData(page, [
+      {
+        id: "r1",
+        name: "Morning",
+        order: 0,
+        steps: [{ id: "s1", text: "Stretch", order: 0 }],
+      },
+    ]);
     await page.goto("");
 
     await page.getByRole("button", { name: /Morning/ }).click();
@@ -111,11 +120,8 @@ test.describe("native back button", () => {
       await page.getByRole("button", { name: en.done }).click();
 
       // Confirming pops back to the same "routine" entry each time
-      // (routine-edit-view.tsx's onBack uses use-smart-back.ts, which pops
-      // real history instead of pushing a duplicate whenever there's a
-      // real entry to pop) — repeating this shouldn't grow the back-stack,
-      // so a single native back from here always reaches home, never a
-      // stale intermediate "edit" screen.
+      // (use-smart-back.ts) instead of pushing a duplicate, so repeating
+      // this doesn't grow the back-stack.
       await expect(page).toHaveURL(/\/routines\/routine\?id=r1$/);
       await expect(
         page.getByRole("heading", { name: "Morning" }),
@@ -146,17 +152,11 @@ test.describe("native back button", () => {
     await expect(page).toHaveURL(/\/routines\/?$/);
     await expect(page.getByRole("heading", { name: en.appName })).toBeVisible();
 
-    // routine-edit-view.tsx's onDelete replaces its own "edit" entry with
-    // home rather than pushing — so going back never resurrects the edit
-    // form for a routine that's gone. It does NOT collapse the "routine"
-    // entry one level further back (a fixed-depth pop would be unsafe: this
-    // same view is also reachable by a direct deep link with nothing behind
-    // it, see routine-crud.spec.ts's own delete test) — a second-order back
-    // tap can still reach that stale "routine" entry, which is exactly what
-    // MissingRoutine exists to handle gracefully rather than a broken
-    // screen. Fully collapsing every level on delete is tracked as an open
-    // question in features/verify-back-button-behavior.md, not silently
-    // assumed here.
+    // Going back once from home never resurrects the edit form for a
+    // routine that's gone — it can still reach the stale "routine" entry
+    // one level further back, which MissingRoutine handles gracefully
+    // (see features/verify-back-button-behavior.md for the open question
+    // of collapsing that level too).
     await page.goBack();
     await expect(page.getByText(en.routineNotFound)).toBeVisible();
   });

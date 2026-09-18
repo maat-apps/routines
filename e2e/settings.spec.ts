@@ -41,7 +41,13 @@ test.describe("settings", () => {
     // it until the drawer closes. Close it first (phone back gesture, same
     // as drawer-dismissal.spec.ts) rather than querying past aria-hidden.
     await page.goBack();
-    await expect(page.getByRole("heading", { name: pl.appName })).toBeVisible();
+    // exact: true — with an empty routine list, the empty state's own
+    // Polish heading ("Zacznij od jednej rutyny") ends with "rutyny" and
+    // would otherwise match too (accessible-name matching is substring,
+    // case-insensitive by default).
+    await expect(
+      page.getByRole("heading", { name: pl.appName, exact: true }),
+    ).toBeVisible();
   });
 
   test("reset settings clears preferences but leaves routine data alone", async ({

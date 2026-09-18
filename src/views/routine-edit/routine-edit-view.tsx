@@ -37,17 +37,8 @@ export function RoutineEditView() {
         // of leaving for "/". Keeping this navigate synchronous batches it
         // together with that update instead.
         deleteRoutine(routine.id);
-        // replace, not a plain push: this screen is also reachable by a
-        // direct deep link/hard refresh with no "routine"/"home" entries
-        // behind it in this session (routine-crud.spec.ts's delete test
-        // covers exactly that), so a fixed-depth back() would be unsafe —
-        // replace at least ensures the *current* entry becomes home rather
-        // than adding yet another push, regardless of how this view was
-        // reached. It doesn't collapse an earlier "routine" entry that may
-        // still be behind it (a subsequent back tap from home could still
-        // land there, showing MissingRoutine — a real gap, tracked in
-        // .claude/tasks/features/verify-back-button-behavior.md rather
-        // than papered over here).
+        // Doesn't collapse an earlier "routine" entry that may still sit
+        // behind this one (see features/verify-back-button-behavior.md).
         navigate("/", { replace: true });
       }}
     />

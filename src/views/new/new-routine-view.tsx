@@ -37,11 +37,6 @@ export function NewRoutineView() {
       onSave={saveRoutine}
       onComplete={() =>
         startTransition(() =>
-          // replace, not push: this draft's own "/new" entry was never a
-          // real back-target (remounting it seeds a brand new blank
-          // routine, per the effect above) — replacing it means back from
-          // the created routine's view lands on home in one step instead
-          // of resurrecting an empty draft.
           navigate(`/routine?id=${encodeURIComponent(routine.id)}`, {
             replace: true,
           }),
