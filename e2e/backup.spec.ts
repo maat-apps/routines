@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { en, seedData } from "./fixtures";
+import { en, seedData } from "./utils";
 
 async function openSettings(page: import("@playwright/test").Page) {
   await page.getByRole("button", { name: en.settings }).click();

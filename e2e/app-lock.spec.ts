@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { addVirtualAuthenticator, en, seedData } from "./fixtures";
+import { addVirtualAuthenticator, en, seedData } from "./utils";
 
 test.describe("app lock", () => {
   test("enrolling turns the lock on and unlocking with the same authenticator works", async ({

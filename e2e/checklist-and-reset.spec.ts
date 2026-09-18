@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { en, seedData, todayIso } from "./fixtures";
+import { en, seedData, todayIso } from "./utils";
 
 test.describe("checking off steps and resetting", () => {
   test("checking a step updates its state and the progress ring", async ({

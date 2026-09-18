@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { en, seedData } from "./fixtures";
+import { en, seedData } from "./utils";
 
 test.describe("settings", () => {
   test("switching language updates the visible label", async ({ page }) => {

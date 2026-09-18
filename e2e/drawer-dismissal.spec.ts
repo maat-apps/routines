@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { en, seedData, swipeDown } from "./fixtures";
+import { en, seedData, swipeDown } from "./utils";
 
 test.describe("drawer dismissal", () => {
   test("swiping down on the swipe handle closes the settings drawer", async ({

@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { en, seedData } from "./fixtures";
+import { en, seedData } from "./utils";
 
 test.describe("route navigation", () => {
   test("moves between home, new, and routine view with correct URLs and no blank screen", async ({

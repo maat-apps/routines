@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { en, seedData, t } from "./fixtures";
+import { en, seedData, t } from "./utils";
 
 test.describe("create / edit / reorder / delete a routine", () => {
   test("creates a routine with two steps end to end", async ({ page }) => {

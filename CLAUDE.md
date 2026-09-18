@@ -242,7 +242,7 @@ The only network traffic is the service worker fetching the app's own files.
   `testIgnore` — `drawer-dismissal.spec.ts` (raw CDP touch events) and
   `app-lock.spec.ts` (a CDP virtual WebAuthn authenticator) — rather than
   those hard-failing there; **remember to add the same exclusion if a
-  future spec needs CDP too.** `e2e/fixtures.ts` holds reusable helpers —
+  future spec needs CDP too.** `e2e/utils.ts` holds reusable helpers —
   `seedData` (seeds `localStorage` via `page.addInitScript`, skipping the
   create/edit UI), `swipeDown` and `addVirtualAuthenticator` (the two
   CDP-based ones above, raw Playwright APIs don't cover either). One easy
@@ -290,6 +290,11 @@ directly.
   free of `react`/`react-dom` imports.
 - View-level UI lives in `src/views/<name>/`; `src/components/` is for UI
   shared by 2+ views only (gates, `app-bar.tsx`, `ui/` primitives).
+- Playwright test helpers live in `e2e/utils.ts`, not `fixtures.ts` —
+  a cross-project convention (all maat-apps projects, not just this one),
+  chosen because these are plain reusable functions the specs call
+  directly, not Playwright's own `test.extend()` fixture-injection system;
+  naming the file "fixtures" would suggest the latter.
 - Validate anything crossing a trust boundary (backup imports, localStorage
   read-back) with Valibot schemas (`src/lib/schemas.ts`), not hand-rolled
   `typeof`/`isRecord` checks — see the State bullet above for why schemas are
