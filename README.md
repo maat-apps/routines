@@ -87,15 +87,17 @@ npm run format:check   # Prettier --check
 npm run typecheck      # tsc -b (project references, no emit)
 npm run test:unit      # Vitest — pure logic + hook/i18n store bridge, no browser
 npm run test:coverage  # same suite, with a coverage report and enforced threshold
-npm run validate       # lint + format:check + typecheck + test:coverage + build + npm audit
+npm run test:e2e       # Playwright, against the real production build
+npm run validate       # lint + format:check + typecheck + test:coverage + test:e2e + build + npm audit
 npm run build:analyze  # production build + a dist/stats.html bundle treemap
 ```
 
 Unit tests (Vitest, `jsdom`) cover `src/lib/`'s pure logic and the
 `src/hooks/`/`src/i18n/` store bridge — no served build, no real browser.
-UI/navigation flows are covered separately by an e2e suite when that lands
-(see `.claude/tasks/features/e2e-user-flow-tests.md`); `vitest.config.ts`
-enforces a 75% coverage threshold on the dirs it actually targets.
+UI/navigation flows are covered separately by a Playwright e2e suite
+(`e2e/`), run against the built app (`npm run build` + `vite preview`)
+rather than the dev server; `vitest.config.ts` enforces a 95% coverage
+threshold on the dirs it actually targets.
 
 ## Deployment (static build + `/routines` base path)
 

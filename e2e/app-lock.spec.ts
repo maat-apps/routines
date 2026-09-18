@@ -1,0 +1,76 @@
+import { expect, test } from "@playwright/test";
+
+import { addVirtualAuthenticator, seedData } from "./fixtures";
+
+test.describe("app lock", () => {
+  test("enrolling turns the lock on and unlocking with the same authenticator works", async ({
+    page,
+  }) => {
+    await addVirtualAuthenticator(page);
+    await seedData(page, []);
+    await page.goto("");
+
+    await page.getByRole("button", { name: "Settings" }).click();
+    const lockSwitch = page.getByRole("switch", { name: "App lock" });
+    await expect(lockSwitch).toBeEnabled();
+    await lockSwitch.click();
+    await expect(lockSwitch).toBeChecked();
+    await expect(
+      page.getByText("Ask for your fingerprint before opening."),
+    ).toBeVisible();
+
+    // Enrolling counts as unlocked (per CLAUDE.md's app-lock notes) — a
+    // reload should still show the locked screen, since being unlocked is
+    // per-session memory state, not persisted.
+    await page.reload();
+    await expect(
+      page.getByRole("heading", { name: "Routines is locked" }),
+    ).toBeVisible();
+
+    await page.getByRole("button", { name: "Unlock" }).click();
+    await expect(
+      page.getByRole("heading", { name: "Routines is locked" }),
+    ).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "Routines" })).toBeVisible();
+  });
+
+  test("the escape hatch turns the lock off when no authenticator is available", async ({
+    page,
+  }) => {
+    // Force "no platform authenticator" deterministically: the real host
+    // machine running this test may (or may not) have one configured (e.g.
+    // Windows Hello), which isAppLockSupported() would otherwise honestly
+    // report — that's environment-dependent, not what this test wants to
+    // exercise.
+    await page.addInitScript(() => {
+      window.PublicKeyCredential = window.PublicKeyCredential ?? ({} as never);
+      window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable =
+        () => Promise.resolve(false);
+      window.localStorage.setItem(
+        "routines-settings",
+        JSON.stringify({
+          lock: {
+            credentialId: "fake",
+            userId: "fake-user",
+            createdAt: new Date().toISOString(),
+          },
+        }),
+      );
+    });
+    await seedData(page, [], {});
+    await page.goto("");
+
+    await expect(
+      page.getByRole("heading", { name: "Routines is locked" }),
+    ).toBeVisible();
+
+    // isAppLockSupported() resolving false shows the escape hatch on mount
+    // (app-lock-gate.tsx), without needing a failed unlock attempt first.
+    const escapeHatch = page.getByRole("button", {
+      name: "Turn off the lock",
+    });
+    await expect(escapeHatch).toBeVisible();
+    await escapeHatch.click();
+    await expect(page.getByRole("heading", { name: "Routines" })).toBeVisible();
+  });
+});

@@ -1,6 +1,6 @@
 {
   "name": "routines",
-  "version": "0.8.2",
+  "version": "0.9.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -20,7 +20,8 @@
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "validate": "npm run lint && npm run format:check && npm run typecheck && npm run test:coverage && npm run build && npm audit",
+    "test:e2e": "playwright test",
+    "validate": "npm run lint && npm run format:check && npm run typecheck && npm run test:coverage && npm run test:e2e && npm run build && npm audit",
     "validate:fix": "npm run lint:fix && npm run format && npm audit fix"
   },
   "dependencies": {
@@ -41,6 +42,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4",
     "@testing-library/react": "^16.3.3",
     "@types/node": "^24.13.5",

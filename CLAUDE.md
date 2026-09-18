@@ -33,14 +33,18 @@ them in mind when writing or reviewing code:
 - `npm run format:check` / `npm run format` — Prettier. Prettier also runs _as an
   ESLint rule_ (`prettier/prettier: error`), so a formatting slip fails lint too.
 - `npm run typecheck` — `tsc -b` (project references: `tsconfig.app.json` for
-  `src/`, `tsconfig.node.json` for `vite.config.ts`).
-- `npm run test:unit` / `npm run test:unit:watch` — Vitest, `src/lib/`
-  (and, once `feature/unit-tests-react` lands, `src/hooks/`/`src/i18n/`).
-  `npm run test:coverage` runs the same suite with a coverage report and
-  enforces the threshold in `vitest.config.ts`. See Architecture below.
+  `src/`, `tsconfig.node.json` for `vite.config.ts`, `tsconfig.e2e.json` for
+  `e2e/` and `playwright.config.ts`).
+- `npm run test:unit` / `npm run test:unit:watch` — Vitest, covering
+  `src/lib/`, `src/hooks/`, and `src/i18n/`. `npm run test:coverage` runs
+  the same suite with a coverage report and enforces the threshold in
+  `vitest.config.ts`. See Architecture below.
+- `npm run test:e2e` — Playwright, `e2e/`, against the real production
+  build (`npm run build` + `vite preview`) rather than the dev server. See
+  Architecture below.
 - `npm run validate` — lint + format:check + typecheck + test:coverage +
-  build + `npm audit`; the same gates CI runs. `npm run validate:fix`
-  applies the autofixable ones.
+  test:e2e + build + `npm audit`; the same gates CI runs. `npm run
+validate:fix` applies the autofixable ones.
 - `npm run build:analyze` — same production build, plus `dist/stats.html`, a
   `rollup-plugin-visualizer` treemap of what's inside each chunk (opens
   automatically). Wraps `npm run build` in `cross-env ANALYZE=1` so it works
@@ -221,6 +225,27 @@ The only network traffic is the service worker fetching the app's own files.
   different test in the same file until the missing `restoreAllMocks()`
   was added.
 
+- **E2E tests (Playwright).** `e2e/*.spec.ts` + `playwright.config.ts`
+  (its own `tsconfig.e2e.json` project reference, separate from
+  `tsconfig.app.json`/`tsconfig.node.json`, since neither of those covers
+  it). Runs against the real production build — `webServer` in
+  `playwright.config.ts` runs `npm run build` then `vite preview`, not the
+  Vite dev server — under a phone-sized viewport (`devices["Pixel 7"]`;
+  the mobile gate hides the app at CSS widths ≥481px regardless of the
+  device's own touch/UA emulation). `e2e/fixtures.ts` seeds
+  `localStorage` directly via `page.addInitScript` for tests that aren't
+  exercising the create/edit UI itself, and holds two CDP-based helpers
+  raw Playwright APIs don't cover: a touch-swipe simulator (Base UI's
+  drawer swipe-to-dismiss reacts to real touch events, not synthetic mouse
+  drags — see the Drawer bullet above) and a virtual WebAuthn
+  authenticator (for the app-lock enrol/unlock flow). One easy trap when
+  writing new specs: `page.goto("/new")` against this `baseURL` (which
+  itself already ends in `/routines/`) resolves to the _origin_ root
+  (`http://localhost:4173/new`), not `/routines/new` — a leading `/` in a
+  relative navigation replaces the whole path per URL-resolution rules.
+  Always navigate with no leading slash (`page.goto("new")`,
+  `page.goto("routine?id=…")`, `page.goto("")` for home).
+
 ## Product context
 
 See `PRODUCT.md` for the design intent: a calm, quiet checklist — no history,
@@ -244,9 +269,11 @@ every turn (cheap enough to tolerate constantly); the test suite only runs
 when this turn actually touched `src/`/`tests/` — most turns (planning,
 docs, git operations, pure Q&A) don't, and skipping them avoids paying the
 ~10-15s test cost for nothing to check. Neither blocks the turn — both are
-summary-only warnings. `build`/`npm audit` aren't tied to any hook, but
-`validate.yml` covers both in CI on every PR. For a full manual check
-(all six steps at once), run `npm run validate` directly.
+summary-only warnings. `test:e2e`/`build`/`npm audit` aren't tied to any
+hook (e2e needs a real browser + a built app, too slow/heavy for a
+per-turn hook), but `validate.yml` covers all three in CI on every PR. For
+a full manual check (all seven steps at once), run `npm run validate`
+directly.
 
 ## Conventions
 
