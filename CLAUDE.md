@@ -240,16 +240,11 @@ The only network traffic is the service worker fetching the app's own files.
   bundled Chromium — so a third project (e.g. a second Android profile)
   would only add a different viewport width, not real engine coverage,
   given WebKit is the one project here actually exercising a different
-  engine. Model choice within each OS is picked for real-world
-  representativeness, not "newest"/flagship: Galaxy A55 over a Samsung
-  flagship because Samsung's own sales data shows the A-series, not the
-  S-series, dominates real shipment volume; iPhone 13 because it's
-  essentially tied for the single most-used iPhone model by installed base
-  and representative of the "standard," not Pro/Max, size tier most iPhones
-  in current use actually are (checked 2026-09-18 via web search — iPhone
-  13/15/16 Pro/17/17 Pro Max all cluster within a point of each other, so
-  this is "closest to the common tier," not a precise single-model claim).
-  `test:e2e` runs both (no `--project` filter); `npm ci`/CI installs both
+  engine. Both models were picked for real-world usage share rather than
+  "newest"/flagship — see git history (`feature/e2e-user-flow-tests`) for
+  the actual data behind the choice, not reproduced here since it'll only
+  go stale with time; re-check before assuming it still holds if it ever
+  matters. `test:e2e` runs both (no `--project` filter); `npm ci`/CI installs both
   `chromium` and `webkit` browser binaries accordingly. WebKit doesn't
   support Playwright's CDP session API (Chromium-only), so `mobile-iphone`
   excludes the two specs built on it via its own `testIgnore` —
