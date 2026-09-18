@@ -32,6 +32,24 @@ export default defineConfig({
       name: "mobile-chromium",
       use: { ...devices["Pixel 7"] },
     },
+    {
+      name: "mobile-samsung",
+      use: { ...devices["Galaxy S24"] },
+    },
+    {
+      // The one project running a genuinely different engine (WebKit, same
+      // as real iOS Safari) rather than another Chromium profile — the
+      // whole point of testing "iPhone" specifically. That means
+      // Playwright's CDP session API (Chromium-only) isn't available here,
+      // so the two specs built on it are excluded on this project alone:
+      // drawer-dismissal.spec.ts (raw CDP touch events for the swipe
+      // gesture) and app-lock.spec.ts (a CDP virtual WebAuthn
+      // authenticator). Everything else — routing, forms, backup,
+      // settings, daily reset — still runs for real on WebKit.
+      name: "mobile-iphone",
+      testIgnore: [/drawer-dismissal\.spec\.ts$/, /app-lock\.spec\.ts$/],
+      use: { ...devices["iPhone 17"] },
+    },
   ],
   webServer: {
     command: "npm run build && npm run preview -- --port 4173 --strictPort",

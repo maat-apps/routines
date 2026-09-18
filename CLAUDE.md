@@ -230,15 +230,26 @@ The only network traffic is the service worker fetching the app's own files.
   `tsconfig.app.json`/`tsconfig.node.json`, since neither of those covers
   it). Runs against the real production build — `webServer` in
   `playwright.config.ts` runs `npm run build` then `vite preview`, not the
-  Vite dev server — under a phone-sized viewport (`devices["Pixel 7"]`;
-  the mobile gate hides the app at CSS widths ≥481px regardless of the
-  device's own touch/UA emulation). `e2e/fixtures.ts` seeds
-  `localStorage` directly via `page.addInitScript` for tests that aren't
-  exercising the create/edit UI itself, and holds two CDP-based helpers
-  raw Playwright APIs don't cover: a touch-swipe simulator (Base UI's
-  drawer swipe-to-dismiss reacts to real touch events, not synthetic mouse
-  drags — see the Drawer bullet above) and a virtual WebAuthn
-  authenticator (for the app-lock enrol/unlock flow). One easy trap when
+  Vite dev server — under a phone-sized viewport across three device
+  projects (the mobile gate hides the app at CSS widths ≥481px regardless
+  of the device's own touch/UA emulation): `mobile-chromium`
+  (`devices["Pixel 7"]`), `mobile-samsung` (`devices["Galaxy S24"]`), and
+  `mobile-iphone` (`devices["iPhone 17"]`, real **WebKit** — the one
+  project running a genuinely different rendering engine, not just another
+  Chromium profile). `test:e2e` runs all three (no `--project` filter);
+  `npm ci`/CI installs both `chromium` and `webkit` browser binaries
+  accordingly. WebKit doesn't support Playwright's CDP session API
+  (Chromium-only), so `mobile-iphone` excludes the two specs built on it
+  via its own `testIgnore` — `drawer-dismissal.spec.ts` (raw CDP touch
+  events) and `app-lock.spec.ts` (a CDP virtual WebAuthn authenticator) —
+  rather than those hard-failing there; everything else still runs for
+  real on WebKit. `e2e/fixtures.ts` seeds `localStorage` directly via
+  `page.addInitScript` for tests that aren't exercising the create/edit UI
+  itself, and holds those two CDP-based helpers raw Playwright APIs don't
+  cover: the touch-swipe simulator (Base UI's drawer swipe-to-dismiss
+  reacts to real touch events, not synthetic mouse drags — see the Drawer
+  bullet above) and the virtual WebAuthn authenticator (for the app-lock
+  enrol/unlock flow). One easy trap when
   writing new specs: `page.goto("/new")` against this `baseURL` (which
   itself already ends in `/routines/`) resolves to the _origin_ root
   (`http://localhost:4173/new`), not `/routines/new` — a leading `/` in a
