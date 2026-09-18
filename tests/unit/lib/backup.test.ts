@@ -52,7 +52,15 @@ describe("parseBackup", () => {
       exportedAt: "2026-09-17T12:00:00.000Z",
       locale: "pl",
       data: {
-        routines: [{ id: "r1", name: "A", order: 0, steps: [] }],
+        routines: [
+          {
+            id: "r1",
+            name: "A",
+            order: 0,
+            activeDays: [0, 1, 2, 3, 4, 5, 6],
+            steps: [],
+          },
+        ],
         state: { r1: { checkedStepIds: [], lastResetDate: "2026-09-17" } },
       },
     };
@@ -79,14 +87,26 @@ describe("parseBackup", () => {
       version: 1,
       data: {
         routines: [
-          { id: "r1", name: "Good", order: 0, steps: [] },
+          {
+            id: "r1",
+            name: "Good",
+            order: 0,
+            activeDays: [0, 1, 2, 3, 4, 5, 6],
+            steps: [],
+          },
           { id: "r2" },
         ],
       },
     });
     const result = parseBackup(text);
     expect(result.data.routines).toEqual([
-      { id: "r1", name: "Good", order: 0, steps: [] },
+      {
+        id: "r1",
+        name: "Good",
+        order: 0,
+        activeDays: [0, 1, 2, 3, 4, 5, 6],
+        steps: [],
+      },
     ]);
   });
 });
@@ -99,12 +119,26 @@ describe("applyBackup", () => {
       exportedAt: "2026-09-17T12:00:00.000Z",
       locale: null,
       data: {
-        routines: [{ id: "r1", name: "A", order: 0, steps: [] }],
+        routines: [
+          {
+            id: "r1",
+            name: "A",
+            order: 0,
+            activeDays: [0, 1, 2, 3, 4, 5, 6],
+            steps: [],
+          },
+        ],
         state: {},
       },
     });
     expect(getRawData().routines).toEqual([
-      { id: "r1", name: "A", order: 0, steps: [] },
+      {
+        id: "r1",
+        name: "A",
+        order: 0,
+        activeDays: [0, 1, 2, 3, 4, 5, 6],
+        steps: [],
+      },
     ]);
   });
 
@@ -200,7 +234,13 @@ describe("downloadBackup", () => {
   });
 
   it("defaults to a fresh createBackup() snapshot when none is given", () => {
-    saveRoutine({ id: "r1", name: "Morning", order: 0, steps: [] });
+    saveRoutine({
+      id: "r1",
+      name: "Morning",
+      order: 0,
+      activeDays: [0, 1, 2, 3, 4, 5, 6],
+      steps: [],
+    });
     stubObjectUrl("blob:mock-url");
     let capturedDownload = "";
     vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (

@@ -6,6 +6,7 @@ import { useSmartBack } from "@/hooks/use-smart-back";
 import { useRoutines } from "@/hooks/use-store";
 import { useTranslation } from "@/i18n/use-translation";
 import { createId } from "@/lib/routine-utils";
+import { ALL_DAYS } from "@/lib/schemas";
 import { saveRoutine } from "@/lib/storage";
 import type { Routine } from "@/types";
 
@@ -21,6 +22,7 @@ export function NewRoutineView() {
       id: createId(),
       name: "",
       order: routines.length,
+      activeDays: ALL_DAYS,
       steps: [],
     };
     startTransition(() => setRoutine(newRoutine));

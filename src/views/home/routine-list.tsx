@@ -29,7 +29,7 @@ import {
 } from "lucide-react";
 import { startTransition, useEffect, useState } from "react";
 
-import { EmptyState } from "@/components/empty-states";
+import { EmptyState, NoRoutinesToday } from "@/components/empty-states";
 import { ProgressRing } from "@/components/progress-ring";
 import { Button } from "@/components/ui/button";
 import {
@@ -46,6 +46,7 @@ const fixedActionShadow = "shadow-[0_8px_22px_oklch(0_0_0_/_28%)]";
 
 export function RoutineList({
   routines,
+  hasAnyRoutines,
   state,
   hasCheckedSteps,
   onCreate,
@@ -54,6 +55,7 @@ export function RoutineList({
   onReorder,
 }: {
   routines: Routine[];
+  hasAnyRoutines: boolean;
   state: Record<string, RoutineProgress>;
   hasCheckedSteps: boolean;
   onCreate: () => void;
@@ -117,7 +119,11 @@ export function RoutineList({
         </Button>
       </header>
       {routines.length === 0 ? (
-        <EmptyState onCreate={onCreate} />
+        hasAnyRoutines ? (
+          <NoRoutinesToday />
+        ) : (
+          <EmptyState onCreate={onCreate} />
+        )
       ) : (
         <DndContext
           sensors={sensors}
