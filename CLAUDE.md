@@ -283,20 +283,10 @@ tied to a hook.
 - Check the current branch before editing or committing anything — never
   edit or commit directly on `main`, including doc-only changes. Branch
   first, always.
-- **Commit automatically once a task's changes are complete** — don't
-  wait to be asked.
-- **Push and open the PR immediately via `/open-pr`** — no draft preview,
-  no confirmation pause. Merge is the human checkpoint, not PR creation:
-  the user merges from the GitHub mobile app, or tells Claude Code to
-  merge/enable auto-merge on a specific PR. If checks already passed,
-  auto-merge can't arm (nothing left to wait for) — use
-  `gh pr merge <n> --squash` directly instead.
-- **Skip local lint/format/typecheck/test/build/audit before pushing.**
-  `.github/workflows/validate.yml` runs the full set as a required check,
-  and Auto-fix handles failures. CI's `Audit` step uses
-  `--audit-level=high`; local `npm run validate` stays plain `npm audit`.
-  Only run checks locally when actively debugging, and keep that output
-  to ✅/❌ with ~10 lines of context on a ❌ — never full logs on a pass.
+- Commit automatically once a task's changes are complete, then use
+  `/open-pr` to push and open the PR — see that command for the full
+  flow (no local re-verification, no confirmation pause, merge is the
+  human checkpoint).
 - When a change touches something CLAUDE.md or README.md describes
   (architecture, stack, file locations), update those docs in the same
   session rather than leaving them to drift until a later cleanup pass finds
