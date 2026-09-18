@@ -283,6 +283,11 @@ summary-only warnings. `build`/`npm audit` aren't tied to any hook, but
 - Check the current branch before editing or committing anything — never
   edit or commit directly on `main`, including doc-only changes. Branch
   first, always.
+- Delete local branches once their PR is confirmed merged on GitHub —
+  `git branch -d`, or `-D` when a squash-merge or an already-deleted
+  remote branch blocks the safe check (git's ancestry check doesn't
+  understand squash merges). Don't wait to be asked; verify via GitHub
+  first (`gh pr view`/`gh api`), not just local heuristics.
 - Commit automatically once a task's changes are complete, then use
   `/open-pr` to push and open the PR — see that command for the full
   flow (no local re-verification, no confirmation pause, merge is the

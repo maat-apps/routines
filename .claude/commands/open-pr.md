@@ -17,10 +17,15 @@ Do NOT proceed past step 1 without stopping and telling the user why.
    - `git rev-parse --abbrev-ref --symbolic-full-name @{u}` to check if it
      already tracks a remote branch.
    - If untracked: `git push -u origin <branch>`. If tracked: `git push`
-     (only if local is ahead of remote — check first, don't force).
+     (only if local is ahead of remote — check first, don't force; if
+     rejected because the remote has new commits — e.g. from a branch
+     update via the GitHub API — `git rebase origin/<branch>` then push).
+   - `gh pr view <branch> --json number` (or reuse `ccd_pr.get_status` if
+     already bound this session) to check whether this branch already has
+     an open PR.
 
-3. **Draft the PR title and description, then create it immediately** —
-   no preview shown in chat, no confirmation pause.
+3. **No existing PR: draft and create one immediately** — no preview
+   shown in chat, no confirmation pause.
    - Title: short (under 70 chars), imperative, no trailing period.
    - Description: follow the exact rules from `/pr-description` — inspect
      `git log --oneline main..HEAD`, `git diff main --stat`, and the actual
@@ -37,11 +42,17 @@ Do NOT proceed past step 1 without stopping and telling the user why.
      ```
      End the body with the attribution lines given in this conversation's
      system-reminder, when one is present.
+   - Then wire up CI monitoring: `ccd_pr` tools (`bind_pr`, then
+     `set_monitor`) so checks are watched and Auto-fix can react —
+     instead of polling `gh` by hand. Do not enable auto-merge unless the
+     user explicitly asks for it on that specific PR.
 
-4. **Wire up CI monitoring.** Use the `ccd_pr` tools (`bind_pr`, then
-   `set_monitor`) on the newly created PR so its checks are watched and
-   Auto-fix can be offered if something fails — instead of polling `gh` by
-   hand. Do not enable auto-merge unless the user explicitly asks for it
-   on that specific PR.
+4. **Existing PR: regenerate the description from the full diff, don't
+   just leave it describing the state at creation.** Re-derive it the
+   same way as step 3 (rules from `/pr-description`, inspecting the full
+   `main..HEAD` diff, not just the new commits), then
+   `gh pr edit <n> --body "$(cat <<'EOF' ... EOF)"`. CI monitoring is
+   already bound from when the PR was created — no need to re-bind.
 
-5. Confirm briefly that the PR was opened — no title/body, no URL.
+5. Confirm briefly that the push/PR update happened — no title/body, no
+   URL.
