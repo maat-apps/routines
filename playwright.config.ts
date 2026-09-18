@@ -17,6 +17,13 @@ export default defineConfig({
   use: {
     baseURL: "http://localhost:4173/routines/",
     trace: "on-first-retry",
+    // Pinned rather than left to whatever the runner's Chromium defaults
+    // to — the app detects its language from navigator.language on first
+    // launch (src/lib/locale-store.ts), and specs assert against en.json's
+    // actual strings (see e2e/fixtures.ts), so this has to be deterministic
+    // across every environment the suite runs in, not just "whatever this
+    // machine happens to resolve."
+    locale: "en-US",
   },
   projects: [
     {

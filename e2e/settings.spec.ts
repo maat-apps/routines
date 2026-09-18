@@ -1,15 +1,20 @@
 import { expect, test } from "@playwright/test";
 
-import { seedData } from "./fixtures";
+import { en, seedData } from "./fixtures";
 
 test.describe("settings", () => {
   test("switching language updates the visible label", async ({ page }) => {
     await seedData(page, []);
     await page.goto("");
-    await page.getByRole("button", { name: "Settings" }).click();
+    await page.getByRole("button", { name: en.settings }).click();
 
-    const languageTrigger = page.getByRole("combobox", { name: "Language" });
+    const languageTrigger = page.getByRole("combobox", {
+      name: en.language,
+    });
     await languageTrigger.click();
+    // "Polski"/"English" are literal option labels (each language name shown
+    // in its own language), not sourced from en.json/pl.json — not a
+    // hardcoded-translation gap the same way the rest of this suite had.
     await page.getByRole("option", { name: "Polski" }).click();
 
     // The combobox's own aria-label is itself the translated word for
@@ -26,14 +31,14 @@ test.describe("settings", () => {
   }) => {
     await seedData(page, [{ id: "r1", name: "Morning", order: 0, steps: [] }]);
     await page.goto("");
-    await page.getByRole("button", { name: "Settings" }).click();
+    await page.getByRole("button", { name: en.settings }).click();
 
-    await page.getByRole("button", { name: "Reset settings" }).click();
+    await page.getByRole("button", { name: en.resetSettings }).click();
     const dialog = page.getByRole("dialog");
     await expect(
-      dialog.getByRole("heading", { name: "Reset settings?" }),
+      dialog.getByRole("heading", { name: en.resetSettingsTitle }),
     ).toBeVisible();
-    await dialog.getByRole("button", { name: "Reset" }).click();
+    await dialog.getByRole("button", { name: en.resetSettingsAction }).click();
 
     await page.waitForURL(/\/routines\/?$/);
     const remainingKeys = await page.evaluate(() =>

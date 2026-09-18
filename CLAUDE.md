@@ -303,6 +303,15 @@ directly.
   hooks — don't manually re-run them or narrate that you're about to.
 - `npm run validate` is for manual/debugging use only, not a required
   step before committing or pushing — see below.
+- Don't run `npm run typecheck`/`lint`/`build`/`test:coverage`/`test:e2e`
+  locally to double-check a change before committing or pushing — the Stop
+  hook already runs typecheck every turn and coverage when `src/`/`tests/`
+  changed, and `validate.yml` runs the full set (including `test:e2e`) in
+  CI on every PR. Running them again locally is redundant work against
+  what's already covered, not extra safety. This applies to `test:e2e`
+  specifically, not just the cheaper checks — a full Playwright run
+  (build + serve + browser) is exactly the kind of repeated local
+  verification CI already exists to replace.
 - Prefer `Grep`/`Glob` over reading whole files; read only what a task needs.
 - For broad codebase audits, use `/find-antipatterns` instead of reading many
   files inline.

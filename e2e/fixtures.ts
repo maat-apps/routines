@@ -1,6 +1,33 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+
 import { type Page } from "@playwright/test";
 
 const DATA_KEY = "routines-data";
+
+// The real strings, read from their actual source rather than retyped by
+// hand into each spec — playwright.config.ts pins `locale: "en-US"` so the
+// app's own navigator.language-based detection (locale-store.ts) always
+// lands on "en" here, matching this file. Without both halves (a pinned
+// locale AND assertions sourced from en.json instead of hand-copied
+// literals), these tests would pass or fail depending on whichever locale
+// the CI runner's Chromium happened to default to, and a wording change in
+// en.json could silently stop matching hand-copied strings without any
+// test catching the drift.
+export const en = JSON.parse(
+  readFileSync(
+    fileURLToPath(new URL("../src/i18n/en.json", import.meta.url)),
+    "utf-8",
+  ),
+) as Record<string, string>;
+
+/** Mirrors use-translation.ts's own `{placeholder}` substitution. */
+export function t(key: string, params: Record<string, string | number> = {}) {
+  return Object.entries(params).reduce(
+    (text, [name, value]) => text.replaceAll(`{${name}}`, String(value)),
+    en[key],
+  );
+}
 
 export interface SeedStep {
   id: string;

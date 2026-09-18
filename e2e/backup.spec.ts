@@ -1,9 +1,9 @@
 import { expect, test } from "@playwright/test";
 
-import { seedData } from "./fixtures";
+import { en, seedData } from "./fixtures";
 
 async function openSettings(page: import("@playwright/test").Page) {
-  await page.getByRole("button", { name: "Settings" }).click();
+  await page.getByRole("button", { name: en.settings }).click();
 }
 
 test.describe("backup export / import", () => {
@@ -16,7 +16,7 @@ test.describe("backup export / import", () => {
 
     const [download] = await Promise.all([
       page.waitForEvent("download"),
-      page.getByRole("button", { name: "Save" }).click(),
+      page.getByRole("button", { name: en.exportAction }).click(),
     ]);
 
     expect(download.suggestedFilename()).toMatch(
@@ -59,7 +59,7 @@ test.describe("backup export / import", () => {
         state: {},
       },
     };
-    await page.getByLabel("Import").setInputFiles({
+    await page.getByLabel(en.importData).setInputFiles({
       name: "backup.json",
       mimeType: "application/json",
       buffer: Buffer.from(JSON.stringify(validBackup)),
@@ -67,13 +67,11 @@ test.describe("backup export / import", () => {
 
     const dialog = page.getByRole("dialog");
     await expect(
-      dialog.getByRole("heading", { name: "Replace all routines?" }),
+      dialog.getByRole("heading", { name: en.importTitle }),
     ).toBeVisible();
-    await dialog.getByRole("button", { name: "Replace" }).click();
+    await dialog.getByRole("button", { name: en.importConfirm }).click();
 
-    await expect(
-      page.getByText("Routines restored from the backup."),
-    ).toBeVisible();
+    await expect(page.getByText(en.importDone)).toBeVisible();
     // Close the settings drawer and check the list underneath.
     await page.keyboard.press("Escape");
     await expect(
@@ -91,15 +89,13 @@ test.describe("backup export / import", () => {
     await page.goto("");
     await openSettings(page);
 
-    await page.getByLabel("Import").setInputFiles({
+    await page.getByLabel(en.importData).setInputFiles({
       name: "not-a-backup.json",
       mimeType: "application/json",
       buffer: Buffer.from("this is not json"),
     });
 
-    await expect(
-      page.getByText("That file is not a Routines backup."),
-    ).toBeVisible();
+    await expect(page.getByText(en.importFailed)).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(page.getByRole("button", { name: /Keep me/ })).toBeVisible();
   });

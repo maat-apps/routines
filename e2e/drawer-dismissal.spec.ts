@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { seedData, swipeDown } from "./fixtures";
+import { en, seedData, swipeDown } from "./fixtures";
 
 test.describe("drawer dismissal", () => {
   test("swiping down on the swipe handle closes the settings drawer", async ({
@@ -8,7 +8,7 @@ test.describe("drawer dismissal", () => {
   }) => {
     await seedData(page, []);
     await page.goto("");
-    await page.getByRole("button", { name: "Settings" }).click();
+    await page.getByRole("button", { name: en.settings }).click();
 
     const dialog = page.getByRole("dialog");
     await expect(dialog).toBeVisible();
@@ -28,7 +28,7 @@ test.describe("drawer dismissal", () => {
   }) => {
     await seedData(page, [{ id: "r1", name: "Morning", order: 0, steps: [] }]);
     await page.goto("");
-    await page.getByRole("button", { name: "Settings" }).click();
+    await page.getByRole("button", { name: en.settings }).click();
     await expect(page.getByRole("dialog")).toBeVisible();
 
     await page.goBack();
@@ -36,6 +36,6 @@ test.describe("drawer dismissal", () => {
     await expect(page.getByRole("dialog")).toHaveCount(0);
     // Still on the home screen — back closed the drawer, it didn't leave the route.
     await expect(page).toHaveURL(/\/routines\/$/);
-    await expect(page.getByRole("heading", { name: "Routines" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: en.appName })).toBeVisible();
   });
 });

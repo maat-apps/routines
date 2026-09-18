@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { seedData, todayIso } from "./fixtures";
+import { en, seedData, todayIso } from "./fixtures";
 
 test.describe("checking off steps and resetting", () => {
   test("checking a step updates its state and the progress ring", async ({
@@ -24,7 +24,7 @@ test.describe("checking off steps and resetting", () => {
     await step.click();
     await expect(step).toHaveAttribute("aria-checked", "true");
     await expect(
-      page.getByRole("img", { name: "1 / 2 completed" }),
+      page.getByRole("img", { name: `1 / 2 ${en.completed}` }),
     ).toBeVisible();
 
     // Toggling back off works the same way.
@@ -52,7 +52,7 @@ test.describe("checking off steps and resetting", () => {
     const step = page.getByRole("checkbox", { name: "Stretch" });
     await expect(step).toHaveAttribute("aria-checked", "true");
 
-    await page.getByRole("button", { name: "Reset" }).click();
+    await page.getByRole("button", { name: en.reset }).click();
     await expect(step).toHaveAttribute("aria-checked", "false");
   });
 

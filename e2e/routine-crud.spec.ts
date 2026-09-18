@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { seedData } from "./fixtures";
+import { en, seedData, t } from "./fixtures";
 
 test.describe("create / edit / reorder / delete a routine", () => {
   test("creates a routine with two steps end to end", async ({ page }) => {
@@ -9,16 +9,16 @@ test.describe("create / edit / reorder / delete a routine", () => {
     // Two "New routine" buttons exist when the list is empty: the
     // always-present floating action button and the empty state's own —
     // either works identically here.
-    await page.getByRole("button", { name: "New routine" }).first().click();
+    await page.getByRole("button", { name: en.newRoutine }).first().click();
 
-    await page.getByLabel("Routine name").fill("Evening");
-    await page.getByRole("button", { name: "Add step" }).click();
-    await page.getByLabel(/^Step 1$/).fill("Brush teeth");
+    await page.getByLabel(en.routineName).fill("Evening");
+    await page.getByRole("button", { name: en.addStep }).click();
+    await page.getByLabel(t("stepNumber", { number: 1 })).fill("Brush teeth");
     // Enter on a step commits it and focuses a newly-inserted row below.
-    await page.getByLabel(/^Step 1$/).press("Enter");
-    await page.getByLabel(/^Step 2$/).fill("Read");
+    await page.getByLabel(t("stepNumber", { number: 1 })).press("Enter");
+    await page.getByLabel(t("stepNumber", { number: 2 })).fill("Read");
 
-    const done = page.getByRole("button", { name: "Done" });
+    const done = page.getByRole("button", { name: en.done });
     await expect(done).toBeEnabled();
     await done.click();
 
@@ -35,16 +35,16 @@ test.describe("create / edit / reorder / delete a routine", () => {
   }) => {
     await seedData(page, []);
     await page.goto("new");
-    const done = page.getByRole("button", { name: "Done" });
+    const done = page.getByRole("button", { name: en.done });
     await expect(done).toBeDisabled();
 
-    await page.getByLabel("Routine name").fill("Evening");
+    await page.getByLabel(en.routineName).fill("Evening");
     await expect(done).toBeDisabled();
 
-    await page.getByRole("button", { name: "Add step" }).click();
+    await page.getByRole("button", { name: en.addStep }).click();
     await expect(done).toBeDisabled();
 
-    await page.getByLabel(/^Step 1$/).fill("Brush teeth");
+    await page.getByLabel(t("stepNumber", { number: 1 })).fill("Brush teeth");
     await expect(done).toBeEnabled();
   });
 
@@ -62,9 +62,9 @@ test.describe("create / edit / reorder / delete a routine", () => {
     ]);
     await page.goto("routine/edit?id=r1");
 
-    await page.getByLabel("Routine name").fill("Morning routine");
-    await page.getByRole("button", { name: "Delete step" }).first().click();
-    await page.getByRole("button", { name: "Done" }).click();
+    await page.getByLabel(en.routineName).fill("Morning routine");
+    await page.getByRole("button", { name: en.deleteStep }).first().click();
+    await page.getByRole("button", { name: en.done }).click();
 
     await expect(page).toHaveURL(/\/routines\/routine\?id=r1$/);
     await expect(
@@ -79,16 +79,16 @@ test.describe("create / edit / reorder / delete a routine", () => {
   test("deletes a routine from the edit view", async ({ page }) => {
     await seedData(page, [{ id: "r1", name: "Morning", order: 0, steps: [] }]);
     await page.goto("routine/edit?id=r1");
-    await page.getByRole("button", { name: "Delete routine" }).click();
+    await page.getByRole("button", { name: en.deleteRoutine }).click();
 
     const dialog = page.getByRole("dialog");
     await expect(
-      dialog.getByRole("heading", { name: "Delete this routine?" }),
+      dialog.getByRole("heading", { name: en.deleteRoutineTitle }),
     ).toBeVisible();
-    await dialog.getByRole("button", { name: "Delete routine" }).click();
+    await dialog.getByRole("button", { name: en.deleteRoutine }).click();
 
     await expect(page).toHaveURL(/\/routines\/?$/);
-    await expect(page.getByText("Start with one routine")).toBeVisible();
+    await expect(page.getByText(en.emptyTitle)).toBeVisible();
   });
 
   test("reorders steps by dragging a step's handle past the next one", async ({
@@ -107,7 +107,7 @@ test.describe("create / edit / reorder / delete a routine", () => {
     ]);
     await page.goto("routine/edit?id=r1");
 
-    const handles = page.getByRole("button", { name: "Drag step" });
+    const handles = page.getByRole("button", { name: en.dragStep });
     const firstHandleBox = await handles.nth(0).boundingBox();
     const secondHandleBox = await handles.nth(1).boundingBox();
     if (!firstHandleBox || !secondHandleBox) {
@@ -132,7 +132,10 @@ test.describe("create / edit / reorder / delete a routine", () => {
     }
     await page.mouse.up();
 
-    const stepInputs = page.locator('input[aria-label^="Step "]');
+    // stepNumber's template ("Step {number}") has a locale-dependent prefix
+    // too — derive it instead of hand-copying "Step " into the selector.
+    const stepLabelPrefix = en.stepNumber.split("{number}")[0];
+    const stepInputs = page.locator(`input[aria-label^="${stepLabelPrefix}"]`);
     await expect(stepInputs.nth(0)).toHaveValue("Second");
     await expect(stepInputs.nth(1)).toHaveValue("First");
   });

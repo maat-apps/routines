@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { addVirtualAuthenticator, seedData } from "./fixtures";
+import { addVirtualAuthenticator, en, seedData } from "./fixtures";
 
 test.describe("app lock", () => {
   test("enrolling turns the lock on and unlocking with the same authenticator works", async ({
@@ -10,28 +10,26 @@ test.describe("app lock", () => {
     await seedData(page, []);
     await page.goto("");
 
-    await page.getByRole("button", { name: "Settings" }).click();
-    const lockSwitch = page.getByRole("switch", { name: "App lock" });
+    await page.getByRole("button", { name: en.settings }).click();
+    const lockSwitch = page.getByRole("switch", { name: en.appLock });
     await expect(lockSwitch).toBeEnabled();
     await lockSwitch.click();
     await expect(lockSwitch).toBeChecked();
-    await expect(
-      page.getByText("Ask for your fingerprint before opening."),
-    ).toBeVisible();
+    await expect(page.getByText(en.appLockDescription)).toBeVisible();
 
     // Enrolling counts as unlocked (per CLAUDE.md's app-lock notes) — a
     // reload should still show the locked screen, since being unlocked is
     // per-session memory state, not persisted.
     await page.reload();
     await expect(
-      page.getByRole("heading", { name: "Routines is locked" }),
+      page.getByRole("heading", { name: en.lockedTitle }),
     ).toBeVisible();
 
-    await page.getByRole("button", { name: "Unlock" }).click();
+    await page.getByRole("button", { name: en.unlock }).click();
     await expect(
-      page.getByRole("heading", { name: "Routines is locked" }),
+      page.getByRole("heading", { name: en.lockedTitle }),
     ).toHaveCount(0);
-    await expect(page.getByRole("heading", { name: "Routines" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: en.appName })).toBeVisible();
   });
 
   test("the escape hatch turns the lock off when no authenticator is available", async ({
@@ -61,16 +59,14 @@ test.describe("app lock", () => {
     await page.goto("");
 
     await expect(
-      page.getByRole("heading", { name: "Routines is locked" }),
+      page.getByRole("heading", { name: en.lockedTitle }),
     ).toBeVisible();
 
     // isAppLockSupported() resolving false shows the escape hatch on mount
     // (app-lock-gate.tsx), without needing a failed unlock attempt first.
-    const escapeHatch = page.getByRole("button", {
-      name: "Turn off the lock",
-    });
+    const escapeHatch = page.getByRole("button", { name: en.turnOffLock });
     await expect(escapeHatch).toBeVisible();
     await escapeHatch.click();
-    await expect(page.getByRole("heading", { name: "Routines" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: en.appName })).toBeVisible();
   });
 });
