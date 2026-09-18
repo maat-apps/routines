@@ -78,6 +78,16 @@ export function todayIso(): string {
  * Base UI's drawer swipe-to-dismiss reacts to real touch events, not
  * synthetic mouse drags (see CLAUDE.md's Drawer notes) — Playwright has no
  * high-level touch-drag API, so this drives the CDP Input domain directly.
+ *
+ * The per-step delay matters, not just the path: firing all touchmove
+ * events back-to-back (no delay) let the gesture's distance/velocity
+ * tracking depend on incidental IPC round-trip jitter between CDP calls to
+ * produce a plausible touch cadence — fine on a fast machine, but flaky on
+ * a slower/busier CI runner, where that jitter isn't consistent enough to
+ * reliably cross the drawer's dismiss threshold (observed: this test
+ * failed the same way, same assertion, on two consecutive CI runs before
+ * this fix). A fixed ~16ms delay between steps (roughly one frame at 60Hz)
+ * gives it a realistic, consistent cadence instead of relying on chance.
  */
 export async function swipeDown(
   page: Page,
@@ -88,6 +98,7 @@ export async function swipeDown(
 ): Promise<void> {
   const client = await page.context().newCDPSession(page);
   const point = (y: number) => [{ x, y, id: 1 }];
+  const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
   await client.send("Input.dispatchTouchEvent", {
     type: "touchStart",
@@ -96,12 +107,14 @@ export async function swipeDown(
 
   for (let i = 1; i <= steps; i++) {
     const y = startY + ((endY - startY) * i) / steps;
+    await wait(16);
     await client.send("Input.dispatchTouchEvent", {
       type: "touchMove",
       touchPoints: point(y),
     });
   }
 
+  await wait(16);
   await client.send("Input.dispatchTouchEvent", {
     type: "touchEnd",
     touchPoints: [],
