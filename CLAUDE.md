@@ -230,20 +230,33 @@ The only network traffic is the service worker fetching the app's own files.
   `tsconfig.app.json`/`tsconfig.node.json`, since neither of those covers
   it). Runs against the real production build — `webServer` in
   `playwright.config.ts` runs `npm run build` then `vite preview`, not the
-  Vite dev server — under a phone-sized viewport across three device
-  projects (the mobile gate hides the app at CSS widths ≥481px regardless
-  of the device's own touch/UA emulation): `mobile-chromium`
-  (`devices["Pixel 7"]`), `mobile-samsung` (`devices["Galaxy S24"]`), and
-  `mobile-iphone` (`devices["iPhone 17"]`, real **WebKit** — the one
-  project running a genuinely different rendering engine, not just another
-  Chromium profile). `test:e2e` runs all three (no `--project` filter);
-  `npm ci`/CI installs both `chromium` and `webkit` browser binaries
-  accordingly. WebKit doesn't support Playwright's CDP session API
-  (Chromium-only), so `mobile-iphone` excludes the two specs built on it
-  via its own `testIgnore` — `drawer-dismissal.spec.ts` (raw CDP touch
-  events) and `app-lock.spec.ts` (a CDP virtual WebAuthn authenticator) —
-  rather than those hard-failing there; everything else still runs for
-  real on WebKit. `e2e/fixtures.ts` seeds `localStorage` directly via
+  Vite dev server — under a phone-sized viewport across two device
+  projects, two OSes, deliberately not more (the mobile gate hides the app
+  at CSS widths ≥481px regardless of the device's own touch/UA emulation):
+  `mobile-chromium` (`devices["Galaxy A55"]`) and `mobile-iphone`
+  (`devices["iPhone 13"]`, real **WebKit**). A Playwright device preset only
+  ever changes viewport/UA, never the rendering engine — every `"iPhone *"`
+  preset drives the same bundled WebKit, every Android preset the same
+  bundled Chromium — so a third project (e.g. a second Android profile)
+  would only add a different viewport width, not real engine coverage,
+  given WebKit is the one project here actually exercising a different
+  engine. Model choice within each OS is picked for real-world
+  representativeness, not "newest"/flagship: Galaxy A55 over a Samsung
+  flagship because Samsung's own sales data shows the A-series, not the
+  S-series, dominates real shipment volume; iPhone 13 because it's
+  essentially tied for the single most-used iPhone model by installed base
+  and representative of the "standard," not Pro/Max, size tier most iPhones
+  in current use actually are (checked 2026-09-18 via web search — iPhone
+  13/15/16 Pro/17/17 Pro Max all cluster within a point of each other, so
+  this is "closest to the common tier," not a precise single-model claim).
+  `test:e2e` runs both (no `--project` filter); `npm ci`/CI installs both
+  `chromium` and `webkit` browser binaries accordingly. WebKit doesn't
+  support Playwright's CDP session API (Chromium-only), so `mobile-iphone`
+  excludes the two specs built on it via its own `testIgnore` —
+  `drawer-dismissal.spec.ts` (raw CDP touch events) and `app-lock.spec.ts`
+  (a CDP virtual WebAuthn authenticator) — rather than those hard-failing
+  there; everything else still runs for real on WebKit. `e2e/fixtures.ts`
+  seeds `localStorage` directly via
   `page.addInitScript` for tests that aren't exercising the create/edit UI
   itself, and holds those two CDP-based helpers raw Playwright APIs don't
   cover: the touch-swipe simulator (Base UI's drawer swipe-to-dismiss
