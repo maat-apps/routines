@@ -1,0 +1,266 @@
+name: CI
+
+# One pipeline per PR, four sequential stages, fast-fail first:
+# code-quality (cheap, deterministic) gates test (unit + e2e, the slow
+# stage), which gates build-and-audit, which gates publishing a PR
+# preview under /routines/pr-<n>/ (see deploy.yml for main's own deploy
+# and how both share one GitHub Pages site via the pages-content storage
+# branch). Each job is a fresh runner — no filesystem shared between
+# them — so each repeats its own `npm ci`; actions/setup-node's
+# `cache: npm` keeps that cheap (keyed off package-lock.json, not a fresh
+# download every time).
+#
+# Only PR preview *cleanup* lives in a separate file
+# (pr-preview-cleanup.yml, triggered on pull_request(closed)) — closing a
+# PR has nothing to validate, so running this whole pipeline again just
+# to delete a folder would be wasted CI minutes for no gate anyone needs.
+on:
+  pull_request:
+    paths:
+      # Code linted/typechecked by ESLint + tsc
+      - "**/*.ts"
+      - "**/*.tsx"
+      - "**/*.js"
+      - "**/*.jsx"
+      - "**/*.mjs"
+      - "**/*.cjs"
+      # Other files Prettier formats (prettier --check .)
+      - "**/*.json"
+      - "**/*.css"
+      - "**/*.md"
+      - "**/*.yml"
+      - "**/*.yaml"
+      - "**/*.html"
+      # Tooling / dependency config that changes the outcome
+      - "package.json"
+      - "package-lock.json"
+      - "tsconfig.json"
+      - ".prettierrc.json"
+      - ".prettierignore"
+      - "eslint.config.mjs"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+  pull-requests: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  code-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Check formatting
+        run: npm run format:check
+
+      - name: Typecheck
+        run: npm run typecheck
+
+  test:
+    needs: code-quality
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Unit tests + coverage
+        run: npm run test:coverage
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium webkit
+
+      # Split from the a11y run below via --grep-invert rather than
+      # excluding e2e/a11y.spec.ts in playwright.config.ts itself — that
+      # config is also what `npm run test:e2e` uses locally, and
+      # CLAUDE.md's own documented design has a11y run as part of that
+      # sweep with "no extra wiring". Splitting the CI invocation instead
+      # keeps that local behavior intact while still giving a11y its own
+      # named, separately-visible check here — every test still runs
+      # exactly once total between the two steps, nothing doubles up.
+      - name: E2E tests (functional)
+        run: npx playwright test --project=mobile-chromium --project=mobile-iphone --grep-invert "accessibility \(axe-core\)"
+
+      # "Scoring" per the task this stage was filed from: axe-core's own
+      # output is a pass/fail violations list, not a numeric score the way
+      # Lighthouse's is (deliberately kept out of this gate elsewhere, for
+      # exactly that reason) — inventing a fake number here would misrepresent
+      # what the tool actually measures. What this step gives instead is a
+      # distinctly-named, separately-visible check rather than a11y's result
+      # being buried inside one monolithic e2e log.
+      - name: E2E tests (accessibility)
+        run: npm run test:a11y
+
+  build-and-audit:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Audit
+        run: npm audit --audit-level=high
+
+  preview-build:
+    needs: build-and-audit
+    runs-on: ubuntu-latest
+    outputs:
+      pr_num: ${{ steps.pr_num.outputs.pr_num }}
+    # Shared with deploy.yml's own concurrency group (not this workflow's
+    # per-ref one above) — every preview push writes to the same shared
+    # pages-content branch main's own deploy also writes to, so two runs
+    # updating it at once would race each other's git push regardless of
+    # which PR (or main) they came from. cancel-in-progress stays false:
+    # cancelling this over an unrelated deploy would be wrong, not just
+    # wasteful.
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    env:
+      PR_NUM: ${{ github.event.pull_request.number }}
+    steps:
+      # A job output is the only way to pass this to preview-deploy below
+      # (separate runner, no shared env).
+      - name: Expose PR_NUM as a job output
+        id: pr_num
+        run: echo "pr_num=$PR_NUM" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout PR
+        uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build preview
+        run: npm run build
+        env:
+          DEPLOY_BASE_PATH: /routines/pr-${{ env.PR_NUM }}/
+
+      # See deploy.yml for why this branch exists: it's this workflow's own
+      # storage for assembling the whole Pages tree (main's root + every
+      # active preview subdirectory), not the Pages source itself.
+      - name: Checkout pages-content workspace
+        uses: actions/checkout@v5
+        with:
+          path: pages-content
+          fetch-depth: 0
+
+      - name: Switch to pages-content branch (create if missing)
+        working-directory: pages-content
+        run: |
+          git fetch origin pages-content:refs/remotes/origin/pages-content || true
+          if git show-ref --verify --quiet refs/remotes/origin/pages-content; then
+            git checkout pages-content
+          else
+            git checkout --orphan pages-content
+            git rm -rf . > /dev/null
+          fi
+
+      - name: Update this PR's preview subdirectory
+        run: |
+          rm -rf "pages-content/pr-$PR_NUM"
+          mkdir -p "pages-content/pr-$PR_NUM"
+          rsync -a dist/ "pages-content/pr-$PR_NUM/"
+
+      - name: Commit and push pages-content
+        working-directory: pages-content
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Preview for PR #$PR_NUM" --allow-empty
+          git push origin HEAD:pages-content
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v6
+        with:
+          enablement: true
+
+      - name: Remove git metadata before upload
+        run: rm -rf pages-content/.git
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: pages-content
+
+      - name: Add preview link to PR description
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PREVIEW_URL="https://maat-apps.github.io/routines/pr-$PR_NUM/"
+          BODY=$(gh pr view "$PR_NUM" --json body -q .body)
+          if ! printf '%s' "$BODY" | grep -qF "$PREVIEW_URL"; then
+            { printf '%s\n\n**Preview:** %s\n' "$BODY" "$PREVIEW_URL"; } | gh pr edit "$PR_NUM" --body-file -
+          fi
+
+  preview-deploy:
+    needs: preview-build
+    runs-on: ubuntu-latest
+    # A distinct environment from deploy.yml's "github-pages" — that one's
+    # auto-configured by GitHub Pages setup with a branch protection rule
+    # restricting deploys to main, which a pull_request run's merge ref
+    # (refs/pull/<n>/merge) never satisfies. actions/deploy-pages doesn't
+    # care what the environment is named, so a fresh one with no such rule
+    # sidesteps it rather than needing a manual repo-settings change.
+    #
+    # url is built explicitly rather than trusting deployment.outputs.page_url
+    # — that's always the Pages site's root, never the /routines/pr-<n>/
+    # subpath this run actually published, so GitHub's own "View deployment"
+    # link pointed at the wrong place. Same URL the PR-description step
+    # above already constructs, just from the other job.
+    environment:
+      name: github-pages-preview
+      # Bracket notation, not needs.preview-build.outputs — a hyphenated
+      # job ID after a dot risks being parsed as subtraction instead of
+      # property access.
+      url: https://maat-apps.github.io/routines/pr-${{ needs['preview-build'].outputs.pr_num }}/
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
