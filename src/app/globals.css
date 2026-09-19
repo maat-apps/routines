@@ -71,7 +71,7 @@
   /* Self-hosted via @fontsource-variable (see src/main.tsx) — same variable-font
      file next/font/google would have served, just bundled instead of fetched
      at runtime. A true variable font, which arbitrary Tailwind weights like
-     `font-medium` rely on. One family for both tokens — headings use
+     `font-semibold` rely on. One family for both tokens — headings use
      --font-heading for semantic clarity even though it currently resolves
      the same as --font-sans. */
   --font-sans: "Outfit Variable", ui-sans-serif, system-ui, sans-serif;

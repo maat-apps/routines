@@ -170,7 +170,7 @@ export function RoutineEditForm({
     <div className="mx-auto min-h-dvh w-[min(100%,480px)] px-5 pt-5 pb-[calc(132px+env(safe-area-inset-bottom))]">
       <AppBar title={title} onBack={onBack} />
       <section className="mb-7.5 grid gap-2.25">
-        <label htmlFor="routine-name" className="text-sm font-medium">
+        <label htmlFor="routine-name" className="text-sm font-semibold">
           {t("routineName")}
         </label>
         <Input
@@ -184,7 +184,7 @@ export function RoutineEditForm({
       </section>
       <section className="mb-7.5 grid gap-2.25">
         <div className="flex items-center justify-between">
-          <h2 className="m-0 text-sm font-medium">{t("activeDaysTitle")}</h2>
+          <h2 className="m-0 text-sm font-semibold">{t("activeDaysTitle")}</h2>
           <CalendarDays
             className="text-muted-foreground size-4"
             aria-hidden="true"
@@ -212,7 +212,7 @@ export function RoutineEditForm({
       </section>
       <section className="grid gap-2.25">
         <div className="flex items-center justify-between">
-          <h2 className="m-0 text-sm font-medium">{t("stepsTitle")}</h2>
+          <h2 className="m-0 text-sm font-semibold">{t("stepsTitle")}</h2>
           <span className="text-muted-foreground text-sm">{steps.length}</span>
         </div>
         <DndContext
