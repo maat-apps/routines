@@ -3,7 +3,7 @@ name: CI
 # One pipeline per PR, four sequential stages, fast-fail first:
 # code-quality (cheap, deterministic) gates test (unit + e2e, the slow
 # stage), which gates build-and-audit, which gates publishing a PR
-# preview under /routines/pr-<n>/ (see deploy.yml for main's own deploy
+# preview under /routines/pr-<n>/ (see cd.yml for main's own deploy
 # and how both share one GitHub Pages site via the pages-content storage
 # branch). Each job is a fresh runner — no filesystem shared between
 # them — so each repeats its own `npm ci`; actions/setup-node's
@@ -145,7 +145,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       pr_num: ${{ steps.pr_num.outputs.pr_num }}
-    # Shared with deploy.yml's own concurrency group (not this workflow's
+    # Shared with cd.yml's own concurrency group (not this workflow's
     # per-ref one above) — every preview push writes to the same shared
     # pages-content branch main's own deploy also writes to, so two runs
     # updating it at once would race each other's git push regardless of
@@ -181,7 +181,7 @@ jobs:
         env:
           DEPLOY_BASE_PATH: /routines/pr-${{ env.PR_NUM }}/
 
-      # See deploy.yml for why this branch exists: it's this workflow's own
+      # See cd.yml for why this branch exists: it's this workflow's own
       # storage for assembling the whole Pages tree (main's root + every
       # active preview subdirectory), not the Pages source itself.
       - name: Checkout pages-content workspace
@@ -242,7 +242,7 @@ jobs:
   preview-deploy:
     needs: preview-build
     runs-on: ubuntu-latest
-    # A distinct environment from deploy.yml's "github-pages" — that one's
+    # A distinct environment from cd.yml's "github-pages" — that one's
     # auto-configured by GitHub Pages setup with a branch protection rule
     # restricting deploys to main, which a pull_request run's merge ref
     # (refs/pull/<n>/merge) never satisfies. actions/deploy-pages doesn't
