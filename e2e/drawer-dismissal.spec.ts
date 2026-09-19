@@ -36,6 +36,14 @@ test.describe("drawer dismissal", () => {
     await expect(dialog).toHaveCount(0);
   });
 
+  // Confirmed by direct experiment (a standalone page with an armed
+  // CloseWatcher): programmatic back navigation — what page.goBack() and
+  // this test drive — only ever fires `popstate`, never CloseWatcher's own
+  // `close` event; the navigation actually proceeds and useHistoryBackDismiss
+  // is what closes the drawer. So this test verifies drawer.tsx's JS
+  // fallback path (iOS/non-CloseWatcher browsers), not the CloseWatcher path
+  // real Android Chrome uses for a hardware back gesture — Playwright has no
+  // way to simulate that signal, only an on-device check can exercise it.
   test("the browser back gesture closes the topmost drawer instead of navigating away", async ({
     page,
   }) => {
