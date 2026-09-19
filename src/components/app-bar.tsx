@@ -25,7 +25,7 @@ export function AppBar({
       >
         <ArrowLeft className="size-6" />
       </Button>
-      <h1 className="font-heading m-0 min-w-0 flex-1 overflow-hidden text-2xl font-[650] tracking-tight text-ellipsis whitespace-nowrap">
+      <h1 className="font-heading m-0 min-w-0 flex-1 overflow-hidden text-2xl font-medium tracking-tight text-ellipsis whitespace-nowrap">
         {title}
       </h1>
       {action ?? <span className="w-10" />}

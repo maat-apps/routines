@@ -170,7 +170,7 @@ export function RoutineEditForm({
     <div className="mx-auto min-h-dvh w-[min(100%,480px)] px-5 pt-5 pb-[calc(132px+env(safe-area-inset-bottom))]">
       <AppBar title={title} onBack={onBack} />
       <section className="mb-7.5 grid gap-2.25">
-        <label htmlFor="routine-name" className="text-sm font-[650]">
+        <label htmlFor="routine-name" className="text-sm font-medium">
           {t("routineName")}
         </label>
         <Input
@@ -184,14 +184,14 @@ export function RoutineEditForm({
       </section>
       <section className="mb-7.5 grid gap-2.25">
         <div className="flex items-center justify-between">
-          <h2 className="m-0 text-sm font-[650]">{t("activeDaysTitle")}</h2>
+          <h2 className="m-0 text-sm font-medium">{t("activeDaysTitle")}</h2>
           <CalendarDays
             className="text-muted-foreground size-4"
             aria-hidden="true"
           />
         </div>
         <div
-          className="flex gap-1.5"
+          className="grid grid-cols-7 gap-1.5"
           role="group"
           aria-label={t("activeDaysTitle")}
         >
@@ -200,7 +200,7 @@ export function RoutineEditForm({
               key={day}
               type="button"
               variant={activeDays.includes(day) ? "default" : "outline"}
-              className="h-10 flex-1 rounded-full px-0 text-sm"
+              className="flex h-10 items-center justify-center rounded-full px-0 pb-0.5 text-sm"
               aria-pressed={activeDays.includes(day)}
               aria-label={weekdayNames[day]}
               onClick={() => toggleDay(day)}
@@ -212,7 +212,7 @@ export function RoutineEditForm({
       </section>
       <section className="grid gap-2.25">
         <div className="flex items-center justify-between">
-          <h2 className="m-0 text-sm font-[650]">{t("stepsTitle")}</h2>
+          <h2 className="m-0 text-sm font-medium">{t("stepsTitle")}</h2>
           <span className="text-muted-foreground text-sm">{steps.length}</span>
         </div>
         <DndContext
