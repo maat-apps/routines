@@ -60,7 +60,7 @@ function SettingsSection({
       aria-label={title}
     >
       {title && (
-        <h2 className="text-muted-foreground mt-2 mb-0 px-1 text-xs font-[650] tracking-wide uppercase">
+        <h2 className="text-muted-foreground mt-2 mb-0 px-1 text-xs font-semibold tracking-wide uppercase">
           {title}
         </h2>
       )}

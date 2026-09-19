@@ -40,9 +40,21 @@ describe("readData / getRawData", () => {
 
   it("round-trips valid data", async () => {
     const { saveRoutine, getRawData } = await freshStorage();
-    saveRoutine({ id: "r1", name: "Morning", order: 0, steps: [] });
+    saveRoutine({
+      id: "r1",
+      name: "Morning",
+      order: 0,
+      activeDays: [0, 1, 2, 3, 4, 5, 6],
+      steps: [],
+    });
     expect(getRawData().routines).toEqual([
-      { id: "r1", name: "Morning", order: 0, steps: [] },
+      {
+        id: "r1",
+        name: "Morning",
+        order: 0,
+        activeDays: [0, 1, 2, 3, 4, 5, 6],
+        steps: [],
+      },
     ]);
   });
 });
@@ -50,7 +62,13 @@ describe("readData / getRawData", () => {
 describe("normalizeState (daily reset, via getStateSnapshot)", () => {
   it("initializes state for a routine with no existing entry", async () => {
     const { saveRoutine, getStateSnapshot } = await freshStorage();
-    saveRoutine({ id: "r1", name: "Morning", order: 0, steps: [] });
+    saveRoutine({
+      id: "r1",
+      name: "Morning",
+      order: 0,
+      activeDays: [0, 1, 2, 3, 4, 5, 6],
+      steps: [],
+    });
     expect(getStateSnapshot()).toEqual({
       r1: { checkedStepIds: [], lastResetDate: todayStr() },
     });
@@ -60,7 +78,15 @@ describe("normalizeState (daily reset, via getStateSnapshot)", () => {
     localStorage.setItem(
       DATA_KEY,
       JSON.stringify({
-        routines: [{ id: "r1", name: "Morning", order: 0, steps: [] }],
+        routines: [
+          {
+            id: "r1",
+            name: "Morning",
+            order: 0,
+            activeDays: [0, 1, 2, 3, 4, 5, 6],
+            steps: [],
+          },
+        ],
         state: {
           r1: { checkedStepIds: ["s1"], lastResetDate: "2000-01-01" },
         },
@@ -77,7 +103,15 @@ describe("normalizeState (daily reset, via getStateSnapshot)", () => {
     localStorage.setItem(
       DATA_KEY,
       JSON.stringify({
-        routines: [{ id: "r1", name: "Morning", order: 0, steps: [] }],
+        routines: [
+          {
+            id: "r1",
+            name: "Morning",
+            order: 0,
+            activeDays: [0, 1, 2, 3, 4, 5, 6],
+            steps: [],
+          },
+        ],
         state: {
           r1: { checkedStepIds: ["s1"], lastResetDate: todayStr() },
         },
@@ -93,8 +127,20 @@ describe("normalizeState (daily reset, via getStateSnapshot)", () => {
 describe("saveRoutine", () => {
   it("appends a new routine with the next order", async () => {
     const { saveRoutine, getRoutinesSnapshot } = await freshStorage();
-    saveRoutine({ id: "r1", name: "A", order: 0, steps: [] });
-    saveRoutine({ id: "r2", name: "B", order: 0, steps: [] });
+    saveRoutine({
+      id: "r1",
+      name: "A",
+      order: 0,
+      activeDays: [0, 1, 2, 3, 4, 5, 6],
+      steps: [],
+    });
+    saveRoutine({
+      id: "r2",
+      name: "B",
+      order: 0,
+      activeDays: [0, 1, 2, 3, 4, 5, 6],
+      steps: [],
+    });
     expect(getRoutinesSnapshot().map((r) => [r.id, r.order])).toEqual([
       ["r1", 0],
       ["r2", 1],
@@ -103,9 +149,27 @@ describe("saveRoutine", () => {
 
   it("replaces an existing routine in place without reordering others", async () => {
     const { saveRoutine, getRoutinesSnapshot } = await freshStorage();
-    saveRoutine({ id: "r1", name: "A", order: 0, steps: [] });
-    saveRoutine({ id: "r2", name: "B", order: 0, steps: [] });
-    saveRoutine({ id: "r1", name: "A renamed", order: 0, steps: [] });
+    saveRoutine({
+      id: "r1",
+      name: "A",
+      order: 0,
+      activeDays: [0, 1, 2, 3, 4, 5, 6],
+      steps: [],
+    });
+    saveRoutine({
+      id: "r2",
+      name: "B",
+      order: 0,
+      activeDays: [0, 1, 2, 3, 4, 5, 6],
+      steps: [],
+    });
+    saveRoutine({
+      id: "r1",
+      name: "A renamed",
+      order: 0,
+      activeDays: [0, 1, 2, 3, 4, 5, 6],
+      steps: [],
+    });
     expect(getRoutinesSnapshot().map((r) => [r.id, r.name])).toEqual([
       ["r1", "A renamed"],
       ["r2", "B"],
@@ -120,6 +184,7 @@ describe("toggleStep", () => {
       id: "r1",
       name: "Morning",
       order: 0,
+      activeDays: [0, 1, 2, 3, 4, 5, 6],
       steps: [{ id: "s1", text: "Drink water", order: 0 }],
     });
     const checked = toggleStep("r1", "s1");
@@ -137,6 +202,7 @@ describe("toggleStep", () => {
             id: "r1",
             name: "Morning",
             order: 0,
+            activeDays: [0, 1, 2, 3, 4, 5, 6],
             steps: [{ id: "s1", text: "Drink water", order: 0 }],
           },
         ],
@@ -172,8 +238,20 @@ describe("reorderRoutines", () => {
   it("applies order from the given id list", async () => {
     const { saveRoutine, reorderRoutines, getRoutinesSnapshot } =
       await freshStorage();
-    saveRoutine({ id: "r1", name: "A", order: 0, steps: [] });
-    saveRoutine({ id: "r2", name: "B", order: 0, steps: [] });
+    saveRoutine({
+      id: "r1",
+      name: "A",
+      order: 0,
+      activeDays: [0, 1, 2, 3, 4, 5, 6],
+      steps: [],
+    });
+    saveRoutine({
+      id: "r2",
+      name: "B",
+      order: 0,
+      activeDays: [0, 1, 2, 3, 4, 5, 6],
+      steps: [],
+    });
     reorderRoutines(["r2", "r1"]);
     expect(getRoutinesSnapshot().map((r) => r.id)).toEqual(["r2", "r1"]);
   });
@@ -181,7 +259,13 @@ describe("reorderRoutines", () => {
   it("ignores an id in orderedIds that no longer exists", async () => {
     const { saveRoutine, reorderRoutines, getRoutinesSnapshot } =
       await freshStorage();
-    saveRoutine({ id: "r1", name: "A", order: 0, steps: [] });
+    saveRoutine({
+      id: "r1",
+      name: "A",
+      order: 0,
+      activeDays: [0, 1, 2, 3, 4, 5, 6],
+      steps: [],
+    });
     reorderRoutines(["ghost", "r1"]);
     expect(getRoutinesSnapshot().map((r) => r.id)).toEqual(["r1"]);
   });
@@ -189,8 +273,20 @@ describe("reorderRoutines", () => {
   it("preserves a routine missing from orderedIds instead of dropping it", async () => {
     const { saveRoutine, reorderRoutines, getRoutinesSnapshot } =
       await freshStorage();
-    saveRoutine({ id: "r1", name: "A", order: 0, steps: [] });
-    saveRoutine({ id: "r2", name: "B", order: 0, steps: [] });
+    saveRoutine({
+      id: "r1",
+      name: "A",
+      order: 0,
+      activeDays: [0, 1, 2, 3, 4, 5, 6],
+      steps: [],
+    });
+    saveRoutine({
+      id: "r2",
+      name: "B",
+      order: 0,
+      activeDays: [0, 1, 2, 3, 4, 5, 6],
+      steps: [],
+    });
     reorderRoutines(["r2"]);
     expect(getRoutinesSnapshot().map((r) => r.id)).toEqual(["r2", "r1"]);
   });
@@ -209,6 +305,7 @@ describe("deleteRoutine", () => {
       id: "r1",
       name: "A",
       order: 0,
+      activeDays: [0, 1, 2, 3, 4, 5, 6],
       steps: [{ id: "s1", text: "x", order: 0 }],
     });
     toggleStep("r1", "s1");
@@ -220,7 +317,13 @@ describe("deleteRoutine", () => {
   it("is a no-op for a non-existent id", async () => {
     const { saveRoutine, deleteRoutine, getRoutinesSnapshot } =
       await freshStorage();
-    saveRoutine({ id: "r1", name: "A", order: 0, steps: [] });
+    saveRoutine({
+      id: "r1",
+      name: "A",
+      order: 0,
+      activeDays: [0, 1, 2, 3, 4, 5, 6],
+      steps: [],
+    });
     expect(() => deleteRoutine("ghost")).not.toThrow();
     expect(getRoutinesSnapshot().map((r) => r.id)).toEqual(["r1"]);
   });
@@ -234,12 +337,14 @@ describe("resetRoutine / resetAll", () => {
       id: "r1",
       name: "A",
       order: 0,
+      activeDays: [0, 1, 2, 3, 4, 5, 6],
       steps: [{ id: "s1", text: "x", order: 0 }],
     });
     saveRoutine({
       id: "r2",
       name: "B",
       order: 1,
+      activeDays: [0, 1, 2, 3, 4, 5, 6],
       steps: [{ id: "s2", text: "y", order: 0 }],
     });
     toggleStep("r1", "s1");
@@ -257,12 +362,14 @@ describe("resetRoutine / resetAll", () => {
       id: "r1",
       name: "A",
       order: 0,
+      activeDays: [0, 1, 2, 3, 4, 5, 6],
       steps: [{ id: "s1", text: "x", order: 0 }],
     });
     saveRoutine({
       id: "r2",
       name: "B",
       order: 1,
+      activeDays: [0, 1, 2, 3, 4, 5, 6],
       steps: [{ id: "s2", text: "y", order: 0 }],
     });
     toggleStep("r1", "s1");
@@ -279,7 +386,13 @@ describe("subscribe / emitChange", () => {
     const { subscribe, saveRoutine } = await freshStorage();
     const listener = vi.fn();
     subscribe(listener);
-    saveRoutine({ id: "r1", name: "A", order: 0, steps: [] });
+    saveRoutine({
+      id: "r1",
+      name: "A",
+      order: 0,
+      activeDays: [0, 1, 2, 3, 4, 5, 6],
+      steps: [],
+    });
     expect(listener).toHaveBeenCalledTimes(1);
   });
 
@@ -288,7 +401,13 @@ describe("subscribe / emitChange", () => {
     const listener = vi.fn();
     const unsubscribe = subscribe(listener);
     unsubscribe();
-    saveRoutine({ id: "r1", name: "A", order: 0, steps: [] });
+    saveRoutine({
+      id: "r1",
+      name: "A",
+      order: 0,
+      activeDays: [0, 1, 2, 3, 4, 5, 6],
+      steps: [],
+    });
     expect(listener).not.toHaveBeenCalled();
   });
 });

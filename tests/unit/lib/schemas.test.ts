@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { parseRoutines, parseState } from "@/lib/schemas";
+import { ALL_DAYS, parseRoutines, parseState } from "@/lib/schemas";
 
 describe("parseRoutines", () => {
   it("returns an empty array for non-array input", () => {
@@ -18,6 +18,7 @@ describe("parseRoutines", () => {
       id: "r1",
       name: "Morning",
       order: 0,
+      activeDays: [1, 3, 5],
       steps: [{ id: "s1", text: "Drink water", order: 0 }],
     };
     expect(parseRoutines([routine])).toEqual([routine]);
@@ -48,6 +49,7 @@ describe("parseRoutines", () => {
         id: "r1",
         name: "Morning",
         order: 0,
+        activeDays: ALL_DAYS,
         steps: [
           { id: "s1", text: "Drink water", order: 0 },
           { id: "s3", text: "Stretch", order: 2 },
@@ -59,7 +61,7 @@ describe("parseRoutines", () => {
   it("treats a non-array steps field as no steps, not a crash", () => {
     const routine = { id: "r1", name: "Morning", order: 0, steps: "oops" };
     expect(parseRoutines([routine])).toEqual([
-      { id: "r1", name: "Morning", order: 0, steps: [] },
+      { id: "r1", name: "Morning", order: 0, activeDays: ALL_DAYS, steps: [] },
     ]);
   });
 
@@ -72,8 +74,48 @@ describe("parseRoutines", () => {
       extra: "field",
     };
     expect(parseRoutines([routine])).toEqual([
-      { id: "r1", name: "Morning", order: 0, steps: [] },
+      { id: "r1", name: "Morning", order: 0, activeDays: ALL_DAYS, steps: [] },
     ]);
+  });
+
+  it("defaults activeDays to every day when the field is missing (old data)", () => {
+    const routine = { id: "r1", name: "Morning", order: 0, steps: [] };
+    expect(parseRoutines([routine])).toEqual([
+      { ...routine, activeDays: ALL_DAYS },
+    ]);
+  });
+
+  it("falls back to every day for a malformed activeDays value", () => {
+    const cases = ["not an array", [1, "tuesday", 3], [1, 9], [1, -1], [1.5]];
+    for (const activeDays of cases) {
+      const routine = {
+        id: "r1",
+        name: "Morning",
+        order: 0,
+        activeDays,
+        steps: [],
+      };
+      expect(parseRoutines([routine])).toEqual([
+        {
+          id: "r1",
+          name: "Morning",
+          order: 0,
+          activeDays: ALL_DAYS,
+          steps: [],
+        },
+      ]);
+    }
+  });
+
+  it("keeps a valid, non-default activeDays value as-is, including empty", () => {
+    const routine = {
+      id: "r1",
+      name: "Morning",
+      order: 0,
+      activeDays: [] as number[],
+      steps: [],
+    };
+    expect(parseRoutines([routine])).toEqual([routine]);
   });
 });
 

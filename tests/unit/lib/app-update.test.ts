@@ -60,14 +60,26 @@ describe("subscribeToUpdateSnapshot", () => {
 
 describe("saveUpdateSnapshot / readUpdateSnapshot", () => {
   it("saves the current data as a backup and notifies listeners", () => {
-    saveRoutine({ id: "r1", name: "Morning", order: 0, steps: [] });
+    saveRoutine({
+      id: "r1",
+      name: "Morning",
+      order: 0,
+      activeDays: [0, 1, 2, 3, 4, 5, 6],
+      steps: [],
+    });
     const listener = vi.fn();
     subscribeToUpdateSnapshot(listener);
 
     const backup = saveUpdateSnapshot();
 
     expect(backup?.data.routines).toEqual([
-      { id: "r1", name: "Morning", order: 0, steps: [] },
+      {
+        id: "r1",
+        name: "Morning",
+        order: 0,
+        activeDays: [0, 1, 2, 3, 4, 5, 6],
+        steps: [],
+      },
     ]);
     expect(hasUpdateSnapshot()).toBe(true);
     expect(listener).toHaveBeenCalledTimes(1);
@@ -81,10 +93,22 @@ describe("saveUpdateSnapshot / readUpdateSnapshot", () => {
   });
 
   it("reads back what was saved", () => {
-    saveRoutine({ id: "r1", name: "Morning", order: 0, steps: [] });
+    saveRoutine({
+      id: "r1",
+      name: "Morning",
+      order: 0,
+      activeDays: [0, 1, 2, 3, 4, 5, 6],
+      steps: [],
+    });
     saveUpdateSnapshot();
     expect(readUpdateSnapshot()?.data.routines).toEqual([
-      { id: "r1", name: "Morning", order: 0, steps: [] },
+      {
+        id: "r1",
+        name: "Morning",
+        order: 0,
+        activeDays: [0, 1, 2, 3, 4, 5, 6],
+        steps: [],
+      },
     ]);
   });
 
@@ -104,9 +128,21 @@ describe("restoreUpdateSnapshot", () => {
   });
 
   it("restores the snapshot's data", () => {
-    saveRoutine({ id: "r1", name: "Morning", order: 0, steps: [] });
+    saveRoutine({
+      id: "r1",
+      name: "Morning",
+      order: 0,
+      activeDays: [0, 1, 2, 3, 4, 5, 6],
+      steps: [],
+    });
     saveUpdateSnapshot();
-    saveRoutine({ id: "r2", name: "Evening", order: 1, steps: [] });
+    saveRoutine({
+      id: "r2",
+      name: "Evening",
+      order: 1,
+      activeDays: [0, 1, 2, 3, 4, 5, 6],
+      steps: [],
+    });
 
     expect(restoreUpdateSnapshot()).toBe(true);
     expect(getRawData().routines.map((r) => r.id)).toEqual(["r1"]);
@@ -128,7 +164,13 @@ describe("discardUpdateSnapshot", () => {
 
 describe("updateApp", () => {
   it("saves a snapshot and reloads the page", async () => {
-    saveRoutine({ id: "r1", name: "Morning", order: 0, steps: [] });
+    saveRoutine({
+      id: "r1",
+      name: "Morning",
+      order: 0,
+      activeDays: [0, 1, 2, 3, 4, 5, 6],
+      steps: [],
+    });
     // jsdom's window.location.reload isn't configurable, so it can't be
     // spied on directly — vi.stubGlobal replaces the whole object instead,
     // and (unlike a raw Object.defineProperty) restores it safely even when
