@@ -49,6 +49,8 @@ export interface SeedRoutine {
   name: string;
   order: number;
   steps: SeedStep[];
+  /** Defaults to every day (schemas.ts's own fallback) when omitted. */
+  activeDays?: number[];
 }
 
 export interface SeedProgress {
