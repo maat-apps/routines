@@ -13,34 +13,57 @@ const DRIVE_UPLOAD_URL = "https://www.googleapis.com/upload/drive/v3/files";
 // collide with anything else in the user's Drive.
 export const BACKUP_FILE_NAME = "routines-backup.json";
 
-export class DriveApiError extends Error {}
+export class DriveApiError extends Error {
+  status: number;
+
+  constructor(status: number, message: string) {
+    super(message);
+    this.status = status;
+  }
+}
 
 async function driveFetch(
   url: string,
   accessToken: string,
   init: RequestInit = {},
 ): Promise<Response> {
-  const response = await fetch(url, {
-    ...init,
-    headers: { ...init.headers, Authorization: `Bearer ${accessToken}` },
-  });
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      ...init,
+      headers: { ...init.headers, Authorization: `Bearer ${accessToken}` },
+    });
+  } catch {
+    throw new DriveApiError(0, "Could not reach Google Drive.");
+  }
   if (!response.ok) {
-    throw new DriveApiError(
-      `Google Drive request failed (${response.status}).`,
-    );
+    let message = `Google Drive request failed (${response.status}).`;
+    try {
+      const body = (await response.json()) as { error?: { message?: string } };
+      if (body.error?.message) message = body.error.message;
+    } catch {
+      // Body wasn't JSON (or already consumed) — keep the generic message.
+    }
+    throw new DriveApiError(response.status, message);
   }
   return response;
 }
 
-/** The backup file's id, if this app has already created one. */
+/**
+ * The backup file's id, if this app has already created one. Ordered by
+ * most-recently-modified so that if a race ever produces a duplicate (two
+ * devices creating the file at once — see drive-sync.ts), every client
+ * converges on the newest one instead of an arbitrary pick.
+ */
 export async function findBackupFileId(
   accessToken: string,
 ): Promise<string | null> {
   const query = encodeURIComponent(
     `name = '${BACKUP_FILE_NAME}' and trashed = false`,
   );
+  const orderBy = encodeURIComponent("modifiedTime desc");
   const response = await driveFetch(
-    `${DRIVE_FILES_URL}?q=${query}&fields=files(id)&spaces=drive`,
+    `${DRIVE_FILES_URL}?q=${query}&fields=files(id,modifiedTime)&spaces=drive&orderBy=${orderBy}`,
     accessToken,
   );
   const data = (await response.json()) as { files?: { id: string }[] };

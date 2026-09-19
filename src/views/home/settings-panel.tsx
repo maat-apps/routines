@@ -46,6 +46,7 @@ import {
   type Backup,
 } from "@/lib/backup";
 import {
+  DriveNoBackupError,
   getDriveSyncMeta,
   restoreFromDrive,
   syncToDrive,
@@ -158,8 +159,9 @@ export function SettingsPanel() {
   const [confirmUpdate, setConfirmUpdate] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
   const [updating, setUpdating] = useState(false);
-  const [driveMeta, setDriveMeta] = useState(getDriveSyncMeta());
+  const [driveMeta, setDriveMeta] = useState(() => getDriveSyncMeta());
   const [driveBusy, setDriveBusy] = useState<"sync" | "restore" | null>(null);
+  const [confirmDriveSync, setConfirmDriveSync] = useState(false);
   const [confirmDriveRestore, setConfirmDriveRestore] = useState(false);
   const hasSnapshot = useSyncExternalStore(
     subscribeToUpdateSnapshot,
@@ -215,33 +217,48 @@ export function SettingsPanel() {
     window.location.reload();
   }
 
-  async function handleDriveSync() {
+  async function runDriveAction(
+    kind: "sync" | "restore",
+    action: () => Promise<void>,
+    doneMessage: string,
+    failedMessage: string,
+  ) {
     setStatus(null);
-    setDriveBusy("sync");
+    setDriveBusy(kind);
     try {
-      await syncToDrive(GOOGLE_CLIENT_ID);
+      await action();
       setDriveMeta(getDriveSyncMeta());
-      setStatus(t("driveSyncDone"));
-    } catch {
-      setStatus(t("driveSyncFailed"));
+      setStatus(doneMessage);
+    } catch (error) {
+      if (kind === "restore" && error instanceof DriveNoBackupError) {
+        setStatus(t("driveNoBackupYet"));
+      } else {
+        console.error(error);
+        setStatus(failedMessage);
+      }
     } finally {
       setDriveBusy(null);
     }
   }
 
-  async function confirmDriveRestoreAction() {
+  function confirmDriveSyncAction() {
+    setConfirmDriveSync(false);
+    void runDriveAction(
+      "sync",
+      () => syncToDrive(GOOGLE_CLIENT_ID),
+      t("driveSyncDone"),
+      t("driveSyncFailed"),
+    );
+  }
+
+  function confirmDriveRestoreAction() {
     setConfirmDriveRestore(false);
-    setStatus(null);
-    setDriveBusy("restore");
-    try {
-      await restoreFromDrive(GOOGLE_CLIENT_ID);
-      setDriveMeta(getDriveSyncMeta());
-      setStatus(t("driveRestoreDone"));
-    } catch {
-      setStatus(t("driveRestoreFailed"));
-    } finally {
-      setDriveBusy(null);
-    }
+    void runDriveAction(
+      "restore",
+      () => restoreFromDrive(GOOGLE_CLIENT_ID),
+      t("driveRestoreDone"),
+      t("driveRestoreFailed"),
+    );
   }
 
   return (
@@ -417,7 +434,7 @@ export function SettingsPanel() {
               variant="outline"
               className="min-h-10.5 px-4"
               disabled={!GOOGLE_CLIENT_ID || driveBusy !== null}
-              onClick={() => void handleDriveSync()}
+              onClick={() => setConfirmDriveSync(true)}
             >
               {t("driveSyncAction")}
             </Button>
@@ -485,12 +502,20 @@ export function SettingsPanel() {
         onConfirm={confirmResetSettings}
       />
       <ConfirmDrawer
+        open={confirmDriveSync}
+        onOpenChange={setConfirmDriveSync}
+        title={t("driveSyncConfirmTitle")}
+        description={t("driveSyncConfirmDescription")}
+        confirmLabel={t("driveSyncAction")}
+        onConfirm={confirmDriveSyncAction}
+      />
+      <ConfirmDrawer
         open={confirmDriveRestore}
         onOpenChange={setConfirmDriveRestore}
         title={t("driveRestoreTitle")}
         description={t("driveRestoreConfirmDescription")}
         confirmLabel={t("driveRestoreAction")}
-        onConfirm={() => void confirmDriveRestoreAction()}
+        onConfirm={confirmDriveRestoreAction}
       />
     </div>
   );

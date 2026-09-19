@@ -3,7 +3,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("@/lib/drive/drive-auth", () => ({
   requestDriveAccessToken: vi.fn(),
 }));
+const { MockDriveApiError } = vi.hoisted(() => ({
+  MockDriveApiError: class extends Error {
+    status: number;
+    constructor(status: number, message: string) {
+      super(message);
+      this.status = status;
+    }
+  },
+}));
+
 vi.mock("@/lib/drive/drive-client", () => ({
+  DriveApiError: MockDriveApiError,
   findBackupFileId: vi.fn(),
   uploadBackupFile: vi.fn(),
   downloadBackupFile: vi.fn(),
@@ -17,11 +28,13 @@ vi.mock("@/lib/backup", () => ({
 import { applyBackup, createBackup, parseBackup } from "@/lib/backup";
 import { requestDriveAccessToken } from "@/lib/drive/drive-auth";
 import {
+  DriveApiError,
   downloadBackupFile,
   findBackupFileId,
   uploadBackupFile,
 } from "@/lib/drive/drive-client";
 import {
+  DriveNoBackupError,
   getDriveSyncMeta,
   restoreFromDrive,
   syncToDrive,
@@ -113,6 +126,59 @@ describe("syncToDrive", () => {
       "known-file",
     );
   });
+
+  it("recreates the file when the cached id no longer exists on Drive", async () => {
+    localStorage.setItem(
+      DRIVE_SYNC_KEY,
+      JSON.stringify({ fileId: "stale-file", lastSyncedAt: null }),
+    );
+    vi.mocked(createBackup).mockReturnValue({
+      app: "routines",
+      version: 1,
+      exportedAt: "now",
+      locale: null,
+      data: { routines: [], state: {} },
+    });
+    vi.mocked(uploadBackupFile)
+      .mockRejectedValueOnce(new DriveApiError(404, "Not found."))
+      .mockResolvedValueOnce("fresh-file-id");
+
+    await syncToDrive("client-id");
+
+    expect(uploadBackupFile).toHaveBeenNthCalledWith(
+      1,
+      "token",
+      expect.any(String),
+      "stale-file",
+    );
+    expect(uploadBackupFile).toHaveBeenNthCalledWith(
+      2,
+      "token",
+      expect.any(String),
+      null,
+    );
+    expect(getDriveSyncMeta().fileId).toBe("fresh-file-id");
+  });
+
+  it("propagates a non-404 upload failure without retrying", async () => {
+    localStorage.setItem(
+      DRIVE_SYNC_KEY,
+      JSON.stringify({ fileId: "known-file", lastSyncedAt: null }),
+    );
+    vi.mocked(createBackup).mockReturnValue({
+      app: "routines",
+      version: 1,
+      exportedAt: "now",
+      locale: null,
+      data: { routines: [], state: {} },
+    });
+    vi.mocked(uploadBackupFile).mockRejectedValue(
+      new DriveApiError(500, "Server error."),
+    );
+
+    await expect(syncToDrive("client-id")).rejects.toThrow("Server error.");
+    expect(uploadBackupFile).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("restoreFromDrive", () => {
@@ -136,12 +202,44 @@ describe("restoreFromDrive", () => {
     expect(getDriveSyncMeta().fileId).toBe("file-1");
   });
 
-  it("throws instead of downloading when no backup file exists yet", async () => {
+  it("throws DriveNoBackupError instead of downloading when no backup file exists yet", async () => {
     vi.mocked(findBackupFileId).mockResolvedValue(null);
 
     await expect(restoreFromDrive("client-id")).rejects.toThrow(
-      /no routines backup/i,
+      DriveNoBackupError,
     );
     expect(downloadBackupFile).not.toHaveBeenCalled();
+  });
+
+  it("clears a stale cached id and throws DriveNoBackupError when it 404s", async () => {
+    localStorage.setItem(
+      DRIVE_SYNC_KEY,
+      JSON.stringify({
+        fileId: "stale-file",
+        lastSyncedAt: "2026-09-18T00:00:00Z",
+      }),
+    );
+    vi.mocked(downloadBackupFile).mockRejectedValue(
+      new DriveApiError(404, "Not found."),
+    );
+
+    await expect(restoreFromDrive("client-id")).rejects.toThrow(
+      DriveNoBackupError,
+    );
+    expect(findBackupFileId).not.toHaveBeenCalled();
+    const meta = getDriveSyncMeta();
+    expect(meta.fileId).toBeNull();
+    expect(meta.lastSyncedAt).toBe("2026-09-18T00:00:00Z");
+  });
+
+  it("propagates a non-404 download failure as-is", async () => {
+    vi.mocked(findBackupFileId).mockResolvedValue("file-1");
+    vi.mocked(downloadBackupFile).mockRejectedValue(
+      new DriveApiError(500, "Server error."),
+    );
+
+    await expect(restoreFromDrive("client-id")).rejects.toThrow(
+      "Server error.",
+    );
   });
 });

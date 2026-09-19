@@ -66,10 +66,23 @@ export async function requestDriveAccessToken(
   }
 
   return new Promise<string>((resolve, reject) => {
+    // If the popup is silently blocked (some browsers/extensions never fire
+    // GIS's error_callback for a blocked popup), neither callback below
+    // would ever run and this promise would hang forever — a timeout is the
+    // only way to recover the UI from that.
+    const timeout = setTimeout(() => {
+      reject(
+        new DriveAuthError(
+          "Google sign-in timed out. If a popup was blocked, allow popups for this site and try again.",
+        ),
+      );
+    }, 60_000);
+
     const client = oauth2.initTokenClient({
       client_id: clientId,
       scope: DRIVE_SCOPE,
       callback: (response) => {
+        clearTimeout(timeout);
         if (response.error || !response.access_token) {
           reject(
             new DriveAuthError(
@@ -81,6 +94,7 @@ export async function requestDriveAccessToken(
         resolve(response.access_token);
       },
       error_callback: (error) => {
+        clearTimeout(timeout);
         reject(
           new DriveAuthError(
             error.message ?? error.type ?? "Google sign-in was cancelled.",

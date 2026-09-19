@@ -44,6 +44,15 @@ export type RoutineProgress = v.InferOutput<typeof ProgressSchema>;
 export type RoutineState = v.InferOutput<typeof StateSchema>;
 export type AppData = v.InferOutput<typeof AppDataSchema>;
 
+// The resolved Drive backup file id and last-synced timestamp
+// (src/lib/drive/drive-sync.ts) — never an access token, which stays in
+// memory only (see drive-auth.ts).
+export const DriveSyncMetaSchema = v.object({
+  fileId: v.nullable(v.string()),
+  lastSyncedAt: v.nullable(v.string()),
+});
+export type DriveSyncMeta = v.InferOutput<typeof DriveSyncMetaSchema>;
+
 // --- Lenient parsing -------------------------------------------------------------
 // Applied to both a user-supplied backup import and whatever's actually in
 // localStorage: anything unrecognised is dropped rather than trusted, since a

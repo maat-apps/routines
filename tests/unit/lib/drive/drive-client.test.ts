@@ -51,6 +51,18 @@ describe("findBackupFileId", () => {
     );
     await expect(findBackupFileId("token")).rejects.toThrow(DriveApiError);
   });
+
+  it("orders results by most-recently-modified", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ files: [{ id: "file-1" }] }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await findBackupFileId("token");
+
+    const [url] = fetchMock.mock.calls[0] as [string];
+    expect(url).toContain(encodeURIComponent("modifiedTime desc"));
+  });
 });
 
 describe("uploadBackupFile", () => {
@@ -120,5 +132,41 @@ describe("downloadBackupFile", () => {
     await expect(downloadBackupFile("token", "missing")).rejects.toThrow(
       DriveApiError,
     );
+  });
+});
+
+describe("driveFetch error shaping", () => {
+  it("carries the response status on DriveApiError", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(jsonResponse({}, false, 404)),
+    );
+    await expect(downloadBackupFile("token", "missing")).rejects.toMatchObject({
+      status: 404,
+    });
+  });
+
+  it("uses Google's error body message when present", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          jsonResponse({ error: { message: "File not found." } }, false, 404),
+        ),
+    );
+    await expect(downloadBackupFile("token", "missing")).rejects.toThrow(
+      "File not found.",
+    );
+  });
+
+  it("throws a DriveApiError with status 0 on a network failure", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockRejectedValue(new TypeError("Failed to fetch")),
+    );
+    await expect(downloadBackupFile("token", "file-1")).rejects.toMatchObject({
+      status: 0,
+    });
   });
 });

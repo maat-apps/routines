@@ -21,6 +21,7 @@ describe("requestDriveAccessToken", () => {
       return { requestAccessToken };
     });
     vi.stubGlobal("google", { accounts: { oauth2: { initTokenClient } } });
+    const clearTimeoutSpy = vi.spyOn(globalThis, "clearTimeout");
 
     const token = await requestDriveAccessToken("client-id");
 
@@ -32,6 +33,22 @@ describe("requestDriveAccessToken", () => {
       }),
     );
     expect(requestAccessToken).toHaveBeenCalledTimes(1);
+    // The pending timeout is cleared on settlement, not left to fire later.
+    expect(clearTimeoutSpy).toHaveBeenCalled();
+    clearTimeoutSpy.mockRestore();
+  });
+
+  it("times out and rejects if Google never calls back (e.g. a blocked popup)", async () => {
+    vi.useFakeTimers();
+    const initTokenClient = vi.fn(() => ({ requestAccessToken: vi.fn() }));
+    vi.stubGlobal("google", { accounts: { oauth2: { initTokenClient } } });
+
+    const pending = requestDriveAccessToken("client-id");
+    const assertion = expect(pending).rejects.toThrow(/timed out/i);
+    await vi.advanceTimersByTimeAsync(60_000);
+    await assertion;
+
+    vi.useRealTimers();
   });
 
   it("rejects when Google reports an error instead of a token", async () => {
