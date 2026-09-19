@@ -31,6 +31,7 @@ import { startTransition, useEffect, useState } from "react";
 
 import { EmptyState, NoRoutinesToday } from "@/components/empty-states";
 import { ProgressRing } from "@/components/progress-ring";
+import { ResetButton } from "@/components/reset-button";
 import { Button } from "@/components/ui/button";
 import {
   Drawer,
@@ -39,10 +40,9 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 import { useTranslation } from "@/i18n/use-translation";
+import { FIXED_ACTION_SHADOW } from "@/lib/utils";
 import type { Routine, RoutineProgress } from "@/types";
 import { SettingsPanel } from "@/views/home/settings-panel";
-
-const fixedActionShadow = "shadow-[0_8px_22px_oklch(0_0_0_/_28%)]";
 
 export function RoutineList({
   routines,
@@ -161,18 +161,17 @@ export function RoutineList({
         </DndContext>
       )}
       {routines.length > 0 && (
-        <Button
-          className={`fixed bottom-[calc(20px+env(safe-area-inset-bottom))] left-[max(20px,calc((100vw-480px)/2+20px))] z-20 min-h-13 rounded-lg px-4 ${fixedActionShadow}`}
-          variant="outline"
+        <ResetButton
+          className="fixed bottom-[calc(20px+env(safe-area-inset-bottom))] left-[max(20px,calc((100vw-480px)/2+20px))] z-20"
           disabled={!hasCheckedSteps}
           onClick={onResetAll}
         >
           <RotateCcw aria-hidden="true" />
           {t("resetAll")}
-        </Button>
+        </ResetButton>
       )}
       <Button
-        className={`fixed right-[max(20px,calc((100vw-480px)/2+20px))] bottom-[calc(20px+env(safe-area-inset-bottom))] z-20 h-13 w-13 rounded-lg ${fixedActionShadow}`}
+        className={`fixed right-[max(20px,calc((100vw-480px)/2+20px))] bottom-[calc(20px+env(safe-area-inset-bottom))] z-20 h-13 w-13 rounded-lg ${FIXED_ACTION_SHADOW}`}
         size="icon-lg"
         aria-label={t("newRoutine")}
         onClick={onCreate}

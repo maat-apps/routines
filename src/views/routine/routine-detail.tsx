@@ -3,6 +3,7 @@ import { Pencil } from "lucide-react";
 import { AppBar } from "@/components/app-bar";
 import { EmptySteps } from "@/components/empty-states";
 import { ProgressRing } from "@/components/progress-ring";
+import { ResetButton } from "@/components/reset-button";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useTranslation } from "@/i18n/use-translation";
@@ -88,14 +89,9 @@ export function RoutineDetail({
         </section>
       )}
       <div className="pointer-events-none fixed right-[max(20px,calc((100vw-480px)/2+20px))] bottom-[calc(20px+env(safe-area-inset-bottom))] left-[max(20px,calc((100vw-480px)/2+20px))] z-20 flex items-center justify-between *:pointer-events-auto">
-        <Button
-          className="disabled:bg-muted disabled:text-muted-foreground min-h-13 rounded-lg px-4.5 shadow-[0_8px_22px_oklch(0_0_0/28%)] disabled:opacity-100"
-          variant="outline"
-          disabled={completed === 0}
-          onClick={onReset}
-        >
+        <ResetButton disabled={completed === 0} onClick={onReset}>
           {t("reset")}
-        </Button>
+        </ResetButton>
         <ProgressRing
           completed={completed}
           total={routine.steps.length}
