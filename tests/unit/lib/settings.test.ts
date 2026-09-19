@@ -18,9 +18,9 @@ beforeEach(() => {
 });
 
 describe("getSettingsSnapshot", () => {
-  it("defaults to no lock when nothing is stored", async () => {
+  it("defaults to no lock and not installed when nothing is stored", async () => {
     const { getSettingsSnapshot } = await freshSettings();
-    expect(getSettingsSnapshot()).toEqual({ lock: null });
+    expect(getSettingsSnapshot()).toEqual({ lock: null, installed: false });
   });
 
   it("parses a validly stored lock", async () => {
@@ -33,13 +33,20 @@ describe("getSettingsSnapshot", () => {
     const { getSettingsSnapshot } = await freshSettings();
     expect(getSettingsSnapshot()).toEqual({
       lock: { credentialId: "c1", userId: "u1", createdAt: "2026-09-17" },
+      installed: false,
     });
+  });
+
+  it("parses a stored installed flag", async () => {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify({ installed: true }));
+    const { getSettingsSnapshot } = await freshSettings();
+    expect(getSettingsSnapshot()).toEqual({ lock: null, installed: true });
   });
 
   it("falls back to defaults for malformed JSON", async () => {
     localStorage.setItem(SETTINGS_KEY, "{not json");
     const { getSettingsSnapshot } = await freshSettings();
-    expect(getSettingsSnapshot()).toEqual({ lock: null });
+    expect(getSettingsSnapshot()).toEqual({ lock: null, installed: false });
   });
 
   it("drops a lock missing required fields instead of returning it half-formed", async () => {
@@ -48,13 +55,13 @@ describe("getSettingsSnapshot", () => {
       JSON.stringify({ lock: { credentialId: "c1" } }),
     );
     const { getSettingsSnapshot } = await freshSettings();
-    expect(getSettingsSnapshot()).toEqual({ lock: null });
+    expect(getSettingsSnapshot()).toEqual({ lock: null, installed: false });
   });
 
   it("drops a lock that isn't an object at all", async () => {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify({ lock: "oops" }));
     const { getSettingsSnapshot } = await freshSettings();
-    expect(getSettingsSnapshot()).toEqual({ lock: null });
+    expect(getSettingsSnapshot()).toEqual({ lock: null, installed: false });
   });
 
   it("generates a createdAt when the stored lock is missing one", async () => {
@@ -70,9 +77,12 @@ describe("getSettingsSnapshot", () => {
 });
 
 describe("getServerSettingsSnapshot", () => {
-  it("returns the defaults (no lock)", async () => {
+  it("returns the defaults (no lock, not installed)", async () => {
     const { getServerSettingsSnapshot } = await freshSettings();
-    expect(getServerSettingsSnapshot()).toEqual({ lock: null });
+    expect(getServerSettingsSnapshot()).toEqual({
+      lock: null,
+      installed: false,
+    });
   });
 });
 
@@ -109,8 +119,29 @@ describe("setLockEnrolment / clearLockEnrolment", () => {
     const listener = vi.fn();
     subscribeToSettings(listener);
     clearLockEnrolment();
-    expect(getSettingsSnapshot()).toEqual({ lock: null });
+    expect(getSettingsSnapshot()).toEqual({ lock: null, installed: false });
     expect(listener).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("markInstalled", () => {
+  it("persists installed, updates the snapshot, and notifies listeners", async () => {
+    const { markInstalled, getSettingsSnapshot, subscribeToSettings } =
+      await freshSettings();
+    const listener = vi.fn();
+    subscribeToSettings(listener);
+    markInstalled();
+    expect(getSettingsSnapshot()).toEqual({ lock: null, installed: true });
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it("is a no-op once already installed", async () => {
+    const { markInstalled, subscribeToSettings } = await freshSettings();
+    markInstalled();
+    const listener = vi.fn();
+    subscribeToSettings(listener);
+    markInstalled();
+    expect(listener).not.toHaveBeenCalled();
   });
 });
 
@@ -118,11 +149,13 @@ describe("resetPreferences", () => {
   it("clears every preference key, resets the snapshot, and notifies listeners", async () => {
     const {
       setLockEnrolment,
+      markInstalled,
       resetPreferences,
       getSettingsSnapshot,
       subscribeToSettings,
     } = await freshSettings();
     setLockEnrolment({ credentialId: "c1", userId: "u1", createdAt: "now" });
+    markInstalled();
     localStorage.setItem("routines-locale", "pl");
 
     const listener = vi.fn();
@@ -133,7 +166,7 @@ describe("resetPreferences", () => {
     for (const key of PREFERENCE_KEYS) {
       expect(localStorage.getItem(key)).toBeNull();
     }
-    expect(getSettingsSnapshot()).toEqual({ lock: null });
+    expect(getSettingsSnapshot()).toEqual({ lock: null, installed: false });
     expect(listener).toHaveBeenCalledTimes(1);
   });
 

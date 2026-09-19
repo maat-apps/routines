@@ -1,10 +1,16 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  getServerStandaloneSnapshot,
-  useInstallPrompt,
-} from "@/hooks/use-install-prompt";
+import { SETTINGS_KEY } from "@/lib/storage-keys";
+
+// use-install-prompt.ts reads/writes the persisted "installed" flag through
+// settings.ts, which caches its snapshot in a module-level singleton (same
+// reasoning as settings.test.ts) — without a fresh module instance per test,
+// one test's markInstalled() would leak into every test after it.
+async function freshInstallPrompt() {
+  vi.resetModules();
+  return import("@/hooks/use-install-prompt");
+}
 
 // jsdom doesn't implement matchMedia at all, so a controllable fake stands in
 // for the real MediaQueryList — one shared instance per test so subscribe()
@@ -38,6 +44,7 @@ function createMatchMediaMock(initialMatches: boolean) {
 let mql: ReturnType<typeof createMatchMediaMock>;
 
 beforeEach(() => {
+  localStorage.clear();
   mql = createMatchMediaMock(false);
   vi.stubGlobal(
     "matchMedia",
@@ -54,12 +61,14 @@ afterEach(() => {
 });
 
 describe("useInstallPrompt", () => {
-  it("starts unavailable when not standalone and no prompt yet", () => {
+  it("starts unavailable when not standalone and no prompt yet", async () => {
+    const { useInstallPrompt } = await freshInstallPrompt();
     const { result } = renderHook(() => useInstallPrompt());
     expect(result.current.state).toBe("unavailable");
   });
 
   it("install() is a no-op when there is no pending prompt", async () => {
+    const { useInstallPrompt } = await freshInstallPrompt();
     const { result } = renderHook(() => useInstallPrompt());
     await act(async () => {
       await result.current.install();
@@ -67,21 +76,31 @@ describe("useInstallPrompt", () => {
     expect(result.current.state).toBe("unavailable");
   });
 
-  it("reports installed immediately when already running standalone", () => {
+  it("reports installed immediately when already running standalone", async () => {
     mql.set(true);
+    const { useInstallPrompt } = await freshInstallPrompt();
     const { result } = renderHook(() => useInstallPrompt());
     expect(result.current.state).toBe("installed");
   });
 
-  it("falls back to navigator.standalone for iOS Safari", () => {
+  it("falls back to navigator.standalone for iOS Safari", async () => {
     // matchMedia's display-mode query predates iOS Safari, which sets its
     // own navigator.standalone flag instead — isStandalone() checks both.
     vi.stubGlobal("navigator", { standalone: true });
+    const { useInstallPrompt } = await freshInstallPrompt();
+    const { result } = renderHook(() => useInstallPrompt());
+    expect(result.current.state).toBe("installed");
+  });
+
+  it("reports installed from a previously persisted flag alone", async () => {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify({ installed: true }));
+    const { useInstallPrompt } = await freshInstallPrompt();
     const { result } = renderHook(() => useInstallPrompt());
     expect(result.current.state).toBe("installed");
   });
 
   it("becomes available after beforeinstallprompt, then installed on acceptance", async () => {
+    const { useInstallPrompt } = await freshInstallPrompt();
     const { result } = renderHook(() => useInstallPrompt());
 
     const promptFn = vi.fn().mockResolvedValue(undefined);
@@ -106,6 +125,7 @@ describe("useInstallPrompt", () => {
   });
 
   it("stays unavailable after a dismissed prompt", async () => {
+    const { useInstallPrompt } = await freshInstallPrompt();
     const { result } = renderHook(() => useInstallPrompt());
 
     const event = Object.assign(
@@ -126,7 +146,8 @@ describe("useInstallPrompt", () => {
     expect(result.current.state).toBe("unavailable");
   });
 
-  it("switches to installed on the appinstalled event", () => {
+  it("switches to installed on the appinstalled event", async () => {
+    const { useInstallPrompt } = await freshInstallPrompt();
     const { result } = renderHook(() => useInstallPrompt());
     act(() => {
       window.dispatchEvent(new Event("appinstalled"));
@@ -134,8 +155,38 @@ describe("useInstallPrompt", () => {
     expect(result.current.state).toBe("installed");
   });
 
-  it("removes its event listeners on unmount", () => {
+  it("persists installed on appinstalled, surviving a later fresh load", async () => {
+    const { useInstallPrompt } = await freshInstallPrompt();
+    renderHook(() => useInstallPrompt());
+    act(() => {
+      window.dispatchEvent(new Event("appinstalled"));
+    });
+
+    // Simulates a later page load: a fresh module instance, still not
+    // standalone, with no beforeinstallprompt offered this time either.
+    const { useInstallPrompt: useInstallPromptAgain } =
+      await freshInstallPrompt();
+    const { result } = renderHook(() => useInstallPromptAgain());
+    expect(result.current.state).toBe("installed");
+  });
+
+  it("persists installed once standalone, surviving a later non-standalone load", async () => {
+    mql.set(true);
+    const { useInstallPrompt } = await freshInstallPrompt();
+    renderHook(() => useInstallPrompt());
+
+    // Simulates opening the same app later from a plain browser tab, where
+    // Chrome no longer offers beforeinstallprompt for an already-installed app.
+    mql.set(false);
+    const { useInstallPrompt: useInstallPromptAgain } =
+      await freshInstallPrompt();
+    const { result } = renderHook(() => useInstallPromptAgain());
+    expect(result.current.state).toBe("installed");
+  });
+
+  it("removes its event listeners on unmount", async () => {
     const removeListener = vi.spyOn(window, "removeEventListener");
+    const { useInstallPrompt } = await freshInstallPrompt();
     const { unmount } = renderHook(() => useInstallPrompt());
     unmount();
 
@@ -151,7 +202,8 @@ describe("useInstallPrompt", () => {
 });
 
 describe("getServerStandaloneSnapshot", () => {
-  it("is always false", () => {
+  it("is always false", async () => {
+    const { getServerStandaloneSnapshot } = await freshInstallPrompt();
     expect(getServerStandaloneSnapshot()).toBe(false);
   });
 });

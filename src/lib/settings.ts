@@ -12,9 +12,16 @@ export type LockEnrolment = {
 
 export type AppSettings = {
   lock: LockEnrolment | null;
+  /**
+   * Whether this browser has ever reported the app as installed (standalone
+   * launch or the `appinstalled` event). Chrome stops re-offering
+   * `beforeinstallprompt` once installed, so a later visit from a plain
+   * browser tab has no other way to tell — see `useInstallPrompt`.
+   */
+  installed: boolean;
 };
 
-const defaultSettings: AppSettings = { lock: null };
+const defaultSettings: AppSettings = { lock: null, installed: false };
 
 // Same tiny external-store shape as src/lib/use-store.ts, so the settings screen
 // can subscribe with `useSyncExternalStore` without a hydration mismatch.
@@ -50,7 +57,11 @@ function read(): AppSettings {
   try {
     const stored = window.localStorage.getItem(SETTINGS_KEY);
     if (!stored) return defaultSettings;
-    return { lock: parseLock(JSON.parse(stored)?.lock) };
+    const parsed = JSON.parse(stored);
+    return {
+      lock: parseLock(parsed?.lock),
+      installed: parsed?.installed === true,
+    };
   } catch {
     return defaultSettings;
   }
@@ -92,6 +103,11 @@ export function setLockEnrolment(lock: LockEnrolment): void {
 
 export function clearLockEnrolment(): void {
   write({ ...getSettingsSnapshot(), lock: null });
+}
+
+export function markInstalled(): void {
+  if (getSettingsSnapshot().installed) return;
+  write({ ...getSettingsSnapshot(), installed: true });
 }
 
 /**
