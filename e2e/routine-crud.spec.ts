@@ -138,7 +138,9 @@ test.describe("create / edit / reorder / delete a routine", () => {
     // stepNumber's template ("Step {number}") has a locale-dependent prefix
     // too — derive it instead of hand-copying "Step " into the selector.
     const stepLabelPrefix = en.stepNumber.split("{number}")[0];
-    const stepInputs = page.locator(`input[aria-label^="${stepLabelPrefix}"]`);
+    const stepInputs = page.locator(
+      `textarea[aria-label^="${stepLabelPrefix}"]`,
+    );
     await expect(stepInputs.nth(0)).toHaveValue("Second");
     await expect(stepInputs.nth(1)).toHaveValue("First");
   });
