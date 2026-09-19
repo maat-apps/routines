@@ -40,10 +40,21 @@ jobs:
   build:
     if: (github.event_name == 'workflow_run' && github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion == 'success') || (github.event_name == 'pull_request' && github.event.action == 'closed')
     runs-on: ubuntu-latest
+    outputs:
+      pr_num: ${{ steps.pr-num.outputs.pr_num }}
     env:
       IS_CLOSE: ${{ github.event_name == 'pull_request' && github.event.action == 'closed' }}
       PR_NUM: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.pull_requests[0].number || github.event.pull_request.number }}
     steps:
+      # Job outputs are the only way to pass a value to the deploy job
+      # below (separate runner, no shared env) — needed there to build
+      # the actual /routines/pr-<n>/ URL instead of trusting
+      # deploy-pages's own page_url output, which is just the Pages
+      # site's root regardless of what subpath this run published.
+      - name: Expose PR_NUM as a job output
+        id: pr-num
+        run: echo "pr_num=$PR_NUM" >> "$GITHUB_OUTPUT"
+
       - name: Checkout PR
         if: env.IS_CLOSE != 'true'
         uses: actions/checkout@v5
@@ -137,9 +148,15 @@ jobs:
     # (refs/pull/<n>/merge) never satisfies. actions/deploy-pages doesn't
     # care what the environment is named, so a fresh one with no such rule
     # sidesteps it rather than needing a manual repo-settings change.
+    #
+    # url is built explicitly rather than trusting deployment.outputs.page_url
+    # — that's always the Pages site's root, never the /routines/pr-<n>/
+    # subpath this run actually published, so GitHub's own "View deployment"
+    # link pointed at the wrong place. Same URL the PR-description step
+    # above already constructs, just from the other job.
     environment:
       name: github-pages-preview
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: https://maat-apps.github.io/routines/pr-${{ needs.build.outputs.pr_num }}/
     steps:
       - name: Deploy to GitHub Pages
         id: deployment

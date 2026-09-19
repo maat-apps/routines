@@ -1,5 +1,13 @@
 name: Validate
 
+# Three sequential stages, fast-fail first: code-quality (cheap,
+# deterministic) gates test (unit + e2e, the slow stage), which gates
+# build-and-audit. Each job is a fresh runner — no filesystem shared
+# between them — so each repeats its own `npm ci`; actions/setup-node's
+# `cache: npm` keeps that cheap (keyed off package-lock.json, not a fresh
+# download every time). deploy-preview.yml's own workflow_run trigger
+# only cares about this workflow's overall conclusion, not its internal
+# job structure, so splitting these doesn't change how that gate behaves.
 on:
   pull_request:
     paths:
@@ -31,7 +39,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  validate:
+  code-quality:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -55,14 +63,64 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Test coverage
+  test:
+    needs: code-quality
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Unit tests + coverage
         run: npm run test:coverage
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium webkit
 
-      - name: E2E tests
-        run: npm run test:e2e
+      # Split from the a11y run below via --grep-invert rather than
+      # excluding e2e/a11y.spec.ts in playwright.config.ts itself — that
+      # config is also what `npm run test:e2e` uses locally, and
+      # CLAUDE.md's own documented design has a11y run as part of that
+      # sweep with "no extra wiring". Splitting the CI invocation instead
+      # keeps that local behavior intact while still giving a11y its own
+      # named, separately-visible check here — every test still runs
+      # exactly once total between the two steps, nothing doubles up.
+      - name: E2E tests (functional)
+        run: npx playwright test --project=mobile-chromium --project=mobile-iphone --grep-invert "accessibility \(axe-core\)"
+
+      # "Scoring" per the task this stage was filed from: axe-core's own
+      # output is a pass/fail violations list, not a numeric score the way
+      # Lighthouse's is (deliberately kept out of this gate elsewhere, for
+      # exactly that reason) — inventing a fake number here would misrepresent
+      # what the tool actually measures. What this step gives instead is a
+      # distinctly-named, separately-visible check rather than a11y's result
+      # being buried inside one monolithic e2e log.
+      - name: E2E tests (accessibility)
+        run: npm run test:a11y
+
+  build-and-audit:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
 
       - name: Build
         run: npm run build
