@@ -2,6 +2,16 @@
 @import "shadcn/tailwind.css";
 
 @custom-variant dark (&:is(.dark *));
+/* True per mobile-gate.tsx's own definition of "phone-sized": the narrow
+   dimension is <=481px, not just width. A portrait phone is caught by the
+   width check alone; a landscape phone (width and height swapped) needs
+   the height+orientation check too, or rotating one reads as a desktop
+   window (width alone stays well over 481px on every real phone).
+   Syntax trap: each comma-separated alternative below must start with its
+   own `@media` — one shared `@media (a), (b)` silently drops everything
+   past the first comma, and wrapping each half in its own outer parens
+   compiles to `@media not all` (matches nothing) instead of erroring. */
+@custom-variant phone-sized (@media (max-width: 481px), @media (max-height: 481px) and (orientation: landscape));
 
 @theme inline {
   --color-background: var(--background);
