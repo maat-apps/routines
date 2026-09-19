@@ -34,6 +34,7 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { useTranslation } from "@/i18n/use-translation";
 import { createId, sortSteps } from "@/lib/routine-utils";
 import type { Routine, RoutineStep } from "@/types";
@@ -287,7 +288,7 @@ function SortableStepRow({
     transition,
     isDragging,
   } = useSortable({ id: step.id });
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (autoFocus) {
@@ -296,6 +297,16 @@ function SortableStepRow({
       input?.setSelectionRange(input.value.length, input.value.length);
     }
   }, [autoFocus]);
+
+  // Textareas don't grow to fit their content on their own — resize on every
+  // value change (typing, backspace, a paste) so a multi-line step never
+  // shows a scrollbar instead of just growing the row.
+  useEffect(() => {
+    const input = inputRef.current;
+    if (!input) return;
+    input.style.height = "auto";
+    input.style.height = `${input.scrollHeight}px`;
+  }, [step.text]);
 
   return (
     <div
@@ -317,15 +328,16 @@ function SortableStepRow({
       >
         <GripVertical aria-hidden="true" />
       </Button>
-      <Input
+      <Textarea
         ref={inputRef}
-        className="h-11.5 min-w-0 flex-1 border-0 text-base shadow-none focus-visible:border-0 focus-visible:ring-0"
+        rows={1}
+        className="h-11.5 min-w-0 flex-1 resize-none overflow-hidden border-0 text-base shadow-none focus-visible:border-0 focus-visible:ring-0"
         value={step.text}
-        onChange={(event: ChangeEvent<HTMLInputElement>) =>
+        onChange={(event: ChangeEvent<HTMLTextAreaElement>) =>
           onChange(step.id, event.target.value)
         }
         onKeyDown={(event) => {
-          if (event.key === "Enter") {
+          if (event.key === "Enter" && !event.shiftKey) {
             event.preventDefault();
             onEnter(step.id);
           } else if (
