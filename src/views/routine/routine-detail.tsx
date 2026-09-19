@@ -71,12 +71,12 @@ export function RoutineDetail({
                 }}
               >
                 <Checkbox
-                  className="size-5.5 shrink-0 rounded-full"
+                  className="mt-0.5 size-5.5 shrink-0 rounded-full"
                   checked={checked}
                   inert
                 />
                 <span
-                  className={`min-w-0 flex-1 text-base leading-normal break-words ${
+                  className={`min-w-0 flex-1 text-base leading-relaxed break-words ${
                     checked ? "text-muted-foreground line-through" : ""
                   }`}
                 >
