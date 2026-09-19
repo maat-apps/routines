@@ -20,7 +20,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Plus, Trash2 } from "lucide-react";
+import { CalendarDays, GripVertical, Plus, Trash2 } from "lucide-react";
 import { type ChangeEvent, useEffect, useRef, useState } from "react";
 
 import { AppBar } from "@/components/app-bar";
@@ -35,7 +35,7 @@ import {
 } from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
 import { useTranslation } from "@/i18n/use-translation";
-import { createId, sortSteps } from "@/lib/routine-utils";
+import { createId, sortSteps, weekdayLabels } from "@/lib/routine-utils";
 import type { Routine, RoutineStep } from "@/types";
 
 const editStepButtonClass = "size-10.5 flex-none [&>svg]:size-5";
@@ -59,13 +59,28 @@ export function RoutineEditForm({
   onComplete?: () => void;
   showDelete?: boolean;
 }) {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const [name, setName] = useState(routine.name);
   const [steps, setSteps] = useState(sortSteps(routine.steps));
+  const [activeDays, setActiveDays] = useState(routine.activeDays);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [focusStepId, setFocusStepId] = useState<string | null>(null);
   const canSave =
     name.trim().length > 0 && steps.some((step) => step.text.trim().length > 0);
+  // Visible chips use "narrow" (a single letter, e.g. "m"/"t"); the full
+  // name goes on each button's aria-label instead — narrow labels repeat
+  // (English "T" is both Tuesday and Thursday), fine for sighted users who
+  // also see fixed left-to-right day order, but a genuinely ambiguous
+  // accessible name for screen readers otherwise.
+  const weekdayNames = weekdayLabels(locale, "long");
+
+  function toggleDay(day: number) {
+    setActiveDays((current) =>
+      current.includes(day)
+        ? current.filter((d) => d !== day)
+        : [...current, day].sort((a, b) => a - b),
+    );
+  }
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(TouchSensor, {
@@ -139,6 +154,7 @@ export function RoutineEditForm({
     onSave({
       ...routine,
       name: name.trim(),
+      activeDays,
       steps: steps
         .filter((step) => step.text.trim().length > 0)
         .map((step, index) => ({
@@ -165,6 +181,34 @@ export function RoutineEditForm({
           placeholder={t("routineNamePlaceholder")}
           autoFocus
         />
+      </section>
+      <section className="mb-7.5 grid gap-2.25">
+        <div className="flex items-center justify-between">
+          <h2 className="m-0 text-sm font-[650]">{t("activeDaysTitle")}</h2>
+          <CalendarDays
+            className="text-muted-foreground size-4"
+            aria-hidden="true"
+          />
+        </div>
+        <div
+          className="flex gap-1.5"
+          role="group"
+          aria-label={t("activeDaysTitle")}
+        >
+          {weekdayLabels(locale, "narrow").map((label, day) => (
+            <Button
+              key={day}
+              type="button"
+              variant={activeDays.includes(day) ? "default" : "outline"}
+              className="h-10 flex-1 rounded-full px-0 text-sm"
+              aria-pressed={activeDays.includes(day)}
+              aria-label={weekdayNames[day]}
+              onClick={() => toggleDay(day)}
+            >
+              {label.toLowerCase()}
+            </Button>
+          ))}
+        </div>
       </section>
       <section className="grid gap-2.25">
         <div className="flex items-center justify-between">

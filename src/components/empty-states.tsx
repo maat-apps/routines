@@ -21,6 +21,21 @@ export function EmptyState({ onCreate }: { onCreate: () => void }) {
   );
 }
 
+// Distinct from EmptyState: the user has routines, just none scheduled for
+// today (routine-day-scheduling) — no "create one" prompt, since creating
+// wouldn't be the fix.
+export function NoRoutinesToday() {
+  const { t } = useTranslation();
+  return (
+    <div className={emptyStateClass}>
+      <h2 className="font-heading m-0 text-xl">{t("noRoutinesTodayTitle")}</h2>
+      <p className="text-muted-foreground mx-0 mt-0 mb-2 max-w-70 text-sm leading-normal">
+        {t("noRoutinesTodayDescription")}
+      </p>
+    </div>
+  );
+}
+
 export function EmptySteps({ onEdit }: { onEdit: () => void }) {
   const { t } = useTranslation();
   return (

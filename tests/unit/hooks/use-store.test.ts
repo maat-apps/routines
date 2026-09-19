@@ -43,11 +43,23 @@ describe("useRoutines", () => {
     expect(result.current).toEqual([]);
 
     act(() => {
-      storage.saveRoutine({ id: "r1", name: "Morning", order: 0, steps: [] });
+      storage.saveRoutine({
+        id: "r1",
+        name: "Morning",
+        order: 0,
+        activeDays: [0, 1, 2, 3, 4, 5, 6],
+        steps: [],
+      });
     });
 
     expect(result.current).toEqual([
-      { id: "r1", name: "Morning", order: 0, steps: [] },
+      {
+        id: "r1",
+        name: "Morning",
+        order: 0,
+        activeDays: [0, 1, 2, 3, 4, 5, 6],
+        steps: [],
+      },
     ]);
   });
 });
@@ -59,6 +71,7 @@ describe("useRoutineState", () => {
       id: "r1",
       name: "Morning",
       order: 0,
+      activeDays: [0, 1, 2, 3, 4, 5, 6],
       steps: [{ id: "s1", text: "Drink water", order: 0 }],
     });
 
@@ -99,6 +112,7 @@ describe("useRevalidateOnVisibility", () => {
       id: "r1",
       name: "Morning",
       order: 0,
+      activeDays: [0, 1, 2, 3, 4, 5, 6],
       steps: [{ id: "s1", text: "Drink water", order: 0 }],
     });
     storage.toggleStep("r1", "s1");
@@ -131,6 +145,7 @@ describe("useRevalidateOnVisibility", () => {
       id: "r1",
       name: "Morning",
       order: 0,
+      activeDays: [0, 1, 2, 3, 4, 5, 6],
       steps: [{ id: "s1", text: "Drink water", order: 0 }],
     });
     storage.toggleStep("r1", "s1");

@@ -12,6 +12,13 @@ export const StepSchema = v.object({
   order: v.number(),
 });
 
+// Day-of-week index matching Date#getDay() (0 = Sunday .. 6 = Saturday), not
+// an ISO weekday — routine-utils.ts's isRoutineActiveToday reads straight off
+// Date#getDay(), so the schema and that lookup have to agree on the same
+// numbering rather than converting between two conventions.
+const DaySchema = v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(6));
+export const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6];
+
 // A routine's own fields, kept separate from its `steps` array so one malformed
 // step doesn't take the rest of an otherwise-valid routine down with it — see
 // parseRoutines below, which validates steps independently of these.
@@ -19,6 +26,10 @@ const RoutineFieldsSchema = v.object({
   id: v.string(),
   name: v.string(),
   order: v.number(),
+  // v.fallback (not v.optional) so a routine stored/backed-up before this
+  // field existed still parses as "every day" instead of failing or ending
+  // up with an empty, always-hidden schedule.
+  activeDays: v.fallback(v.array(DaySchema), ALL_DAYS),
 });
 
 export const RoutineSchema = v.object({
