@@ -1,0 +1,80 @@
+name: PR preview cleanup
+
+# Removes a closed/merged PR's /routines/pr-<n>/ subdirectory from the
+# shared pages-content branch (see ci.yml's preview-build job, which
+# publishes it, and deploy.yml, which explains what that branch actually
+# is). Deliberately its own file, not a job in ci.yml: closing a PR has
+# nothing to validate, so running that whole pipeline again just to
+# delete a folder would be wasted CI minutes for no gate anyone needs.
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    outputs:
+      pr_num: ${{ steps.pr_num.outputs.pr_num }}
+    env:
+      PR_NUM: ${{ github.event.pull_request.number }}
+    steps:
+      - name: Expose PR_NUM as a job output
+        id: pr_num
+        run: echo "pr_num=$PR_NUM" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout pages-content workspace
+        uses: actions/checkout@v5
+        with:
+          path: pages-content
+          fetch-depth: 0
+
+      - name: Switch to pages-content branch
+        working-directory: pages-content
+        run: |
+          git fetch origin pages-content:refs/remotes/origin/pages-content || true
+          git show-ref --verify --quiet refs/remotes/origin/pages-content && git checkout pages-content || exit 0
+
+      - name: Remove this PR's preview subdirectory
+        run: rm -rf "pages-content/pr-$PR_NUM"
+
+      - name: Commit and push pages-content
+        working-directory: pages-content
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Remove preview for PR #$PR_NUM" --allow-empty
+          git push origin HEAD:pages-content
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v6
+        with:
+          enablement: true
+
+      - name: Remove git metadata before upload
+        run: rm -rf pages-content/.git
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: pages-content
+
+  deploy:
+    needs: cleanup
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages-preview
+      url: https://maat-apps.github.io/routines/pr-${{ needs.cleanup.outputs.pr_num }}/
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
