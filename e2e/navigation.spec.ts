@@ -154,9 +154,10 @@ test.describe("native back button", () => {
 
     // Going back once from home never resurrects the edit form for a
     // routine that's gone — it can still reach the stale "routine" entry
-    // one level further back, which MissingRoutine handles gracefully
-    // (see features/verify-back-button-behavior.md for the open question
-    // of collapsing that level too).
+    // one level further back, which MissingRoutine handles gracefully.
+    // Fully collapsing that level too needs real navigation-depth tracking,
+    // not a fixed-depth navigate(-N) (see routine-edit-view.tsx's onDelete) —
+    // accepted as a deliberate, tested trade-off rather than a silent gap.
     await page.goBack();
     await expect(page.getByText(en.routineNotFound)).toBeVisible();
   });

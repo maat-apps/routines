@@ -38,7 +38,12 @@ export function RoutineEditView() {
         // together with that update instead.
         deleteRoutine(routine.id);
         // Doesn't collapse an earlier "routine" entry that may still sit
-        // behind this one (see features/verify-back-button-behavior.md).
+        // behind this one — a second back tap can still land on it, handled
+        // gracefully by MissingRoutine (see e2e/navigation.spec.ts's
+        // "deleting a routine..." test). Fully collapsing every level would
+        // need real navigation-depth tracking, not a fixed-depth navigate(-N)
+        // (that would break the delete-from-a-direct-deep-link case) —
+        // accepted as-is rather than worth that complexity for this edge case.
         navigate("/", { replace: true });
       }}
     />
