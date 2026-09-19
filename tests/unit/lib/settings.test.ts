@@ -95,6 +95,7 @@ describe("setLockEnrolment / clearLockEnrolment", () => {
     setLockEnrolment({ credentialId: "c1", userId: "u1", createdAt: "now" });
     expect(getSettingsSnapshot()).toEqual({
       lock: { credentialId: "c1", userId: "u1", createdAt: "now" },
+      installed: false,
     });
     expect(listener).toHaveBeenCalledTimes(1);
   });
