@@ -83,4 +83,16 @@ describe("weekdayLabels", () => {
     // Polish short weekday labels don't collide with the English ones.
     expect(labels).not.toEqual(weekdayLabels("en-US", "short"));
   });
+
+  it("narrow style gives single-letter labels with no trailing punctuation", () => {
+    // The day picker's actual production style — "short" appends a dot in
+    // Polish ("pon.", "wt.", ...), which narrow avoids entirely.
+    for (const locale of ["en-US", "pl-PL"]) {
+      const labels = weekdayLabels(locale, "narrow");
+      expect(labels).toHaveLength(7);
+      for (const label of labels) {
+        expect(label).toMatch(/^\p{L}$/u);
+      }
+    }
+  });
 });

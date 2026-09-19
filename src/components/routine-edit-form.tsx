@@ -20,7 +20,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Plus, Trash2 } from "lucide-react";
+import { CalendarDays, GripVertical, Plus, Trash2 } from "lucide-react";
 import { type ChangeEvent, useEffect, useRef, useState } from "react";
 
 import { AppBar } from "@/components/app-bar";
@@ -67,6 +67,12 @@ export function RoutineEditForm({
   const [focusStepId, setFocusStepId] = useState<string | null>(null);
   const canSave =
     name.trim().length > 0 && steps.some((step) => step.text.trim().length > 0);
+  // Visible chips use "narrow" (a single letter, e.g. "m"/"t"); the full
+  // name goes on each button's aria-label instead — narrow labels repeat
+  // (English "T" is both Tuesday and Thursday), fine for sighted users who
+  // also see fixed left-to-right day order, but a genuinely ambiguous
+  // accessible name for screen readers otherwise.
+  const weekdayNames = weekdayLabels(locale, "long");
 
   function toggleDay(day: number) {
     setActiveDays((current) =>
@@ -177,22 +183,29 @@ export function RoutineEditForm({
         />
       </section>
       <section className="mb-7.5 grid gap-2.25">
-        <h2 className="m-0 text-sm font-[650]">{t("activeDaysTitle")}</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="m-0 text-sm font-[650]">{t("activeDaysTitle")}</h2>
+          <CalendarDays
+            className="text-muted-foreground size-4"
+            aria-hidden="true"
+          />
+        </div>
         <div
           className="flex gap-1.5"
           role="group"
           aria-label={t("activeDaysTitle")}
         >
-          {weekdayLabels(locale).map((label, day) => (
+          {weekdayLabels(locale, "narrow").map((label, day) => (
             <Button
               key={day}
               type="button"
               variant={activeDays.includes(day) ? "default" : "outline"}
               className="h-10 flex-1 rounded-full px-0 text-sm"
               aria-pressed={activeDays.includes(day)}
+              aria-label={weekdayNames[day]}
               onClick={() => toggleDay(day)}
             >
-              {label}
+              {label.toLowerCase()}
             </Button>
           ))}
         </div>

@@ -23,7 +23,7 @@ export function isRoutineActiveToday(
 // i18n keys, the same way dates are formatted elsewhere in the app.
 export function weekdayLabels(
   locale: string,
-  style: "short" | "narrow" = "short",
+  style: "short" | "narrow" | "long" = "short",
 ): string[] {
   // 1970-01-04 was a Sunday — an arbitrary anchor date whose getDay()
   // sequence for the following 6 days is exactly 0..6.
