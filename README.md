@@ -5,8 +5,9 @@ small gaps of a real day — before leaving home, after the gym, in the morning,
 before bed. No accounts, no history, no gamification, no notifications. Just the
 steps you want to keep close, and a checkmark next to each one.
 
-Everything lives in your browser. There is no backend and no account, nothing
-about you is sent anywhere, and the app works offline — the only requests it
+Everything lives in your browser by default. There is no required account and
+nothing about you is sent anywhere unless you turn on Google Drive sync
+yourself — the app works offline, and until you opt in, the only requests it
 makes are for its own files.
 
 ## Design principles
@@ -14,8 +15,9 @@ makes are for its own files.
 This project — and this stack in general — is guided by a few core goals:
 
 - **Minimalism.** No more than the checklist needs; a calm, uncluttered UI.
-- **Independence.** No accounts, no cloud, no vendor lock-in — your data stays
-  yours and stays on your device.
+- **Independence.** Local-first by default — no required account, no vendor
+  lock-in. Google Drive sync (see Features below) is opt-in, off unless you
+  turn it on, and your data works exactly the same without it.
 - **Smallest possible runtime footprint.** Lightweight and easy on the battery
   once it's on your device, e.g. true black (`#000000`) backgrounds to save
   power on OLED screens. This is about how the app behaves after it's built —
@@ -45,6 +47,9 @@ This project — and this stack in general — is guided by a few core goals:
   gate, not encryption — see the note below.
 - **Reset settings.** Puts language and app lock back to their defaults and
   leaves your routines alone.
+- **Google Drive sync (opt-in).** Connect your own Google Drive with one
+  click and push/pull a backup on demand from Settings. Off by default,
+  and the app works exactly the same without it — see the note below.
 
 ### About the app lock
 
@@ -55,6 +60,19 @@ passer-by out of an unlocked phone, it does not protect the data itself. If
 the authenticator ever stops working (a new phone, cleared browser data,
 re-enrolled biometrics), the lock screen offers a way to turn the lock off so
 you are never shut out of your own checklist.
+
+### About Google Drive sync
+
+Off by default. Turning it on requests access to a single file this app
+creates in your Drive (the `drive.file` OAuth scope — it can never see or
+touch anything else in your Drive) via Google's own sign-in popup, no
+password ever touches this app. There's no background sync and no real-time
+merge: "Sync now" pushes your current routines to that file, overwriting
+whatever was there; "Restore from Drive" does the reverse. Whichever
+direction you pick is the one that wins. Because this app has no backend,
+the connection itself isn't persistent — each sync/restore re-asks Google
+for access (normally an invisible round-trip once you've already granted it
+once, not a repeat consent screen).
 
 ## Tech stack
 
@@ -69,6 +87,8 @@ you are never shut out of your own checklist.
 - **vite-plugin-pwa** (`injectManifest` strategy) builds the service worker.
 - State persisted to **`localStorage`** (no database, no API), validated with
   **Valibot** schemas that double as the source of the app's TypeScript types.
+- **Google Identity Services** (loaded on demand, only once Drive sync is
+  used) + the Drive REST API directly via `fetch` — no `gapi` SDK.
 
 ## Local development
 
@@ -76,6 +96,10 @@ you are never shut out of your own checklist.
 npm install
 npm run dev      # dev server (note the /routines base path, see below)
 ```
+
+Optional: copy `.env.example` to `.env.local` and fill in
+`VITE_GOOGLE_CLIENT_ID` to enable Google Drive sync locally — every other
+feature works without it.
 
 Other useful scripts:
 

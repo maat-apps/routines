@@ -13,5 +13,16 @@ export const SETTINGS_KEY = "routines-settings";
 /** Automatic backup taken just before an in-app update. */
 export const SNAPSHOT_KEY = "routines-update-snapshot";
 
+/**
+ * Google Drive sync metadata — the resolved backup file id and last-synced
+ * timestamp (`src/lib/drive/drive-sync.ts`). Never an access token: those
+ * are short-lived and kept in memory only, never persisted.
+ */
+export const DRIVE_SYNC_KEY = "routines-drive-sync";
+
 /** Keys cleared by "reset settings" — preferences only, never routine data. */
-export const PREFERENCE_KEYS = [LOCALE_KEY, SETTINGS_KEY] as const;
+export const PREFERENCE_KEYS = [
+  LOCALE_KEY,
+  SETTINGS_KEY,
+  DRIVE_SYNC_KEY,
+] as const;

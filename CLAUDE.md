@@ -9,8 +9,13 @@ them in mind when writing or reviewing code:
 
 - **Minimalism.** Prefer the simplest solution; avoid unnecessary
   abstractions, UI complexity, or dependencies.
-- **Independence.** Avoid vendor/cloud lock-in — don't reach for a backend or
-  third-party service where a local-first approach works.
+- **Independence.** Local-first by default; avoid vendor/cloud lock-in — don't
+  reach for a backend or third-party service where a local-first approach
+  works. This doesn't rule out an opt-in cloud feature when the thing it does
+  (e.g. cross-device sync) genuinely can't be local-first — see the Google
+  Drive integration in Architecture below — as long as it stays off by
+  default, the app works the same without it, and it doesn't introduce a
+  required account or a backend this project runs itself.
 - **Smallest possible runtime footprint.** Keep bundle sizes and components
   lightweight to reduce battery/resource usage on the user's device — e.g.
   prefer true black (`#000000`) backgrounds, which save power on OLED screens.
@@ -58,9 +63,12 @@ validate:fix` applies the autofixable ones.
 
 ## Architecture
 
-A private, phone-first PWA for daily checklists. No accounts and no backend —
-everything lives in the browser, and nothing about the user leaves the device.
-The only network traffic is the service worker fetching the app's own files.
+A private, phone-first PWA for daily checklists. No required accounts and no
+backend of this project's own — everything lives in the browser by default,
+and nothing about the user leaves the device unless they opt into Google
+Drive sync (`src/lib/drive/`, off by default) themselves. Absent that,
+the only network traffic is the service worker fetching the app's own
+files.
 
 - **Vite + base path, no server.** `vite.config.ts` sets `base` from
   `DEPLOY_BASE_PATH` (defaulting to `/routines/`, deployed to GitHub Pages
@@ -167,6 +175,31 @@ The only network traffic is the service worker fetching the app's own files.
   the same external-store shape as `use-store.ts`; `resetPreferences` clears
   preferences only and callers must reload, since other stores cache their own
   snapshots.
+
+- **Google Drive sync (`src/lib/drive/`, opt-in).** Written in an
+  extractable shape — a self-contained module, no `routines`-specific
+  entanglement — so it can become the future `maat-core`/
+  `maat-cloud-adapters` Google Drive adapter rather than staying tied to
+  this app. `drive-auth.ts` loads Google Identity Services on demand (never
+  bundled/loaded eagerly) and requests a `drive.file`-scoped access token —
+  the least-privilege scope: this app can only ever see/modify a file it
+  created itself, never the rest of the user's Drive. `drive-client.ts` is
+  three plain `fetch` calls against the Drive REST v3 API (no `gapi` SDK).
+  `drive-sync.ts` reuses `backup.ts`'s existing `createBackup`/
+  `parseBackup`/`applyBackup` rather than inventing a second data shape —
+  the Drive file _is_ a backup JSON, saved by overwrite (one well-known
+  filename, `BACKUP_FILE_NAME`), never a second timestamped copy. Scope is
+  deliberately small: manual "Sync now" / "Restore from Drive" only, no
+  background sync, no real conflict resolution — whichever direction the
+  user picks overwrites the other side outright. The access token itself is
+  never persisted (kept in a `Promise` a caller awaits and then lets go of)
+  since this app has no backend and therefore no refresh-token flow either —
+  only the resolved file id and a last-synced timestamp are cached, under
+  `DRIVE_SYNC_KEY` (`storage-keys.ts`; also in `PREFERENCE_KEYS`, so "reset
+  settings" clears it too). `VITE_GOOGLE_CLIENT_ID` (`vite-env.d.ts`) is a
+  placeholder by default — the feature is inert, not broken or hidden, until
+  someone does the one-time Google Cloud Console setup documented in
+  `.env.example`/README.md and sets it.
 
 - **UI stack.** shadcn (`base-nova` style, see `components.json`, `rsc: false`)
   built on `@base-ui/react` — primitives live in `src/components/ui`, generated
