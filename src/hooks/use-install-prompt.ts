@@ -2,6 +2,13 @@
 
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 
+import {
+  getServerSettingsSnapshot,
+  getSettingsSnapshot,
+  markInstalled,
+  subscribeToSettings,
+} from "@/lib/settings";
+
 // Not in lib.dom yet — Chromium-only, and the whole point of the install button.
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
