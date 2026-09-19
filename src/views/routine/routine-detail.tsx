@@ -57,7 +57,7 @@ export function RoutineDetail({
             const checked = checkedStepIds.includes(step.id);
             return (
               <div
-                className="border-border text-card-foreground active:bg-muted flex min-h-15 cursor-pointer items-start gap-3.5 border-b px-2.5 py-3 text-left transition-colors"
+                className="border-border text-card-foreground active:bg-muted flex cursor-pointer items-start gap-3.5 border-b px-2.5 py-3 text-left transition-colors"
                 key={step.id}
                 role="checkbox"
                 aria-checked={checked}
