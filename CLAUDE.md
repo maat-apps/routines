@@ -65,12 +65,16 @@ The only network traffic is the service worker fetching the app's own files.
 - **Vite + base path, no server.** `vite.config.ts` sets `base` from
   `DEPLOY_BASE_PATH` (defaulting to `/routines/`, deployed to GitHub Pages
   under `/routines`) and builds a plain static SPA — no server at runtime.
-  A PR preview build (`.github/workflows/deploy-preview.yml`, gated on
-  `validate.yml` passing via `workflow_run`) overrides it to
-  `/routines/pr-<n>/` so an open PR can be checked on a phone under its own
-  subpath alongside `main`'s deployment — see that workflow and `deploy.yml`
-  for how both share one GitHub Pages site via a `pages-content` storage
-  branch that isn't itself the Pages source. GitHub Pages has no server-side
+  A PR preview build (`.github/workflows/ci.yml`'s `preview-build`/
+  `preview-deploy` jobs, gated on the earlier stages in that same pipeline
+  passing) overrides it to `/routines/pr-<n>/` so an open PR can be checked
+  on a phone under its own subpath alongside `main`'s deployment — see that
+  workflow and `deploy.yml` for how both share one GitHub Pages site via a
+  `pages-content` storage branch that isn't itself the Pages source.
+  Cleaning that subdirectory back up when the PR closes is a separate
+  workflow, `pr-preview-cleanup.yml` — closing a PR has nothing to
+  validate, so it doesn't run the rest of the pipeline. GitHub Pages has
+  no server-side
   rewrites, so a hard refresh or deep link into a client-routed path would
   404; a `closeBundle` plugin in `vite.config.ts` copies the built
   `index.html` to `dist/404.html` after every build so Pages' 404 fallback
@@ -346,7 +350,7 @@ docs, git operations, pure Q&A) don't, and skipping them avoids paying the
 ~10-15s test cost for nothing to check. Neither blocks the turn — both are
 summary-only warnings. `test:e2e`/`build`/`npm audit` aren't tied to any
 hook (e2e needs a real browser + a built app, too slow/heavy for a
-per-turn hook), but `validate.yml` covers all three in CI on every PR. For
+per-turn hook), but `ci.yml` covers all three in CI on every PR. For
 a full manual check (all seven steps at once), run `npm run validate`
 directly.
 
@@ -383,7 +387,7 @@ directly.
   (individually or via `npm run validate`) to double-check a change before
   committing or pushing, or narrate that you're about to — see the
   Automation table above for what already runs per-edit/per-turn, and
-  `validate.yml` for what CI covers on every PR. Running any of it again
+  `ci.yml` for what CI covers on every PR. Running any of it again
   locally is redundant work against what's already covered, not extra
   safety.
 - Prefer `Grep`/`Glob` over reading whole files; read only what a task needs.

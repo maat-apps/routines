@@ -115,9 +115,11 @@ The app is deployed to **GitHub Pages** as a static site.
   every build — GitHub Pages falls back to that for any unresolved path, which
   boots the app and lets React Router take it from there.
 - Deployment is automated in `.github/workflows/deploy.yml`: on push to `main` it
-  builds the static site, uploads it as a Pages artifact, and deploys it. A
-  separate `.github/workflows/validate.yml` runs lint, format check, and typecheck
-  on every push to any branch.
+  builds the static site, uploads it as a Pages artifact, and deploys it. Every
+  PR instead runs `.github/workflows/ci.yml` — lint, format check, typecheck,
+  unit tests, e2e tests, a build, and an audit, gating a PR preview deploy under
+  its own `/routines/pr-<n>/` subpath once all of that passes. Closing a PR
+  cleans that subdirectory back up via `.github/workflows/pr-preview-cleanup.yml`.
 
 > **One-time repo setting:** in **Settings → Pages**, the build and deployment
 > **Source** must be set to **"GitHub Actions"** for the deploy workflow to
