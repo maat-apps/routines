@@ -2,6 +2,12 @@ import { type ReactNode, useEffect } from "react";
 
 import { useTranslation } from "@/i18n/use-translation";
 
+// Not in lib.dom yet — ScreenOrientation.lock() is non-standard/experimental
+// (Android Chrome only), unlike unlock()/angle/type which lib.dom already types.
+type LockableScreenOrientation = ScreenOrientation & {
+  lock?: (orientation: string) => Promise<void>;
+};
+
 export function MobileGate({ children }: { children: ReactNode }) {
   const { t } = useTranslation();
 
@@ -16,15 +22,25 @@ export function MobileGate({ children }: { children: ReactNode }) {
         .register(`${import.meta.env.BASE_URL}sw.js`)
         .catch(() => undefined);
     }
+
+    // Best-effort only: the Screen Orientation API's lock() only succeeds
+    // for a fullscreen or standalone-launched (installed) context on a
+    // browser that implements it (Android Chrome) — it silently rejects
+    // for a plain browser tab and isn't implemented at all on iOS Safari.
+    // A landscape phone opened as a normal tab still sees the "smartphones
+    // only" message below; this only helps the installed-PWA case.
+    (screen.orientation as LockableScreenOrientation | undefined)
+      ?.lock?.("portrait")
+      .catch(() => undefined);
   }, []);
 
   return (
     <>
-      <main className="bg-background phone-sized:block hidden min-h-dvh">
+      <main className="bg-background block min-h-dvh min-[481px]:hidden">
         {children}
       </main>
       <section
-        className="bg-background text-muted-foreground phone-sized:hidden grid min-h-dvh place-items-center p-8 text-center"
+        className="bg-background text-muted-foreground hidden min-h-dvh place-items-center p-8 text-center min-[481px]:grid"
         aria-live="polite"
       >
         <p>{t("mobileOnly")}</p>
