@@ -69,7 +69,7 @@ The only network traffic is the service worker fetching the app's own files.
   `preview-deploy` jobs, gated on the earlier stages in that same pipeline
   passing) overrides it to `/routines/pr-<n>/` so an open PR can be checked
   on a phone under its own subpath alongside `main`'s deployment — see that
-  workflow and `deploy.yml` for how both share one GitHub Pages site via a
+  workflow and `cd.yml` for how both share one GitHub Pages site via a
   `pages-content` storage branch that isn't itself the Pages source.
   Cleaning that subdirectory back up when the PR closes is a separate
   workflow, `pr-preview-cleanup.yml` — closing a PR has nothing to

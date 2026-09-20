@@ -2,7 +2,7 @@ name: PR preview cleanup
 
 # Removes a closed/merged PR's /routines/pr-<n>/ subdirectory from the
 # shared pages-content branch (see ci.yml's preview-build job, which
-# publishes it, and deploy.yml, which explains what that branch actually
+# publishes it, and cd.yml, which explains what that branch actually
 # is). Deliberately its own file, not a job in ci.yml: closing a PR has
 # nothing to validate, so running that whole pipeline again just to
 # delete a folder would be wasted CI minutes for no gate anyone needs.
