@@ -19,8 +19,15 @@ const RoutineEditView = lazy(() =>
     default: m.RoutineEditView,
   })),
 );
+const AllRoutinesView = lazy(() =>
+  import("@/views/all-routines/all-routines-view").then((m) => ({
+    default: m.AllRoutinesView,
+  })),
+);
 
-// Mirrors the previous Next.js routes 1:1: /, /new, /routine?id=, /routine/edit?id=.
+// Mirrors the previous Next.js routes 1:1 (/, /new, /routine?id=,
+// /routine/edit?id=), plus /all-routines (a later addition, reached only
+// from Settings — see all-routines-view.tsx).
 // GitHub Pages has no server-side rewrites, so a copy of the built index.html is
 // published as 404.html (see vite.config.ts) — that's what lets a hard refresh or
 // deep link into any of these paths still boot the app and land on the right view.
@@ -38,6 +45,7 @@ export function AppRouter() {
           <Route path="/new" element={<NewRoutineView />} />
           <Route path="/routine" element={<RoutineView />} />
           <Route path="/routine/edit" element={<RoutineEditView />} />
+          <Route path="/all-routines" element={<AllRoutinesView />} />
         </Routes>
       </Suspense>
     </BrowserRouter>

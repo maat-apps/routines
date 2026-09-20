@@ -1,10 +1,12 @@
 import {
+  startTransition,
   useEffect,
   useRef,
   useState,
   useSyncExternalStore,
   type ReactNode,
 } from "react";
+import { useNavigate } from "react-router";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -137,6 +139,7 @@ function ConfirmDrawer({
 }
 
 export function SettingsPanel() {
+  const navigate = useNavigate();
   const { t, locale, setLocale } = useTranslation();
   const settings = useAppSettings();
   const install = useInstallPrompt();
@@ -258,6 +261,22 @@ export function SettingsPanel() {
             {t("appLockNotice")}
           </p>
         )}
+      </SettingsSection>
+
+      <SettingsSection>
+        <SettingsRow
+          title={t("viewAllRoutines")}
+          description={t("allRoutinesDescription")}
+          action={
+            <Button
+              variant="outline"
+              className="min-h-10.5 px-4"
+              onClick={() => startTransition(() => navigate("/all-routines"))}
+            >
+              {t("viewAllRoutinesAction")}
+            </Button>
+          }
+        />
       </SettingsSection>
 
       <SettingsSection title={t("sectionData")}>
