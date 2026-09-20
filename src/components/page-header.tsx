@@ -10,9 +10,13 @@ import { cn } from "@/lib/utils";
 // side gutters above 480px wide. The actual content stays constrained to
 // that same column via the inner wrapper below, so text/controls still
 // line up with the rest of the page. Callers must add top padding to their
-// own content wrapper equal to this header's rendered height (h-17, plus
+// own content wrapper equal to this header's rendered height (h-23, plus
 // whatever gap they want) — `fixed` removes it from document flow
-// entirely, unlike `sticky`, which still reserves its own space.
+// entirely, unlike `sticky`, which still reserves its own space. h-23
+// (not the tighter height a single-line title would need on its own) is
+// sized for the tallest header content — the home view's two-line
+// title+date block — so every screen's header renders at the same height
+// instead of home's looking cramped relative to the rest.
 export function PageHeader({
   children,
   className,
@@ -24,7 +28,7 @@ export function PageHeader({
     <header
       className={cn("bg-background fixed inset-x-0 top-0 z-10", className)}
     >
-      <div className="mx-auto flex h-17 w-[min(100%,480px)] items-center justify-between gap-4 px-5 py-2.5">
+      <div className="mx-auto flex h-23 w-[min(100%,480px)] items-center justify-between gap-4 px-5 py-2.5">
         {children}
       </div>
       {/* Always rendered (no JS scroll listener) — content scrolling
