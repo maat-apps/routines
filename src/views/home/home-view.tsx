@@ -58,7 +58,7 @@ export function HomeView() {
         onCreate={openNewRoutine}
         onOpen={(routineId) =>
           startTransition(() =>
-            navigate(`/routine?id=${encodeURIComponent(routineId)}`),
+            navigate(`/routine/${encodeURIComponent(routineId)}`),
           )
         }
         onResetAll={() => setResetAllOpen(true)}

@@ -4,8 +4,8 @@ import { useNavigate } from "react-router";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/i18n/use-translation";
 
-// Shown by the "/routine" and "/routine/edit" views when the `?id=` in the URL
-// no longer matches a stored routine (e.g. it was deleted in another tab).
+// Shown by the "/routine/:id" and "/routine/:id/edit" views when the id in
+// the URL no longer matches a stored routine (e.g. it was deleted in another tab).
 export function MissingRoutine() {
   const { t } = useTranslation();
   const navigate = useNavigate();

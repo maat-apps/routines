@@ -1,5 +1,5 @@
 import { startTransition } from "react";
-import { useNavigate, useSearchParams } from "react-router";
+import { useNavigate, useParams } from "react-router";
 
 import { MissingRoutine } from "@/components/missing-routine";
 import { useSmartBack } from "@/hooks/use-smart-back";
@@ -10,8 +10,7 @@ import { RoutineDetail } from "@/views/routine/routine-detail";
 export function RoutineView() {
   const navigate = useNavigate();
   const smartBack = useSmartBack("/");
-  const [searchParams] = useSearchParams();
-  const routineId = searchParams.get("id");
+  const { id: routineId } = useParams();
   const routines = useRoutines();
   const state = useRoutineState();
   const routine = routineId
@@ -26,7 +25,7 @@ export function RoutineView() {
       onBack={() => startTransition(smartBack)}
       onEdit={() =>
         startTransition(() =>
-          navigate(`/routine/edit?id=${encodeURIComponent(routine.id)}`),
+          navigate(`/routine/${encodeURIComponent(routine.id)}/edit`),
         )
       }
       onToggle={(_, stepId) => toggleStep(routine.id, stepId)}

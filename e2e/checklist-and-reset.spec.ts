@@ -17,7 +17,7 @@ test.describe("checking off steps and resetting", () => {
         ],
       },
     ]);
-    await page.goto("routine?id=r1");
+    await page.goto("routine/r1");
 
     const step = page.getByRole("checkbox", { name: "Stretch" });
     await expect(step).toHaveAttribute("aria-checked", "false");
@@ -60,7 +60,7 @@ test.describe("checking off steps and resetting", () => {
       page.getByRole("img", { name: `1 / 2 ${en.completed}` }),
     ).toBeVisible();
 
-    await page.goto("routine?id=r1");
+    await page.goto("routine/r1");
     await expect(
       page.getByRole("checkbox", { name: "Stretch" }),
     ).toHaveAttribute("aria-checked", "true");
@@ -87,7 +87,7 @@ test.describe("checking off steps and resetting", () => {
       ],
       { r1: { checkedStepIds: ["s1"], lastResetDate: todayIso() } },
     );
-    await page.goto("routine?id=r1");
+    await page.goto("routine/r1");
 
     const step = page.getByRole("checkbox", { name: "Stretch" });
     await expect(step).toHaveAttribute("aria-checked", "true");
@@ -112,7 +112,7 @@ test.describe("checking off steps and resetting", () => {
       // Yesterday's progress should not survive a fresh read today.
       { r1: { checkedStepIds: ["s1"], lastResetDate: "2000-01-01" } },
     );
-    await page.goto("routine?id=r1");
+    await page.goto("routine/r1");
 
     await expect(
       page.getByRole("checkbox", { name: "Stretch" }),
