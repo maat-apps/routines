@@ -170,7 +170,12 @@ The only network traffic is the service worker fetching the app's own files.
 
 - **UI stack.** shadcn (`base-nova` style, see `components.json`, `rsc: false`)
   built on `@base-ui/react` — primitives live in `src/components/ui`, generated
-  and not hand-edited. Always import through the aliases `components.json`
+  and not hand-edited, with one deliberate exception: `button.tsx`'s `outline`
+  variant carries a `disabled:` blurred-translucent-background treatment
+  (`disabled:bg-background/40 disabled:backdrop-blur-md`) so every disabled
+  outline button in the app gets it, not just the ones that happened to add
+  their own override — re-apply this if `button.tsx` is ever regenerated via
+  `npx shadcn add`. Always import through the aliases `components.json`
   declares (`utils`, `ui`, `components`, `lib`, `hooks`) rather than straight
   from the underlying package — e.g. `cn` from `@/lib/utils`, not directly
   from the `cn` package — so a future `npx shadcn add` or hand-adjustment
