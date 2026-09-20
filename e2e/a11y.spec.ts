@@ -64,12 +64,7 @@ test.describe("accessibility (axe-core)", () => {
     ]);
     await page.goto("routine?id=r1");
     await expect(page.getByRole("heading").first()).toBeVisible();
-    // nested-interactive disabled: a real, tracked violation (the row's
-    // own role="checkbox" wraps Base UI's <Checkbox>, itself a second
-    // interactive checkbox with a focusable hidden native input) — see
-    // .claude/tasks/bugs/nested-interactive-checkbox-role.md. Deferred, not
-    // silently ignored: re-enable once that's fixed.
-    await auditIsClean(page, ["nested-interactive"]);
+    await auditIsClean(page);
   });
 
   test("routine edit screen has no violations", async ({ page }) => {

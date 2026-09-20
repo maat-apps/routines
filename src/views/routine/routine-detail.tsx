@@ -1,10 +1,9 @@
-import { Pencil } from "lucide-react";
+import { Check, Pencil } from "lucide-react";
 
 import { AppBar } from "@/components/app-bar";
 import { EmptySteps } from "@/components/empty-states";
 import { ProgressRing } from "@/components/progress-ring";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { useTranslation } from "@/i18n/use-translation";
 import { sortSteps } from "@/lib/routine-utils";
 import type { Routine, RoutineProgress } from "@/types";
@@ -70,11 +69,24 @@ export function RoutineDetail({
                   }
                 }}
               >
-                <Checkbox
-                  className="size-6 shrink-0 rounded-full"
-                  checked={checked}
-                  inert
-                />
+                {/* Plain presentation, not Base UI's <Checkbox> — that
+                    renders its own interactive role="checkbox" plus a
+                    hidden-but-focusable native <input>, both genuinely
+                    nested inside this row's own role="checkbox" regardless
+                    of `inert` (which lands on Base UI's visual span, not
+                    the native input, a sibling of it). This row is already
+                    a complete, valid custom checkbox on its own — this
+                    span is purely decorative. */}
+                <span
+                  aria-hidden="true"
+                  className={`flex size-6 shrink-0 items-center justify-center rounded-full border transition-colors ${
+                    checked
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-input"
+                  }`}
+                >
+                  {checked && <Check className="size-3.5" />}
+                </span>
                 <span
                   className={`min-w-0 flex-1 text-base wrap-break-word ${
                     checked ? "text-muted-foreground line-through" : ""
