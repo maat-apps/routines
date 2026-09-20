@@ -30,6 +30,7 @@ import {
 import { startTransition, useEffect, useState } from "react";
 
 import { EmptyState, NoRoutinesToday } from "@/components/empty-states";
+import { FabButton } from "@/components/fab-button";
 import { ProgressRing } from "@/components/progress-ring";
 import { ResetButton } from "@/components/reset-button";
 import { Button } from "@/components/ui/button";
@@ -40,7 +41,6 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 import { useTranslation } from "@/i18n/use-translation";
-import { FIXED_ACTION_SHADOW } from "@/lib/utils";
 import type { Routine, RoutineProgress } from "@/types";
 import { SettingsPanel } from "@/views/home/settings-panel";
 
@@ -170,14 +170,13 @@ export function RoutineList({
           {t("resetAll")}
         </ResetButton>
       )}
-      <Button
-        className={`fixed right-[max(20px,calc((100vw-480px)/2+20px))] bottom-[calc(20px+env(safe-area-inset-bottom))] z-20 h-13 w-13 rounded-lg ${FIXED_ACTION_SHADOW}`}
-        size="icon-lg"
-        aria-label={t("newRoutine")}
+      <FabButton
+        className="fixed right-[max(20px,calc((100vw-480px)/2+20px))] bottom-[calc(20px+env(safe-area-inset-bottom))] z-20"
+        ariaLabel={t("newRoutine")}
         onClick={onCreate}
       >
         <Plus className="size-6" />
-      </Button>
+      </FabButton>
       <Drawer
         open={settingsOpen}
         onOpenChange={setSettingsOpen}
