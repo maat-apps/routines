@@ -168,7 +168,7 @@ export function RoutineEditForm({
   }
 
   return (
-    <div className="mx-auto min-h-dvh w-[min(100%,480px)] px-5 pt-5 pb-[calc(132px+env(safe-area-inset-bottom))]">
+    <div className="mx-auto min-h-dvh w-[min(100%,480px)] px-5 pt-26 pb-[calc(132px+env(safe-area-inset-bottom))]">
       <AppBar title={title} onBack={onBack} />
       <section className="mb-7.5 grid gap-2.25">
         <label htmlFor="routine-name" className="text-sm font-semibold">

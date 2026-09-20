@@ -30,6 +30,7 @@ import {
 import { startTransition, useEffect, useState } from "react";
 
 import { EmptyState, NoRoutinesToday } from "@/components/empty-states";
+import { PageHeader } from "@/components/page-header";
 import { ProgressRing } from "@/components/progress-ring";
 import { Button } from "@/components/ui/button";
 import {
@@ -97,8 +98,8 @@ export function RoutineList({
   }
 
   return (
-    <div className="mx-auto flex min-h-dvh w-[min(100%,480px)] flex-col px-5 pt-5 pb-[calc(96px+env(safe-area-inset-bottom))]">
-      <header className="bg-background sticky top-0 z-10 mb-1 flex h-17 items-center justify-between gap-4 py-2.5">
+    <div className="mx-auto flex min-h-dvh w-[min(100%,480px)] flex-col px-5 pt-23 pb-[calc(96px+env(safe-area-inset-bottom))]">
+      <PageHeader>
         <div className="min-w-0">
           <h1 className="font-heading m-0 text-3xl leading-[1.05] font-bold tracking-tight">
             {t("appName")}
@@ -117,7 +118,7 @@ export function RoutineList({
         >
           <Settings className="size-6" />
         </Button>
-      </header>
+      </PageHeader>
       {routines.length === 0 ? (
         hasAnyRoutines ? (
           <NoRoutinesToday />
