@@ -69,7 +69,7 @@ The only network traffic is the service worker fetching the app's own files.
   `preview-deploy` jobs, gated on the earlier stages in that same pipeline
   passing) overrides it to `/routines/pr-<n>/` so an open PR can be checked
   on a phone under its own subpath alongside `main`'s deployment — see that
-  workflow and `deploy.yml` for how both share one GitHub Pages site via a
+  workflow and `cd.yml` for how both share one GitHub Pages site via a
   `pages-content` storage branch that isn't itself the Pages source.
   Cleaning that subdirectory back up when the PR closes is a separate
   workflow, `pr-preview-cleanup.yml` — closing a PR has nothing to
@@ -163,14 +163,24 @@ The only network traffic is the service worker fetching the app's own files.
   in `schemas.ts` validate each routine/step/progress entry independently
   rather than handing a whole array/record to `v.array()`/`v.record()` — one
   malformed entry is dropped without taking an otherwise-valid import or
-  stored blob down with it. `src/lib/settings.ts` holds preferences (currently the lock enrolment) in
-  the same external-store shape as `use-store.ts`; `resetPreferences` clears
-  preferences only and callers must reload, since other stores cache their own
-  snapshots.
+  stored blob down with it. `src/lib/settings.ts` holds preferences (the lock
+  enrolment, plus an `installed` flag set once `useInstallPrompt`
+  (`src/hooks/use-install-prompt.ts`) ever observes the app running
+  standalone or receives `appinstalled` — Chrome stops re-offering
+  `beforeinstallprompt` once installed, so this is the only way a later visit
+  from a plain browser tab can still show "Already installed" instead of a
+  disabled button with no explanation) in the same external-store shape as
+  `use-store.ts`; `resetPreferences` clears preferences only and callers must
+  reload, since other stores cache their own snapshots.
 
 - **UI stack.** shadcn (`base-nova` style, see `components.json`, `rsc: false`)
   built on `@base-ui/react` — primitives live in `src/components/ui`, generated
-  and not hand-edited. Always import through the aliases `components.json`
+  and not hand-edited, with one deliberate exception: `button.tsx`'s `outline`
+  variant carries a `disabled:` blurred-translucent-background treatment
+  (`disabled:bg-background/40 disabled:backdrop-blur-md`) so every disabled
+  outline button in the app gets it, not just the ones that happened to add
+  their own override — re-apply this if `button.tsx` is ever regenerated via
+  `npx shadcn add`. Always import through the aliases `components.json`
   declares (`utils`, `ui`, `components`, `lib`, `hooks`) rather than straight
   from the underlying package — e.g. `cn` from `@/lib/utils`, not directly
   from the `cn` package — so a future `npx shadcn add` or hand-adjustment
@@ -384,12 +394,15 @@ directly.
 ## Workflow Rules
 
 - Don't manually re-run format/lint/typecheck/build/test:coverage/test:e2e
-  (individually or via `npm run validate`) to double-check a change before
-  committing or pushing, or narrate that you're about to — see the
-  Automation table above for what already runs per-edit/per-turn, and
-  `ci.yml` for what CI covers on every PR. Running any of it again
-  locally is redundant work against what's already covered, not extra
-  safety.
+  (individually, via `npm run validate`, or by invoking the underlying tool
+  directly — `tsc`, `eslint`, `vitest`, `playwright`, etc. — the rule is
+  about the check, not the exact command spelling) to double-check a
+  change before committing or pushing, or narrate that you're about to —
+  see the Automation table above for what already runs per-edit/per-turn,
+  and `ci.yml` for what CI covers on every PR. This applies even to a
+  trivial or comment-only edit, and even right after fixing something —
+  the hooks and CI already re-check it; running any of it again locally is
+  redundant work against what's already covered, not extra safety.
 - Prefer `Grep`/`Glob` over reading whole files; read only what a task needs.
 - For broad codebase audits, use `/find-antipatterns` instead of reading many
   files inline.

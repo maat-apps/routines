@@ -90,7 +90,7 @@ describe("useAppSettings", () => {
   it("returns the current settings and updates after a lock change", async () => {
     const { useAppSettings, settings } = await freshUseStore();
     const { result } = renderHook(() => useAppSettings());
-    expect(result.current).toEqual({ lock: null });
+    expect(result.current).toEqual({ lock: null, installed: false });
 
     act(() => {
       settings.setLockEnrolment({

@@ -114,7 +114,7 @@ The app is deployed to **GitHub Pages** as a static site.
   SPA. `vite.config.ts` copies the built `index.html` to `dist/404.html` after
   every build — GitHub Pages falls back to that for any unresolved path, which
   boots the app and lets React Router take it from there.
-- Deployment is automated in `.github/workflows/deploy.yml`: on push to `main` it
+- Deployment is automated in `.github/workflows/cd.yml`: on push to `main` it
   builds the static site, uploads it as a Pages artifact, and deploys it. Every
   PR instead runs `.github/workflows/ci.yml` — lint, format check, typecheck,
   unit tests, e2e tests, a build, and an audit, gating a PR preview deploy under
