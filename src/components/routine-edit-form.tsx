@@ -36,7 +36,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useTranslation } from "@/i18n/use-translation";
-import { createId, sortSteps, weekdayLabels } from "@/lib/routine-utils";
+import {
+  createId,
+  sortSteps,
+  weekdayLabels,
+  weekOrder,
+} from "@/lib/routine-utils";
 import type { Routine, RoutineStep } from "@/types";
 
 const editStepButtonClass = "size-10.5 flex-none [&>svg]:size-5";
@@ -71,9 +76,11 @@ export function RoutineEditForm({
   // Visible chips use "narrow" (a single letter, e.g. "m"/"t"); the full
   // name goes on each button's aria-label instead — narrow labels repeat
   // (English "T" is both Tuesday and Thursday), fine for sighted users who
-  // also see fixed left-to-right day order, but a genuinely ambiguous
-  // accessible name for screen readers otherwise.
+  // also see the chips in a fixed order (locale-dependent, but stable), but
+  // a genuinely ambiguous accessible name for screen readers otherwise.
   const weekdayNames = weekdayLabels(locale, "long");
+  const narrowWeekdayLabels = weekdayLabels(locale, "narrow");
+  const orderedDays = weekOrder(locale);
 
   function toggleDay(day: number) {
     setActiveDays((current) =>
@@ -196,7 +203,7 @@ export function RoutineEditForm({
           role="group"
           aria-label={t("activeDaysTitle")}
         >
-          {weekdayLabels(locale, "narrow").map((label, day) => (
+          {orderedDays.map((day) => (
             <Button
               key={day}
               type="button"
@@ -206,7 +213,7 @@ export function RoutineEditForm({
               aria-label={weekdayNames[day]}
               onClick={() => toggleDay(day)}
             >
-              {label.toLowerCase()}
+              {narrowWeekdayLabels[day].toLowerCase()}
             </Button>
           ))}
         </div>
