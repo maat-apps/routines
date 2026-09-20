@@ -133,18 +133,10 @@ The only network traffic is the service worker fetching the app's own files.
   with native `Intl.DateTimeFormat`.
 
 - **Mobile gate + app lock.** `src/components/mobile-gate.tsx` renders the app
-  for mobile viewports (width-only check, `min-[481px]:`) and a "desktop not
-  supported" message otherwise, and registers the service worker (production
-  builds only — see the `import.meta.env.PROD` guard; there's no `sw.js` in
-  dev, and running a caching worker during development would fight Vite's HMR
-  anyway). It also makes a best-effort `screen.orientation.lock("portrait")`
-  call (a local type, since `lock()` isn't in `lib.dom.d.ts` — same situation
-  as `BeforeInstallPromptEvent` in `use-install-prompt.ts`) and declares
-  `"orientation": "portrait"` in `public/manifest.json`; both are genuinely
-  inert outside a fullscreen or standalone-launched context on a browser that
-  implements it (Android Chrome only — not iOS Safari, not a plain browser
-  tab), so a landscape phone opened as a normal tab still sees the desktop
-  message above, unchanged. Inside the gate,
+  for mobile viewports and a "desktop not supported" message otherwise, and
+  registers the service worker (production builds only — see the
+  `import.meta.env.PROD` guard; there's no `sw.js` in dev, and running a
+  caching worker during development would fight Vite's HMR anyway). Inside it,
   `src/components/app-lock-gate.tsx` hides the app behind a WebAuthn
   platform-authenticator prompt when the lock is on. Being unlocked is
   per-session memory state in `src/lib/app-lock.ts`; enrolling counts as
