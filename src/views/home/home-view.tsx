@@ -57,9 +57,7 @@ export function HomeView() {
         hasCheckedSteps={hasCheckedSteps}
         onCreate={openNewRoutine}
         onOpen={(routineId) =>
-          startTransition(() =>
-            navigate(`/routine/${encodeURIComponent(routineId)}`),
-          )
+          startTransition(() => navigate(`/${encodeURIComponent(routineId)}`))
         }
         onResetAll={() => setResetAllOpen(true)}
         onReorder={reorderRoutines}

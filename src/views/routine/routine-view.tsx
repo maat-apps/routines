@@ -25,7 +25,7 @@ export function RoutineView() {
       onBack={() => startTransition(smartBack)}
       onEdit={() =>
         startTransition(() =>
-          navigate(`/routine/${encodeURIComponent(routine.id)}/edit`),
+          navigate(`/${encodeURIComponent(routine.id)}/edit`),
         )
       }
       onToggle={(_, stepId) => toggleStep(routine.id, stepId)}

@@ -37,24 +37,24 @@ test.describe("route navigation", () => {
     // ("Morning 0 / 0 completed"), so match a substring rather than the
     // exact routine name.
     await page.getByRole("button", { name: /Morning/ }).click();
-    await expect(page).toHaveURL(/\/routines\/routine\/r1$/);
+    await expect(page).toHaveURL(/\/routines\/r1$/);
     await expect(page.getByRole("heading", { name: "Morning" })).toBeVisible();
 
     await page.getByRole("button", { name: en.editRoutine }).click();
-    await expect(page).toHaveURL(/\/routines\/routine\/r1\/edit$/);
+    await expect(page).toHaveURL(/\/routines\/r1\/edit$/);
     await expect(
       page.getByRole("heading", { name: en.editTitle }),
     ).toBeVisible();
 
     await page.getByRole("button", { name: en.back }).click();
-    await expect(page).toHaveURL(/\/routines\/routine\/r1$/);
+    await expect(page).toHaveURL(/\/routines\/r1$/);
   });
 
   test("deep link into a routine works on a fresh navigation (hard refresh)", async ({
     page,
   }) => {
     await seedData(page, [{ id: "r1", name: "Morning", order: 0, steps: [] }]);
-    await page.goto("routine/r1");
+    await page.goto("r1");
     await expect(page.getByRole("heading", { name: "Morning" })).toBeVisible();
   });
 
@@ -62,7 +62,7 @@ test.describe("route navigation", () => {
     page,
   }) => {
     await seedData(page, []);
-    await page.goto("routine/missing");
+    await page.goto("missing");
     await expect(page.getByText(en.routineNotFound)).toBeVisible();
     await page.getByRole("button", { name: en.viewAllRoutines }).click();
     await expect(page).toHaveURL(/\/routines\/?$/);
@@ -90,7 +90,7 @@ test.describe("native back button", () => {
     // Done navigates to the new routine's own detail view, replacing the
     // draft's "/new" entry — not the blank "new routine" form the draft
     // came from (see new-routine-view.tsx's onComplete).
-    await expect(page).toHaveURL(/\/routines\/routine\/.+$/);
+    await expect(page).toHaveURL(/\/routines\/[^/]+$/);
     await expect(page.getByRole("heading", { name: "Evening" })).toBeVisible();
 
     await page.goBack();
@@ -112,17 +112,17 @@ test.describe("native back button", () => {
     await page.goto("");
 
     await page.getByRole("button", { name: /Morning/ }).click();
-    await expect(page).toHaveURL(/\/routines\/routine\/r1$/);
+    await expect(page).toHaveURL(/\/routines\/r1$/);
 
     for (let i = 0; i < 2; i++) {
       await page.getByRole("button", { name: en.editRoutine }).click();
-      await expect(page).toHaveURL(/\/routines\/routine\/r1\/edit$/);
+      await expect(page).toHaveURL(/\/routines\/r1\/edit$/);
       await page.getByRole("button", { name: en.done }).click();
 
       // Confirming pops back to the same "routine" entry each time
       // (use-smart-back.ts) instead of pushing a duplicate, so repeating
       // this doesn't grow the back-stack.
-      await expect(page).toHaveURL(/\/routines\/routine\/r1$/);
+      await expect(page).toHaveURL(/\/routines\/r1$/);
       await expect(
         page.getByRole("heading", { name: "Morning" }),
       ).toBeVisible();

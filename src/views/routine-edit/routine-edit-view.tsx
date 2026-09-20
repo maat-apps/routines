@@ -16,9 +16,7 @@ export function RoutineEditView() {
   const routine = routineId
     ? (routines.find((item) => item.id === routineId) ?? null)
     : null;
-  const smartBack = useSmartBack(
-    `/routine/${encodeURIComponent(routineId ?? "")}`,
-  );
+  const smartBack = useSmartBack(`/${encodeURIComponent(routineId ?? "")}`);
 
   if (!routine) return <MissingRoutine />;
   return (

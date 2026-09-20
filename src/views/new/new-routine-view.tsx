@@ -39,7 +39,7 @@ export function NewRoutineView() {
       onSave={saveRoutine}
       onComplete={() =>
         startTransition(() =>
-          navigate(`/routine/${encodeURIComponent(routine.id)}`, {
+          navigate(`/${encodeURIComponent(routine.id)}`, {
             replace: true,
           }),
         )

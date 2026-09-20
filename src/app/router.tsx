@@ -35,8 +35,8 @@ export function AppRouter() {
         <Routes>
           <Route path="/" element={<HomeView />} />
           <Route path="/new" element={<NewRoutineView />} />
-          <Route path="/routine/:id" element={<RoutineView />} />
-          <Route path="/routine/:id/edit" element={<RoutineEditView />} />
+          <Route path="/:id" element={<RoutineView />} />
+          <Route path="/:id/edit" element={<RoutineEditView />} />
         </Routes>
       </Suspense>
     </BrowserRouter>
