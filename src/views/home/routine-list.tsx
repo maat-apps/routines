@@ -30,8 +30,10 @@ import {
 import { startTransition, useEffect, useState } from "react";
 
 import { EmptyState, NoRoutinesToday } from "@/components/empty-states";
+import { FabButton } from "@/components/fab-button";
 import { PageHeader } from "@/components/page-header";
 import { ProgressRing } from "@/components/progress-ring";
+import { ResetButton } from "@/components/reset-button";
 import { Button } from "@/components/ui/button";
 import {
   Drawer,
@@ -42,8 +44,6 @@ import {
 import { useTranslation } from "@/i18n/use-translation";
 import type { Routine, RoutineProgress } from "@/types";
 import { SettingsPanel } from "@/views/home/settings-panel";
-
-const fixedActionShadow = "shadow-[0_8px_22px_oklch(0_0_0_/_28%)]";
 
 export function RoutineList({
   routines,
@@ -162,24 +162,22 @@ export function RoutineList({
         </DndContext>
       )}
       {routines.length > 0 && (
-        <Button
-          className={`fixed bottom-[calc(20px+env(safe-area-inset-bottom))] left-[max(20px,calc((100vw-480px)/2+20px))] z-20 min-h-13 rounded-lg px-4 ${fixedActionShadow}`}
-          variant="outline"
+        <ResetButton
+          className="fixed bottom-[calc(20px+env(safe-area-inset-bottom))] left-[max(20px,calc((100vw-480px)/2+20px))] z-20"
           disabled={!hasCheckedSteps}
           onClick={onResetAll}
         >
           <RotateCcw aria-hidden="true" />
           {t("resetAll")}
-        </Button>
+        </ResetButton>
       )}
-      <Button
-        className={`fixed right-[max(20px,calc((100vw-480px)/2+20px))] bottom-[calc(20px+env(safe-area-inset-bottom))] z-20 h-13 w-13 rounded-lg ${fixedActionShadow}`}
-        size="icon-lg"
-        aria-label={t("newRoutine")}
+      <FabButton
+        className="fixed right-[max(20px,calc((100vw-480px)/2+20px))] bottom-[calc(20px+env(safe-area-inset-bottom))] z-20"
+        ariaLabel={t("newRoutine")}
         onClick={onCreate}
       >
         <Plus className="size-6" />
-      </Button>
+      </FabButton>
       <Drawer
         open={settingsOpen}
         onOpenChange={setSettingsOpen}

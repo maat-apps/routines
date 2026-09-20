@@ -5,6 +5,7 @@ import {
   isRoutineActiveToday,
   sortSteps,
   weekdayLabels,
+  weekOrder,
 } from "@/lib/routine-utils";
 import type { Routine } from "@/types";
 
@@ -93,6 +94,24 @@ describe("weekdayLabels", () => {
       for (const label of labels) {
         expect(label).toMatch(/^\p{L}$/u);
       }
+    }
+  });
+});
+
+describe("weekOrder", () => {
+  it("starts from Sunday for en, matching Date#getDay() order unchanged", () => {
+    expect(weekOrder("en")).toEqual([0, 1, 2, 3, 4, 5, 6]);
+  });
+
+  it("starts from Monday for pl", () => {
+    expect(weekOrder("pl")).toEqual([1, 2, 3, 4, 5, 6, 0]);
+  });
+
+  it("always returns each day index 0-6 exactly once", () => {
+    for (const locale of ["en", "pl"]) {
+      expect([...weekOrder(locale)].sort((a, b) => a - b)).toEqual([
+        0, 1, 2, 3, 4, 5, 6,
+      ]);
     }
   });
 });

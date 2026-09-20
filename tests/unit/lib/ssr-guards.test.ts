@@ -18,7 +18,7 @@ describe('typeof window === "undefined" guards', () => {
 
   it("settings.ts's getSettingsSnapshot returns the defaults", async () => {
     const { getSettingsSnapshot } = await import("@/lib/settings");
-    expect(getSettingsSnapshot()).toEqual({ lock: null });
+    expect(getSettingsSnapshot()).toEqual({ lock: null, installed: false });
   });
 
   it("locale-store.ts's getLocaleSnapshot returns the default locale", async () => {
