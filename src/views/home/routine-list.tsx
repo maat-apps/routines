@@ -98,7 +98,7 @@ export function RoutineList({
   }
 
   return (
-    <div className="mx-auto flex min-h-dvh w-[min(100%,480px)] flex-col px-5 pt-29 pb-[calc(96px+env(safe-area-inset-bottom))]">
+    <div className="mx-auto flex min-h-dvh w-[min(100%,480px)] flex-col px-5 pt-32 pb-[calc(96px+env(safe-area-inset-bottom))]">
       <PageHeader>
         <div className="min-w-0">
           <h1 className="font-heading m-0 text-3xl leading-[1.05] font-bold tracking-tight">
