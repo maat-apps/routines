@@ -46,7 +46,7 @@ import type { Routine, RoutineStep } from "@/types";
 
 const editStepButtonClass = "size-10.5 flex-none [&>svg]:size-5";
 
-// Shared by the "/new" and "/routine/edit" views — the only difference between
+// Shared by the "/new" and "/:id/edit" views — the only difference between
 // creating and editing a routine is what happens on save/back/delete.
 export function RoutineEditForm({
   routine,

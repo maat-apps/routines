@@ -25,7 +25,7 @@ test.describe("create / edit / reorder / delete a routine", () => {
     await expect(done).toBeEnabled();
     await done.click();
 
-    await expect(page).toHaveURL(/\/routines\/routine\?id=.+/);
+    await expect(page).toHaveURL(/\/routines\/[^/]+$/);
     await expect(page.getByRole("heading", { name: "Evening" })).toBeVisible();
     await expect(
       page.getByRole("checkbox", { name: "Brush teeth" }),
@@ -63,13 +63,13 @@ test.describe("create / edit / reorder / delete a routine", () => {
         ],
       },
     ]);
-    await page.goto("routine/edit?id=r1");
+    await page.goto("r1/edit");
 
     await page.getByLabel(en.routineName).fill("Morning routine");
     await page.getByRole("button", { name: en.deleteStep }).first().click();
     await page.getByRole("button", { name: en.done }).click();
 
-    await expect(page).toHaveURL(/\/routines\/routine\?id=r1$/);
+    await expect(page).toHaveURL(/\/routines\/r1$/);
     await expect(
       page.getByRole("heading", { name: "Morning routine" }),
     ).toBeVisible();
@@ -81,7 +81,7 @@ test.describe("create / edit / reorder / delete a routine", () => {
 
   test("deletes a routine from the edit view", async ({ page }) => {
     await seedData(page, [{ id: "r1", name: "Morning", order: 0, steps: [] }]);
-    await page.goto("routine/edit?id=r1");
+    await page.goto("r1/edit");
     await page.getByRole("button", { name: en.deleteRoutine }).click();
 
     const dialog = page.getByRole("dialog");
@@ -108,7 +108,7 @@ test.describe("create / edit / reorder / delete a routine", () => {
         ],
       },
     ]);
-    await page.goto("routine/edit?id=r1");
+    await page.goto("r1/edit");
 
     const handles = page.getByRole("button", { name: en.dragStep });
     const firstHandleBox = await handles.nth(0).boundingBox();
