@@ -175,7 +175,7 @@ export function RoutineEditForm({
   }
 
   return (
-    <div className="mx-auto min-h-dvh w-[min(100%,480px)] px-5 pt-5 pb-[calc(132px+env(safe-area-inset-bottom))]">
+    <div className="mx-auto min-h-dvh w-[min(100%,480px)] px-5 pt-27 pb-[calc(132px+env(safe-area-inset-bottom))]">
       <AppBar title={title} onBack={onBack} />
       <section className="mb-7.5 grid gap-2.25">
         <label htmlFor="routine-name" className="text-sm font-semibold">
@@ -199,7 +199,7 @@ export function RoutineEditForm({
           />
         </div>
         <div
-          className="grid grid-cols-7 gap-1.5"
+          className="mx-auto grid grid-cols-7 gap-3"
           role="group"
           aria-label={t("activeDaysTitle")}
         >
@@ -208,7 +208,7 @@ export function RoutineEditForm({
               key={day}
               type="button"
               variant={activeDays.includes(day) ? "default" : "outline"}
-              className="flex h-10 items-center justify-center rounded-full px-0 pb-0.5 text-sm"
+              className="flex h-10 min-w-10 items-center justify-center rounded-full px-0 pb-0.5 text-sm"
               aria-pressed={activeDays.includes(day)}
               aria-label={weekdayNames[day]}
               onClick={() => toggleDay(day)}
