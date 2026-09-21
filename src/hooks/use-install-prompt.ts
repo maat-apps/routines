@@ -2,6 +2,13 @@
 
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 
+import {
+  getServerSettingsSnapshot,
+  getSettingsSnapshot,
+  markInstalled,
+  subscribeToSettings,
+} from "@/lib/settings";
+
 // Not in lib.dom yet — Chromium-only, and the whole point of the install button.
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -42,6 +49,14 @@ export function useInstallPrompt() {
     isStandalone,
     getServerStandaloneSnapshot,
   );
+  // Chrome stops re-offering beforeinstallprompt once it considers the app
+  // installed, even from a plain browser tab that never sees `standalone`
+  // become true again — this is the only record of that fact surviving here.
+  const persistedInstalled = useSyncExternalStore(
+    subscribeToSettings,
+    () => getSettingsSnapshot().installed,
+    () => getServerSettingsSnapshot().installed,
+  );
   const [prompt, setPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [installed, setInstalled] = useState(false);
 
@@ -55,6 +70,7 @@ export function useInstallPrompt() {
     function onInstalled() {
       setPrompt(null);
       setInstalled(true);
+      markInstalled();
     }
 
     window.addEventListener("beforeinstallprompt", onBeforeInstallPrompt);
@@ -64,6 +80,10 @@ export function useInstallPrompt() {
       window.removeEventListener("appinstalled", onInstalled);
     };
   }, []);
+
+  useEffect(() => {
+    if (standalone) markInstalled();
+  }, [standalone]);
 
   const install = useCallback(async () => {
     if (!prompt) return;
@@ -75,7 +95,7 @@ export function useInstallPrompt() {
   }, [prompt]);
 
   const state: InstallState =
-    standalone || installed
+    standalone || installed || persistedInstalled
       ? "installed"
       : prompt
         ? "available"

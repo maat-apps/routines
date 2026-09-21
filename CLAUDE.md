@@ -163,14 +163,24 @@ The only network traffic is the service worker fetching the app's own files.
   in `schemas.ts` validate each routine/step/progress entry independently
   rather than handing a whole array/record to `v.array()`/`v.record()` — one
   malformed entry is dropped without taking an otherwise-valid import or
-  stored blob down with it. `src/lib/settings.ts` holds preferences (currently the lock enrolment) in
-  the same external-store shape as `use-store.ts`; `resetPreferences` clears
-  preferences only and callers must reload, since other stores cache their own
-  snapshots.
+  stored blob down with it. `src/lib/settings.ts` holds preferences (the lock
+  enrolment, plus an `installed` flag set once `useInstallPrompt`
+  (`src/hooks/use-install-prompt.ts`) ever observes the app running
+  standalone or receives `appinstalled` — Chrome stops re-offering
+  `beforeinstallprompt` once installed, so this is the only way a later visit
+  from a plain browser tab can still show "Already installed" instead of a
+  disabled button with no explanation) in the same external-store shape as
+  `use-store.ts`; `resetPreferences` clears preferences only and callers must
+  reload, since other stores cache their own snapshots.
 
 - **UI stack.** shadcn (`base-nova` style, see `components.json`, `rsc: false`)
   built on `@base-ui/react` — primitives live in `src/components/ui`, generated
-  and not hand-edited. Always import through the aliases `components.json`
+  and not hand-edited, with one deliberate exception: `button.tsx`'s `outline`
+  variant carries a `disabled:` blurred-translucent-background treatment
+  (`disabled:bg-background/40 disabled:backdrop-blur-md`) so every disabled
+  outline button in the app gets it, not just the ones that happened to add
+  their own override — re-apply this if `button.tsx` is ever regenerated via
+  `npx shadcn add`. Always import through the aliases `components.json`
   declares (`utils`, `ui`, `components`, `lib`, `hooks`) rather than straight
   from the underlying package — e.g. `cn` from `@/lib/utils`, not directly
   from the `cn` package — so a future `npx shadcn add` or hand-adjustment
