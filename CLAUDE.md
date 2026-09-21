@@ -106,8 +106,8 @@ The only network traffic is the service worker fetching the app's own files.
 - **Routing pattern.** `src/views/<name>/` holds one folder per screen;
   `src/app/router.tsx` maps them to routes with React Router
   (`<BrowserRouter basename="/routines">`), and each view is `lazy()`-loaded as
-  its own chunk. Views read the target id from the `?id=` search param via
-  `useSearchParams`. Drilling deeper (`/` → `/routine?id=` → `/routine/edit?id=`,
+  its own chunk. Views read the target id from the `:id` path param via
+  `useParams`. Drilling deeper (`/` → `/:id` → `/:id/edit`,
   and `/` → `/new`) is a plain forward `navigate(...)`. Returning is
   `src/hooks/use-smart-back.ts`'s `useSmartBack(fallback)`: every route here is
   also a valid deep link (hard refresh, PWA relaunch, a bookmark), so a "Back"
@@ -120,6 +120,11 @@ The only network traffic is the service worker fetching the app's own files.
   different screen, not a "back," so it just replaces the disposable `/new`
   draft entry directly. Settings is a drawer opened from the home view's
   state, not a route — `src/views/home/settings-panel.tsx`.
+  `/all-routines` (`all-routines-view.tsx`) is a later addition: home's own
+  list is scoped to routines active today (`isRoutineActiveToday`), so this
+  is the only way to reach one that isn't — a plain lookup/access point, not
+  a second home screen, reached from a Settings row rather than a second nav
+  affordance on home.
   A component used by 2+ views lives in `src/components/` instead of a view
   folder (e.g. `app-bar.tsx`, `routine-edit-form.tsx`, `missing-routine.tsx`).
 

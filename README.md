@@ -45,6 +45,9 @@ This project — and this stack in general — is guided by a few core goals:
   gate, not encryption — see the note below.
 - **Reset settings.** Puts language and app lock back to their defaults and
   leaves your routines alone.
+- **All routines, from Settings.** Home only shows routines scheduled for
+  today; a Settings row opens a full list of every routine so you can still
+  find and open one that isn't.
 
 ### About the app lock
 
@@ -138,10 +141,11 @@ The app is deployed to **GitHub Pages** as a static site.
   truth for both validation and the TS types.
 - **Routing.** `src/views/**` holds one folder per screen; `src/app/router.tsx`
   maps them to routes with React Router, each view lazy-loaded as its own chunk.
-  Views read the target id from the `?id=` search param via `useSearchParams`.
-  Navigation is plain `navigate(...)` between `/`, `/routine?id=`,
-  `/routine/edit?id=`, and `/new`; Settings is a drawer opened from the home
-  view, not a separate route.
+  Views read the target id from the `:id` path param via `useParams`.
+  Navigation is plain `navigate(...)` between `/`, `/:id`,
+  `/:id/edit`, `/new`, and `/all-routines` (every routine, including ones
+  not scheduled today — reached from Settings); Settings is a drawer
+  opened from the home view, not a separate route.
 - **i18n.** A small custom hook, `src/i18n/use-translation.ts` — a
   `useSyncExternalStore`-backed locale store (detects the device language on
   first launch, then remembers the choice in `localStorage` under
