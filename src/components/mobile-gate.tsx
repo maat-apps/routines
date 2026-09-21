@@ -20,11 +20,11 @@ export function MobileGate({ children }: { children: ReactNode }) {
 
   return (
     <>
-      <main className="bg-background block min-h-dvh min-[481px]:hidden">
+      <main className="bg-background phone-sized:block hidden min-h-dvh">
         {children}
       </main>
       <section
-        className="bg-background text-muted-foreground hidden min-h-dvh place-items-center p-8 text-center min-[481px]:grid"
+        className="bg-background text-muted-foreground phone-sized:hidden grid min-h-dvh place-items-center p-8 text-center"
         aria-live="polite"
       >
         <p>{t("mobileOnly")}</p>
