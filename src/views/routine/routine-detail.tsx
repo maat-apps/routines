@@ -31,7 +31,7 @@ export function RoutineDetail({
   ).length;
 
   return (
-    <div className="mx-auto min-h-dvh w-[min(100%,480px)] px-5 pt-5 pb-[calc(116px+env(safe-area-inset-bottom))]">
+    <div className="mx-auto min-h-dvh w-[min(100%,480px)] px-5 pt-27 pb-[calc(116px+env(safe-area-inset-bottom))]">
       <AppBar
         title={routine.name || t("unnamed")}
         onBack={onBack}

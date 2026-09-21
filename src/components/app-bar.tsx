@@ -1,6 +1,7 @@
 import { ArrowLeft } from "lucide-react";
 import { type ReactNode } from "react";
 
+import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/i18n/use-translation";
 
@@ -16,7 +17,7 @@ export function AppBar({
   const { t } = useTranslation();
 
   return (
-    <header className="bg-background sticky top-0 z-10 mb-4 flex h-17 items-center justify-between gap-4 py-2.5">
+    <PageHeader>
       <Button
         variant="ghost"
         size="icon-lg"
@@ -29,6 +30,6 @@ export function AppBar({
         {title}
       </h1>
       {action ?? <span className="w-10" />}
-    </header>
+    </PageHeader>
   );
 }
