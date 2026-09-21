@@ -10,15 +10,10 @@ import { cn } from "@/lib/utils";
 // side gutters above 480px wide. The actual content stays constrained to
 // that same column via the inner wrapper below, so text/controls still
 // line up with the rest of the page. Callers must add top padding to their
-// own content wrapper equal to this header's rendered height (pt-23) —
+// own content wrapper equal to this header's rendered height (pt-27) —
 // `fixed` removes it from document flow entirely, unlike `sticky`, which
-// still reserves its own space. Every screen uses the same pt-23, no
-// per-view extra gap, so content starts at the same distance from the top
-// everywhere. h-23 itself (not the tighter height a single-line title
-// would need on its own) is sized for the tallest header content — the
-// home view's two-line title+date block — so every screen's header
-// renders at the same height instead of home's looking cramped relative
-// to the rest.
+// still reserves its own space. A downward box-shadow (not a gradient-fade
+// div) marks the edge between the header and scrolling content underneath.
 export function PageHeader({
   children,
   className,
@@ -28,17 +23,14 @@ export function PageHeader({
 }) {
   return (
     <header
-      className={cn("bg-background fixed inset-x-0 top-0 z-10", className)}
+      className={cn(
+        "bg-background fixed inset-x-0 top-0 z-10 shadow-[0_8px_16px_-4px_oklch(0_0_0/50%)]",
+        className,
+      )}
     >
-      <div className="mx-auto flex h-23 w-[min(100%,480px)] items-center justify-between gap-4 px-5 py-2.5">
+      <div className="mx-auto flex h-27 w-[min(100%,480px)] items-center justify-between gap-4 px-5">
         {children}
       </div>
-      {/* Always rendered (no JS scroll listener) — content scrolling
-          underneath fades out instead of stopping at a hard edge. */}
-      <div
-        aria-hidden="true"
-        className="from-background pointer-events-none absolute inset-x-0 top-full h-4 bg-gradient-to-b to-transparent"
-      />
     </header>
   );
 }
