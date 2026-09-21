@@ -24,7 +24,7 @@ export function PageHeader({
   return (
     <header
       className={cn(
-        "bg-background fixed inset-x-0 top-0 z-10 shadow-[0_8px_16px_-4px_oklch(0_0_0/50%)]",
+        "bg-background fixed inset-x-0 top-0 z-10 shadow-[0_16px_32px_-4px_oklch(0_0_0/50%)]",
         className,
       )}
     >
