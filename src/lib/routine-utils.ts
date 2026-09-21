@@ -35,3 +35,31 @@ export function weekdayLabels(
     return formatter.format(date);
   });
 }
+
+// Intl.Locale.prototype.getWeekInfo() reports a locale's actual first day of
+// week (1=Monday..7=Sunday, per the spec) without hand-maintaining a locale
+// table — not yet supported by every engine (older WebKit), so this falls
+// back to a fixed value for this app's only two supported locales: "en"
+// defaults to Sunday-first (CLDR root default, matching what getWeekInfo()
+// itself reports where it's available), "pl" to Monday-first (ISO 8601).
+function firstDayOfWeek(locale: string): number {
+  try {
+    const info = (
+      new Intl.Locale(locale) as Intl.Locale & {
+        getWeekInfo?: () => { firstDay: number };
+      }
+    ).getWeekInfo?.();
+    if (info) return info.firstDay;
+  } catch {
+    // Fall through to the fixed default below.
+  }
+  return locale === "pl" ? 1 : 7;
+}
+
+// Day indices (0=Sunday..6=Saturday, matching weekdayLabels/DaySchema) in
+// the order a locale actually renders its calendar week — e.g. Monday-first
+// for "pl" instead of always starting from Sunday.
+export function weekOrder(locale: string): number[] {
+  const first = firstDayOfWeek(locale) % 7; // spec's 7 (Sunday) -> day index 0
+  return Array.from({ length: 7 }, (_, i) => (first + i) % 7);
+}
