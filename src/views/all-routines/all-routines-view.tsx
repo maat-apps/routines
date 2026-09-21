@@ -48,7 +48,7 @@ export function AllRoutinesView() {
                 className="bg-card text-card-foreground active:bg-muted [&>svg]:text-muted-foreground flex min-h-18 w-full items-center gap-3.5 rounded-lg border-0 py-3.5 pr-4 pl-4 text-left transition-colors"
                 onClick={() =>
                   startTransition(() =>
-                    navigate(`/routine?id=${encodeURIComponent(routine.id)}`),
+                    navigate(`/${encodeURIComponent(routine.id)}`),
                   )
                 }
               >

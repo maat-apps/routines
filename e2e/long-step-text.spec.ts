@@ -12,7 +12,7 @@ test("a long step wraps instead of being truncated", async ({ page }) => {
       steps: [{ id: "s1", text: longText, order: 0 }],
     },
   ]);
-  await page.goto("routine?id=r1");
+  await page.goto("r1");
 
   const step = page.getByRole("checkbox", { name: longText });
   await expect(step).toContainText(longText);

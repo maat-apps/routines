@@ -59,7 +59,7 @@ test.describe("all routines view", () => {
     await page.goto("all-routines");
 
     await page.getByRole("button", { name: /Someday/ }).click();
-    await expect(page).toHaveURL(/\/routines\/routine\?id=r1$/);
+    await expect(page).toHaveURL(/\/routines\/r1$/);
     await expect(page.getByRole("heading", { name: "Someday" })).toBeVisible();
   });
 
@@ -86,7 +86,7 @@ test.describe("all routines view", () => {
     page,
   }) => {
     await seedData(page, [{ id: "r1", name: "Morning", order: 0, steps: [] }]);
-    await page.goto("routine?id=missing");
+    await page.goto("missing");
     await expect(page.getByText(en.routineNotFound)).toBeVisible();
 
     await page.getByRole("button", { name: en.viewAllRoutines }).click();

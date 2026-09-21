@@ -106,8 +106,8 @@ The only network traffic is the service worker fetching the app's own files.
 - **Routing pattern.** `src/views/<name>/` holds one folder per screen;
   `src/app/router.tsx` maps them to routes with React Router
   (`<BrowserRouter basename="/routines">`), and each view is `lazy()`-loaded as
-  its own chunk. Views read the target id from the `?id=` search param via
-  `useSearchParams`. Drilling deeper (`/` → `/routine?id=` → `/routine/edit?id=`,
+  its own chunk. Views read the target id from the `:id` path param via
+  `useParams`. Drilling deeper (`/` → `/:id` → `/:id/edit`,
   and `/` → `/new`) is a plain forward `navigate(...)`. Returning is
   `src/hooks/use-smart-back.ts`'s `useSmartBack(fallback)`: every route here is
   also a valid deep link (hard refresh, PWA relaunch, a bookmark), so a "Back"

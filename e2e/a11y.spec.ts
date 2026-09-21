@@ -62,14 +62,14 @@ test.describe("accessibility (axe-core)", () => {
         ],
       },
     ]);
-    await page.goto("routine?id=r1");
+    await page.goto("r1");
     await expect(page.getByRole("heading").first()).toBeVisible();
     await auditIsClean(page);
   });
 
   test("routine edit screen has no violations", async ({ page }) => {
     await seedData(page, [{ id: "r1", name: "Morning", order: 0, steps: [] }]);
-    await page.goto("routine/edit?id=r1");
+    await page.goto("r1/edit");
     await expect(page.getByRole("heading").first()).toBeVisible();
     await auditIsClean(page);
   });
