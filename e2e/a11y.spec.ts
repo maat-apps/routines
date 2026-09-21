@@ -81,4 +81,11 @@ test.describe("accessibility (axe-core)", () => {
     await expect(page.getByRole("dialog")).toBeVisible();
     await auditIsClean(page);
   });
+
+  test("the all-routines screen has no violations", async ({ page }) => {
+    await seedData(page, [{ id: "r1", name: "Morning", order: 0, steps: [] }]);
+    await page.goto("all-routines");
+    await expect(page.getByRole("heading").first()).toBeVisible();
+    await auditIsClean(page);
+  });
 });

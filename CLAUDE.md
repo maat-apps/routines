@@ -120,6 +120,11 @@ The only network traffic is the service worker fetching the app's own files.
   different screen, not a "back," so it just replaces the disposable `/new`
   draft entry directly. Settings is a drawer opened from the home view's
   state, not a route — `src/views/home/settings-panel.tsx`.
+  `/all-routines` (`all-routines-view.tsx`) is a later addition: home's own
+  list is scoped to routines active today (`isRoutineActiveToday`), so this
+  is the only way to reach one that isn't — a plain lookup/access point, not
+  a second home screen, reached from a Settings row rather than a second nav
+  affordance on home.
   A component used by 2+ views lives in `src/components/` instead of a view
   folder (e.g. `app-bar.tsx`, `routine-edit-form.tsx`, `missing-routine.tsx`).
 

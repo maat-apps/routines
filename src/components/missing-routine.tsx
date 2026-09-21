@@ -12,7 +12,10 @@ export function MissingRoutine() {
   return (
     <div className="grid min-h-dvh place-items-center gap-4 px-5 text-center">
       <p className="m-0">{t("routineNotFound")}</p>
-      <Button size="lg" onClick={() => startTransition(() => navigate("/"))}>
+      <Button
+        size="lg"
+        onClick={() => startTransition(() => navigate("/all-routines"))}
+      >
         {t("viewAllRoutines")}
       </Button>
     </div>

@@ -19,6 +19,11 @@ const RoutineEditView = lazy(() =>
     default: m.RoutineEditView,
   })),
 );
+const AllRoutinesView = lazy(() =>
+  import("@/views/all-routines/all-routines-view").then((m) => ({
+    default: m.AllRoutinesView,
+  })),
+);
 
 // GitHub Pages has no server-side rewrites, so a copy of the built index.html is
 // published as 404.html (see vite.config.ts) — that's what lets a hard refresh or
@@ -37,6 +42,7 @@ export function AppRouter() {
           <Route path="/new" element={<NewRoutineView />} />
           <Route path="/:id" element={<RoutineView />} />
           <Route path="/:id/edit" element={<RoutineEditView />} />
+          <Route path="/all-routines" element={<AllRoutinesView />} />
         </Routes>
       </Suspense>
     </BrowserRouter>

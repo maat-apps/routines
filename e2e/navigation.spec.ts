@@ -65,7 +65,7 @@ test.describe("route navigation", () => {
     await page.goto("missing");
     await expect(page.getByText(en.routineNotFound)).toBeVisible();
     await page.getByRole("button", { name: en.viewAllRoutines }).click();
-    await expect(page).toHaveURL(/\/routines\/?$/);
+    await expect(page).toHaveURL(/\/routines\/all-routines$/);
   });
 });
 
