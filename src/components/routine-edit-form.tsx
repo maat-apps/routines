@@ -199,7 +199,7 @@ export function RoutineEditForm({
           />
         </div>
         <div
-          className="flex justify-between"
+          className="mx-auto grid grid-cols-7 gap-3"
           role="group"
           aria-label={t("activeDaysTitle")}
         >
@@ -208,7 +208,7 @@ export function RoutineEditForm({
               key={day}
               type="button"
               variant={activeDays.includes(day) ? "default" : "outline"}
-              className="flex h-10 w-10 items-center justify-center rounded-full px-0 pb-0.5 text-sm"
+              className="flex h-10 min-w-10 items-center justify-center rounded-full px-0 pb-0.5 text-sm"
               aria-pressed={activeDays.includes(day)}
               aria-label={weekdayNames[day]}
               onClick={() => toggleDay(day)}
