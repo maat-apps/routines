@@ -160,6 +160,10 @@ describe("useInstallPrompt", () => {
       window.dispatchEvent(new Event("appinstalled"));
     });
     expect(result.current.state).toBe("installed");
+    // markInstalled()'s write is fire-and-forget — let it settle before this
+    // test ends, or the next test's resetIndexedDb() can close the
+    // connection mid-write (unhandled rejection).
+    await new Promise((resolve) => setTimeout(resolve, 0));
   });
 
   it("persists installed on appinstalled, surviving a later fresh load", async () => {
