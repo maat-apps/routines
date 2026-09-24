@@ -65,6 +65,13 @@ test.describe("settings", () => {
     await dialog.getByRole("button", { name: en.resetSettingsAction }).click();
 
     await page.waitForURL(/\/routines\/?$/);
+    // confirmResetSettings() reloads the page, but the URL doesn't change —
+    // waitForURL above can resolve on the pre-reload document, so wait for
+    // the reloaded app to actually re-render before touching page context
+    // again; otherwise the reload can destroy an in-flight page.evaluate()
+    // (seen as a flaky "Execution context was destroyed" on WebKit).
+    await expect(page.getByRole("button", { name: /Morning/ })).toBeVisible();
+
     // Settings live in IndexedDB (src/lib/idb-store.ts), not localStorage —
     // hand-duplicated store/key names, same reasoning as seedData() in
     // ./utils.ts, since this runs in the page context, not this test file.
@@ -88,6 +95,5 @@ test.describe("settings", () => {
     // presence afterward is correct behavior, not a leftover preference.
     expect(remainingKeys).not.toContain("routines-settings");
     expect(remainingKeys).toContain("routines-data");
-    await expect(page.getByRole("button", { name: /Morning/ })).toBeVisible();
   });
 });
