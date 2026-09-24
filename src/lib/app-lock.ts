@@ -201,7 +201,7 @@ export async function verifyAppLock(
 ): Promise<boolean> {
   try {
     const needsKey = enrolment.encryptionSupported && enrolment.prfSalt != null;
-    const assertion = await navigator.credentials.get({
+    const assertion = (await navigator.credentials.get({
       publicKey: {
         challenge: randomBytes(32),
         allowCredentials: [
@@ -218,7 +218,7 @@ export async function verifyAppLock(
           },
         }),
       },
-    });
+    })) as PublicKeyCredential | null;
     if (assertion === null) return false;
 
     if (needsKey) {

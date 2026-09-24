@@ -34,7 +34,7 @@ function fromBase64(value: string): Uint8Array<ArrayBuffer> {
  */
 export async function deriveKey(
   prfOutput: BufferSource,
-  hkdfSalt: Uint8Array,
+  hkdfSalt: BufferSource,
 ): Promise<CryptoKey> {
   const keyMaterial = await crypto.subtle.importKey(
     "raw",
