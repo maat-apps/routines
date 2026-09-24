@@ -8,7 +8,7 @@ import {
 } from "react";
 
 import { Button } from "@/components/ui/button";
-import { useAppSettings } from "@/hooks/use-store";
+import { useAppSettings, useSettingsReady } from "@/hooks/use-store";
 import { useTranslation } from "@/i18n/use-translation";
 import {
   disableAppLock,
@@ -27,6 +27,7 @@ import {
  */
 export function AppLockGate({ children }: { children: ReactNode }) {
   const { t } = useTranslation();
+  const settingsReady = useSettingsReady();
   const { lock } = useAppSettings();
   const unlocked = useSyncExternalStore(
     subscribeToUnlock,
@@ -57,6 +58,13 @@ export function AppLockGate({ children }: { children: ReactNode }) {
       if (!supported) setShowEscape(true);
     });
   }, [lock, unlocked]);
+
+  // Settings load from IndexedDB in the background — until that resolves,
+  // "no lock enrolled" can't be told apart from "haven't checked yet", so
+  // render nothing rather than risk a locked device flashing unlocked.
+  if (!settingsReady) {
+    return null;
+  }
 
   if (!lock || unlocked) {
     return <>{children}</>;

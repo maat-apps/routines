@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { LOCALE_KEY } from "@/lib/storage-keys";
+import { resetIndexedDb } from "../reset-indexeddb";
 
 // readStoredLocale's `typeof window === "undefined"` guard is tested in
 // ssr-guards.test.ts, not here — see storage.test.ts's equivalent comment
@@ -8,10 +9,18 @@ import { LOCALE_KEY } from "@/lib/storage-keys";
 // file in particular relies on window.navigator, which Node doesn't have).
 //
 // getLocaleSnapshot caches into a module-level singleton on first read, so
-// each test needs a fresh module instance to control what it reads.
+// each test needs a fresh module instance to control what it reads. The
+// stored value now loads from IndexedDB in the background, so this also
+// awaits `whenLoaded()` before handing the module back. idb-store's kvGet is
+// re-imported alongside it (not statically at the top of this file) since a
+// static binding wouldn't follow `vi.resetModules()` and would end up
+// pointed at a closed connection from a previous test.
 async function freshLocaleStore() {
   vi.resetModules();
-  return import("@/lib/locale-store");
+  const localeStore = await import("@/lib/locale-store");
+  await localeStore.whenLoaded();
+  const { kvGet } = await import("@/lib/idb-store");
+  return { ...localeStore, kvGet };
 }
 
 function setNavigatorLanguage(language: string) {
@@ -23,8 +32,9 @@ function setNavigatorLanguage(language: string) {
 
 const originalLanguage = window.navigator.language;
 
-beforeEach(() => {
+beforeEach(async () => {
   localStorage.clear();
+  await resetIndexedDb();
 });
 
 afterEach(() => {
@@ -66,14 +76,16 @@ describe("first launch (nothing stored)", () => {
 
   it("persists the detected value, not just returns it", async () => {
     setNavigatorLanguage("pl-PL");
-    const { getLocaleSnapshot } = await freshLocaleStore();
+    const { getLocaleSnapshot, kvGet } = await freshLocaleStore();
     getLocaleSnapshot();
-    expect(localStorage.getItem(LOCALE_KEY)).toBe("pl");
+    await expect(kvGet(LOCALE_KEY)).resolves.toBe("pl");
   });
 });
 
 describe("a stored value always wins over navigator.language", () => {
   it("ignores navigator.language once a value is stored", async () => {
+    // A bare string, matching the legacy localStorage format this migrates
+    // from (see idb-store.ts's migrateFromLocalStorage) — not JSON.
     localStorage.setItem(LOCALE_KEY, "en");
     setNavigatorLanguage("pl-PL");
     const { getLocaleSnapshot } = await freshLocaleStore();
@@ -96,13 +108,13 @@ describe("when localStorage is unavailable (e.g. private mode)", () => {
 
 describe("setStoredLocale", () => {
   it("updates the snapshot, persists it, and notifies listeners", async () => {
-    const { setStoredLocale, getLocaleSnapshot, subscribeToLocale } =
+    const { setStoredLocale, getLocaleSnapshot, subscribeToLocale, kvGet } =
       await freshLocaleStore();
     const listener = vi.fn();
     subscribeToLocale(listener);
     setStoredLocale("pl");
     expect(getLocaleSnapshot()).toBe("pl");
-    expect(localStorage.getItem(LOCALE_KEY)).toBe("pl");
+    await expect(kvGet(LOCALE_KEY)).resolves.toBe("pl");
     expect(listener).toHaveBeenCalledTimes(1);
   });
 

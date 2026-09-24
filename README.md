@@ -33,7 +33,7 @@ This project — and this stack in general — is guided by a few core goals:
 - **Progress at a glance.** A small ring shows how many steps are done.
 - **Installable.** Add it to your home screen and launch it like a native app.
 - **English and Polish.** A built-in language toggle (English by default); your
-  choice is remembered on the device via `localStorage`.
+  choice is remembered on the device.
 - **Reorder routines.** Drag routines on the main list into the order you want.
 - **Export and import.** Save every routine to a JSON file and restore it
   later — the way to move your data to another device or browser.
@@ -53,7 +53,7 @@ This project — and this stack in general — is guided by a few core goals:
 
 The lock registers a WebAuthn platform credential and asks for it before
 showing your routines. Because there is no backend, nothing verifies the
-assertion and your routines stay readable in `localStorage` — it keeps a
+assertion and your routines stay readable on the device — it keeps a
 passer-by out of an unlocked phone, it does not protect the data itself. If
 the authenticator ever stops working (a new phone, cleared browser data,
 re-enrolled biometrics), the lock screen offers a way to turn the lock off so
@@ -70,8 +70,9 @@ you are never shut out of your own checklist.
 - A small custom `useTranslation()` hook (see below) for translations, plus
   native `Intl` for date formatting.
 - **vite-plugin-pwa** (`injectManifest` strategy) builds the service worker.
-- State persisted to **`localStorage`** (no database, no API), validated with
-  **Valibot** schemas that double as the source of the app's TypeScript types.
+- State persisted to **IndexedDB** (no backend database, no API), validated
+  with **Valibot** schemas that double as the source of the app's TypeScript
+  types.
 
 ## Local development
 
@@ -131,14 +132,22 @@ The app is deployed to **GitHub Pages** as a static site.
 
 ## Architecture
 
-- **State is `localStorage` only.** `src/lib/storage.ts` is the single source of
-  truth, persisting one JSON blob under the `routines-data` key. Reads go through
-  `normalizeState`, which resets a routine's checked steps whenever its
-  `lastResetDate` is not today — the daily reset is a side effect of reading, not
-  a scheduled job. Accessors are guarded for a non-browser environment, so first
-  render is empty and real data appears after mount. Types in `src/types.ts` are
-  inferred from Valibot schemas (`src/lib/schemas.ts`), the single source of
-  truth for both validation and the TS types.
+- **State is IndexedDB, cached in memory.** `src/lib/idb-store.ts` is a small
+  hand-rolled IndexedDB wrapper (no dependency) that `src/lib/storage.ts`,
+  `src/lib/locale-store.ts`, `src/lib/settings.ts`, and `src/lib/app-update.ts`
+  all build on. Each keeps its data in an in-memory variable that's the real
+  source of truth once loaded, so nearly every public function stays
+  synchronous even though the storage engine underneath is async — IndexedDB
+  is read once in the background at startup and written to in the background
+  on every mutation. `storage.ts`'s reads go through `normalizeState`, which
+  resets a routine's checked steps whenever its `lastResetDate` is not today —
+  the daily reset is a side effect of reading, not a scheduled job. First
+  render is empty and real data appears moments after mount, once the
+  background read resolves. A one-time migration copies over anyone's
+  existing `localStorage` data the first time the app runs after this
+  changed. Types in `src/types.ts` are inferred from Valibot schemas
+  (`src/lib/schemas.ts`), the single source of truth for both validation and
+  the TS types.
 - **Routing.** `src/views/**` holds one folder per screen; `src/app/router.tsx`
   maps them to routes with React Router, each view lazy-loaded as its own chunk.
   Views read the target id from the `:id` path param via `useParams`.
@@ -148,8 +157,8 @@ The app is deployed to **GitHub Pages** as a static site.
   opened from the home view, not a separate route.
 - **i18n.** A small custom hook, `src/i18n/use-translation.ts` — a
   `useSyncExternalStore`-backed locale store (detects the device language on
-  first launch, then remembers the choice in `localStorage` under
-  `routines-locale`) plus a `t()` function doing `{placeholder}` substitution
+  first launch, then remembers the choice) plus a `t()` function doing
+  `{placeholder}` substitution
   against the message catalogs. Catalogs are `src/i18n/en.json` and
   `src/i18n/pl.json` — keep both in sync when adding keys. Dates are formatted
   with native `Intl.DateTimeFormat`.
@@ -169,8 +178,8 @@ The app is deployed to **GitHub Pages** as a static site.
 - **Backup + preferences.** `src/lib/backup.ts` writes and validates (via the
   same Valibot schemas `storage.ts` uses) the versioned export/import file;
   `src/lib/settings.ts` stores preferences (the lock enrolment). Every
-  `localStorage` key the app owns is declared in `src/lib/storage-keys.ts`,
-  so backup and reset stay in step.
+  storage key the app owns is declared in `src/lib/storage-keys.ts`, so
+  backup, reset, and the one-time IndexedDB migration all stay in step.
 
 ## Product
 

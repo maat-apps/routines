@@ -16,6 +16,12 @@ export function MobileGate({ children }: { children: ReactNode }) {
         .register(`${import.meta.env.BASE_URL}sw.js`)
         .catch(() => undefined);
     }
+    // Best-effort request that the browser not evict IndexedDB under storage
+    // pressure — cheap insurance now that data lives there. Ignored outright
+    // by browsers that don't support it.
+    if ("storage" in navigator && "persist" in navigator.storage) {
+      navigator.storage.persist().catch(() => undefined);
+    }
   }, []);
 
   return (

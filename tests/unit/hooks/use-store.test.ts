@@ -1,15 +1,18 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { DATA_KEY } from "@/lib/storage-keys";
+import { resetIndexedDb } from "../reset-indexeddb";
 
-// storage.ts/settings.ts cache their snapshots in module-level state, so each
-// test needs a fresh module graph — the hooks module is re-imported alongside
-// them so both resolve to the same instances.
+// storage.ts/settings.ts cache their data in module-level state (loaded from
+// IndexedDB in the background), so each test needs a fresh module graph — the
+// hooks module is re-imported alongside them so both resolve to the same
+// instances.
 async function freshUseStore() {
   vi.resetModules();
   const storage = await import("@/lib/storage");
+  await storage.whenLoaded();
   const settings = await import("@/lib/settings");
+  await settings.whenLoaded();
   const hooks = await import("@/hooks/use-store");
   return { ...hooks, storage, settings };
 }
@@ -21,8 +24,9 @@ function setDocumentVisibility(state: DocumentVisibilityState) {
   });
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   localStorage.clear();
+  await resetIndexedDb();
   setDocumentVisibility("visible");
 });
 
@@ -34,6 +38,7 @@ afterEach(() => {
   // Same reasoning for the vi.spyOn(document/window, "removeEventListener")
   // calls below — not undone automatically once the environment is shared.
   vi.restoreAllMocks();
+  vi.useRealTimers();
 });
 
 describe("useRoutines", () => {
@@ -106,6 +111,8 @@ describe("useAppSettings", () => {
 
 describe("useRevalidateOnVisibility", () => {
   it("re-checks the daily reset when the tab becomes visible again", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2000, 0, 1));
     const { useRevalidateOnVisibility, useRoutineState, storage } =
       await freshUseStore();
     storage.saveRoutine({
@@ -123,12 +130,10 @@ describe("useRevalidateOnVisibility", () => {
     });
     expect(result.current.r1.checkedStepIds).toEqual(["s1"]);
 
-    // Simulate midnight passing while the tab stayed open: only the stored
-    // lastResetDate moves backward, exactly as a real date rollover would —
-    // the app itself is never told directly.
-    const raw = JSON.parse(localStorage.getItem(DATA_KEY)!);
-    raw.state.r1.lastResetDate = "2000-01-01";
-    localStorage.setItem(DATA_KEY, JSON.stringify(raw));
+    // Simulate midnight passing while the tab stayed open — real time moves
+    // forward, but nothing in the app is told directly; only the visibility
+    // listener re-checks.
+    vi.setSystemTime(new Date(2000, 0, 2));
 
     setDocumentVisibility("visible");
     act(() => {
@@ -139,6 +144,8 @@ describe("useRevalidateOnVisibility", () => {
   });
 
   it("does not revalidate while the document is hidden", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2000, 0, 1));
     const { useRevalidateOnVisibility, useRoutineState, storage } =
       await freshUseStore();
     storage.saveRoutine({
@@ -155,9 +162,7 @@ describe("useRevalidateOnVisibility", () => {
       return useRoutineState();
     });
 
-    const raw = JSON.parse(localStorage.getItem(DATA_KEY)!);
-    raw.state.r1.lastResetDate = "2000-01-01";
-    localStorage.setItem(DATA_KEY, JSON.stringify(raw));
+    vi.setSystemTime(new Date(2000, 0, 2));
 
     setDocumentVisibility("hidden");
     act(() => {

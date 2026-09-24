@@ -25,6 +25,10 @@ export default defineConfig({
     // use-install-prompt.test.ts, app-update.test.ts), and every file
     // clears localStorage in beforeEach.
     isolate: false,
+    // fake-indexeddb (jsdom has no real IndexedDB) — installed once globally,
+    // same reasoning as isolate: false above: it needs explicit per-test
+    // cleanup (deleting the database), not per-file isolation.
+    setupFiles: ["tests/unit/setup.ts"],
     // Test files live under tests/unit/, mirroring src/'s structure, not
     // co-located with source — kept explicit rather than relying on
     // Vitest's default project-wide glob, so a stray *.test.ts dropped

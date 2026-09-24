@@ -5,7 +5,10 @@ import { useEffect, useSyncExternalStore } from "react";
 import {
   getServerSettingsSnapshot,
   getSettingsSnapshot,
+  isSettingsReady,
+  isSettingsReadyOnServer,
   subscribeToSettings,
+  subscribeToSettingsReady,
   type AppSettings,
 } from "@/lib/settings";
 import {
@@ -39,6 +42,18 @@ export function useAppSettings(): AppSettings {
     subscribeToSettings,
     getSettingsSnapshot,
     getServerSettingsSnapshot,
+  );
+}
+
+// Settings load from IndexedDB in the background, so "not loaded yet" and
+// "loaded, no lock enrolled" are different states — AppLockGate must not
+// treat the former as the latter, or a locked device would briefly show
+// unlocked content on every cold start.
+export function useSettingsReady(): boolean {
+  return useSyncExternalStore(
+    subscribeToSettingsReady,
+    isSettingsReady,
+    isSettingsReadyOnServer,
   );
 }
 

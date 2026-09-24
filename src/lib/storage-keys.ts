@@ -15,3 +15,11 @@ export const SNAPSHOT_KEY = "routines-update-snapshot";
 
 /** Keys cleared by "reset settings" — preferences only, never routine data. */
 export const PREFERENCE_KEYS = [LOCALE_KEY, SETTINGS_KEY] as const;
+
+/** Every key this app owns — what `idb-store.ts` migrates from localStorage. */
+export const ALL_STORAGE_KEYS = [
+  DATA_KEY,
+  LOCALE_KEY,
+  SETTINGS_KEY,
+  SNAPSHOT_KEY,
+] as const;

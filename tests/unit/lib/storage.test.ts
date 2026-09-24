@@ -1,18 +1,25 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DATA_KEY } from "@/lib/storage-keys";
+import { resetIndexedDb } from "../reset-indexeddb";
 
 // getRawData's `typeof window === "undefined"` guard is tested in
 // ssr-guards.test.ts, not here — it needs a Node environment (no window at
 // all), which this file can't switch to without breaking every other test
 // below that relies on jsdom.
 //
-// storage.ts caches its snapshot in module-level state, so each test needs a
-// fresh module instance — otherwise one test's cached snapshot would bleed
-// into the next.
+// storage.ts caches its data in module-level state, so each test needs a
+// fresh module instance — otherwise one test's cached data would bleed into
+// the next. Data now loads from IndexedDB in the background on first access,
+// so this also awaits `whenLoaded()` before handing the module back — tests
+// seed via `localStorage.setItem` exactly as before, and idb-store.ts's
+// one-time migration (triggered because resetIndexedDb() below leaves no
+// database for the next freshStorage() to find) picks it up from there.
 async function freshStorage() {
   vi.resetModules();
-  return import("@/lib/storage");
+  const storage = await import("@/lib/storage");
+  await storage.whenLoaded();
+  return storage;
 }
 
 function todayStr(date = new Date()): string {
@@ -22,8 +29,9 @@ function todayStr(date = new Date()): string {
   return `${year}-${month}-${day}`;
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   localStorage.clear();
+  await resetIndexedDb();
 });
 
 describe("readData / getRawData", () => {

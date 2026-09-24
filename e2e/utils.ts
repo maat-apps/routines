@@ -59,10 +59,19 @@ export interface SeedProgress {
 }
 
 /**
- * Writes routines/progress straight into localStorage before the app boots,
+ * Writes routines/progress straight into IndexedDB before the app boots,
  * bypassing the create/edit UI for tests that aren't exercising that flow.
- * Must run before the first `page.goto` (uses addInitScript) since
- * localStorage isn't reachable before a page has loaded some origin.
+ * Must run before the first `page.goto` (uses addInitScript) since the page's
+ * origin — and so its IndexedDB — isn't reachable before a page has loaded.
+ *
+ * The DB/store name and version are hand-duplicated from src/lib/idb-store.ts
+ * (same reasoning as DATA_KEY above) since an init script runs in the page
+ * before any app code and can't import from src/. `page.addInitScript`
+ * doesn't wait for this callback's work to finish before navigation
+ * proceeds, but in practice the write's `indexedDB.open()` call is scheduled
+ * before the app's own (deferred, module-script) first read, so it lands
+ * first — this is the standard Playwright pattern for seeding IndexedDB, not
+ * a guarantee of the spec.
  */
 export async function seedData(
   page: Page,
@@ -71,7 +80,16 @@ export async function seedData(
 ): Promise<void> {
   await page.addInitScript(
     ([key, value]) => {
-      window.localStorage.setItem(key, value);
+      const request = indexedDB.open("routines", 1);
+      request.onupgradeneeded = () => {
+        if (!request.result.objectStoreNames.contains("kv")) {
+          request.result.createObjectStore("kv");
+        }
+      };
+      request.onsuccess = () => {
+        const transaction = request.result.transaction("kv", "readwrite");
+        transaction.objectStore("kv").put(JSON.parse(value), key);
+      };
     },
     [DATA_KEY, JSON.stringify({ routines, state })],
   );

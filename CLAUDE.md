@@ -89,19 +89,56 @@ The only network traffic is the service worker fetching the app's own files.
   static file Vite copies as-is rather than rewriting; a PR preview is not
   expected to be independently installable as a scoped PWA, only viewable.
 
-- **State = localStorage only.** `src/lib/storage.ts` is the single source of
-  truth, persisting one JSON blob under the `routines-data` key. All reads go
-  through `normalizeState`, which **resets each routine's checked steps when its
+- **State = IndexedDB, cached in memory.** `src/lib/idb-store.ts` is a small
+  hand-rolled promise wrapper around raw IndexedDB (one database, one
+  key-value object store — no dependency, same reasoning as the custom i18n
+  hook below) that every storage module builds on: `src/lib/storage.ts`
+  (routines/progress), `src/lib/locale-store.ts`, `src/lib/settings.ts`
+  (app-lock enrolment, installed flag), and `src/lib/app-update.ts` (the
+  pre-update snapshot). Each of those keeps its own data in an in-memory
+  module-level variable that is the **real** source of truth once loaded —
+  IndexedDB is a write-through backing store, read once in the background at
+  startup and written to in the background on every mutation (fire-and-forget,
+  not awaited) — so almost every public function in these modules stays fully
+  synchronous despite the storage engine underneath being async; `app-update.ts`
+  is the one exception (see below). `storage.ts`'s reads go through
+  `normalizeState`, which **resets each routine's checked steps when its
   `lastResetDate` is not today** — the daily-reset behavior is a side effect of
-  reading, not a scheduled job. Every accessor is guarded for a non-browser
-  environment (`typeof window === "undefined"` returns empty data), so first
-  render is empty and real data appears after mount. Types in `src/types.ts`
-  are inferred from the Valibot schemas in `src/lib/schemas.ts` (`v.InferOutput`)
-  rather than hand-written in parallel, so the type and the runtime validator
-  can't drift out of sync. Every localStorage key the app owns is declared in `src/lib/storage-keys.ts`
-  — add new ones there so backup and reset stay in step. `lib/` never imports
-  from `react`/`react-dom`; React hooks that wrap this state live in `src/hooks/`
-  (`use-store.ts`, `use-install-prompt.ts`) instead.
+  reading, not a scheduled job. The one real user-visible consequence of this
+  design: **first load is genuinely async** — until the background read
+  resolves, screens see the same empty defaults that exist for the
+  (currently theoretical) SSR case, so first render is empty and real data
+  appears moments after mount. This is a real, if brief, gap for
+  `settings.ts` specifically: `AppLockGate`
+  (`src/components/app-lock-gate.tsx`) can't treat "settings haven't loaded
+  yet" the same as "no lock enrolled" (that would flash a locked device's
+  content unlocked on every cold start), so it gates on a separate
+  `useSettingsReady()` (`src/hooks/use-store.ts`) and renders nothing until
+  settings have actually loaded. Types in `src/types.ts` are inferred from
+  the Valibot schemas in `src/lib/schemas.ts` (`v.InferOutput`) rather than
+  hand-written in parallel, so the type and the runtime validator can't drift
+  out of sync. Every storage key the app owns is declared in
+  `src/lib/storage-keys.ts` — add new ones there so backup, reset, and
+  `idb-store.ts`'s one-time migration (below) stay in step. `lib/` never
+  imports from `react`/`react-dom`; React hooks that wrap this state live in
+  `src/hooks/` (`use-store.ts`, `use-install-prompt.ts`) instead.
+  `src/components/mobile-gate.tsx` also calls `navigator.storage.persist()`
+  once (best-effort) — mainly insurance against iOS Safari's Intelligent
+  Tracking Prevention evicting script-writable storage after 7 days of no
+  interaction in a plain browser tab (this doesn't apply the same way once
+  the app is installed/standalone, which is the primary use case, but the
+  call is free either way).
+
+- **Migrating from the old localStorage-only storage.** `idb-store.ts`'s
+  `onupgradeneeded` handler — which only ever fires the very first time the
+  IndexedDB database is created — reads whatever the four
+  `storage-keys.ts` keys already had in `localStorage`, copies it into the
+  new object store, and clears those `localStorage` keys once the copy
+  succeeds. A corrupt legacy value is skipped, not fatal. One asymmetry
+  worth knowing if this migration is ever touched: every key stored a
+  `JSON.stringify`'d object except `LOCALE_KEY`, which `locale-store.ts`
+  always wrote as a bare string (`"pl"`/`"en"`) — the migration special-cases
+  it rather than `JSON.parse`-ing it like the rest.
 
 - **Routing pattern.** `src/views/<name>/` holds one folder per screen;
   `src/app/router.tsx` maps them to routes with React Router
@@ -272,6 +309,18 @@ The only network traffic is the service worker fetching the app's own files.
   `vi.spyOn(Storage.prototype, ...)` in `app-update.test.ts` broke a
   different test in the same file until the missing `restoreAllMocks()`
   was added.
+  jsdom has no IndexedDB implementation at all, so `tests/unit/setup.ts`
+  (wired via `vitest.config.ts`'s `test.setupFiles`) installs
+  `fake-indexeddb/auto` globally for the whole run — same `isolate: false`
+  consequence as above: every test touching the storage layer deletes the
+  `"routines"` database itself (`tests/unit/reset-indexeddb.ts`'s
+  `resetIndexedDb()`, called in `beforeEach` alongside the usual
+  `localStorage.clear()`), rather than getting a fresh fake IndexedDB per
+  file. Each storage module also exports a test-only `whenLoaded()`
+  (resolves once its background read from IndexedDB finishes) so tests can
+  await readiness deterministically instead of polling — the same spirit as
+  the `vi.resetModules()` + dynamic `import()` pattern above, a small testing
+  seam rather than a production branch added just for tests.
 
 - **E2E tests (Playwright).** `e2e/*.spec.ts` + `playwright.config.ts` — its
   own `tsconfig.e2e.json` project reference, since neither
@@ -389,12 +438,39 @@ directly.
   `typeof`/`isRecord` checks — see the State bullet above for why schemas are
   the single source of truth here. Also the standard validation library
   across the maat-apps ecosystem, not just this repo (see
-  `.claude/tasks/ecosystem/adopt-valibot-for-validation.md`). Validate
+  [maat-core#2](https://github.com/maat-apps/maat-core/issues/2)). Validate
   array/record entries independently rather than handing a whole
   array/record to `v.array()`/`v.record()` in one call, so one malformed
   entry doesn't take an otherwise-valid whole down with it.
 - Full pattern log: `.claude/docs/patterns.md` — read by `/find-antipatterns`
   and `/learn-patterns`, not loaded every session.
+
+## Task tracking
+
+Work items live as **GitHub Issues**, not local files — migrated
+2026-09-24 off the old `.claude/tasks/` setup (still gitignored, still fine
+for scratch/pre-issue notes, but no longer the durable backlog). Every
+Issue that's ecosystem-wide or belongs to another `maat-apps` repo is also
+attached as an item to the org-level
+[Ma'at Apps Roadmap](https://github.com/orgs/maat-apps/projects/1) Project
+— a GitHub Project can only hold real Issues/PRs (each needs a repo) or
+repo-less "draft issues"; this ecosystem uses real Issues throughout, so
+every repo that has tasks needs Issues enabled first (`gh repo edit
+<repo> --enable-issues`).
+
+- **This repo's own work** (features, bugs): Issues directly on
+  `maat-apps/routines`.
+- **Ecosystem-wide work** (shared config, UI library, CI/testing
+  standards, scaffolding, etc. — anything not specific to one app): Issues
+  on [`maat-apps/maat-core`](https://github.com/maat-apps/maat-core/issues),
+  even before that repo has real code — it's the ecosystem's issue tracker
+  as much as its future shared package.
+- **Another app's work** (e.g. `trainer`, `diet`, `to-do`, `notes`,
+  `albums`): Issues on that app's own repo once it exists. `priority.md`
+  (this repo's own backlog ordering, still local/gitignored — see
+  `.claude/tasks/README.md`) is the one exception that stays a file, not an
+  Issue, since it's an ordering decision over other Issues, not a task
+  itself.
 
 ## Workflow Rules
 

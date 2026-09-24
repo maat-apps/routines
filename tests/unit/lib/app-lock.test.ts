@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { resetIndexedDb } from "../reset-indexeddb";
+
 // app-lock.ts caches session-unlock state in module-level singletons, so each
 // test needs a fresh module instance.
 async function freshAppLock() {
@@ -11,8 +13,9 @@ function fakeCredential(rawId: ArrayBuffer): PublicKeyCredential {
   return { rawId } as PublicKeyCredential;
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   localStorage.clear();
+  await resetIndexedDb();
 });
 
 afterEach(() => {
@@ -162,11 +165,15 @@ describe("verifyAppLock", () => {
 
 describe("disableAppLock", () => {
   it("clears the stored lock and marks the session unlocked", async () => {
-    const { setLockEnrolment } = await import("@/lib/settings");
-    setLockEnrolment({ credentialId: "c1", userId: "u1", createdAt: "now" });
-
+    // Kept to one module generation throughout (rather than setting the lock
+    // via one settings.ts instance and clearing it via another): settings.ts
+    // now persists to IndexedDB in the background, so bridging a lock across
+    // a `vi.resetModules()` gap can't be relied on to be durable by the time
+    // the next instance reads it back.
     const { disableAppLock, isSessionUnlocked } = await freshAppLock();
-    const { getSettingsSnapshot } = await import("@/lib/settings");
+    const { setLockEnrolment, getSettingsSnapshot } =
+      await import("@/lib/settings");
+    setLockEnrolment({ credentialId: "c1", userId: "u1", createdAt: "now" });
 
     disableAppLock();
 

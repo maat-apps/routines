@@ -202,10 +202,12 @@ export function SettingsPanel() {
   }
 
   function confirmResetSettings() {
-    resetPreferences();
-    // Other stores cache their own snapshots, so a reload is the honest way to
-    // land on a clean state.
-    window.location.reload();
+    void (async () => {
+      await resetPreferences();
+      // Other stores cache their own snapshots, so a reload is the honest
+      // way to land on a clean state.
+      window.location.reload();
+    })();
   }
 
   return (
@@ -364,10 +366,12 @@ export function SettingsPanel() {
                 variant="outline"
                 className="min-h-10.5 px-4"
                 onClick={() => {
-                  if (restoreUpdateSnapshot()) {
-                    setStatus(t("restoreSnapshotDone"));
-                    discardUpdateSnapshot();
-                  }
+                  void (async () => {
+                    if (await restoreUpdateSnapshot()) {
+                      setStatus(t("restoreSnapshotDone"));
+                      await discardUpdateSnapshot();
+                    }
+                  })();
                 }}
               >
                 {t("restoreSnapshotAction")}

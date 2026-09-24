@@ -2,13 +2,19 @@ import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SETTINGS_KEY } from "@/lib/storage-keys";
+import { resetIndexedDb } from "../reset-indexeddb";
 
 // use-install-prompt.ts reads/writes the persisted "installed" flag through
-// settings.ts, which caches its snapshot in a module-level singleton (same
-// reasoning as settings.test.ts) — without a fresh module instance per test,
-// one test's markInstalled() would leak into every test after it.
+// settings.ts, which caches its data in a module-level singleton loaded from
+// IndexedDB in the background (same reasoning as settings.test.ts) — without
+// a fresh module instance per test, one test's markInstalled() would leak
+// into every test after it, and without awaiting settings' own
+// `whenLoaded()`, the hook would mount before a seeded "installed" flag has
+// finished loading.
 async function freshInstallPrompt() {
   vi.resetModules();
+  const settings = await import("@/lib/settings");
+  await settings.whenLoaded();
   return import("@/hooks/use-install-prompt");
 }
 
@@ -43,8 +49,9 @@ function createMatchMediaMock(initialMatches: boolean) {
 
 let mql: ReturnType<typeof createMatchMediaMock>;
 
-beforeEach(() => {
+beforeEach(async () => {
   localStorage.clear();
+  await resetIndexedDb();
   mql = createMatchMediaMock(false);
   vi.stubGlobal(
     "matchMedia",

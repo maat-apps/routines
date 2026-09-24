@@ -1,3 +1,4 @@
+import { kvGet, kvSet } from "@/lib/idb-store";
 import { parseRoutines, parseState } from "@/lib/schemas";
 import { DATA_KEY } from "@/lib/storage-keys";
 import type { AppData, Routine, RoutineState } from "@/types";
@@ -5,10 +6,15 @@ import type { AppData, Routine, RoutineState } from "@/types";
 const emptyData: AppData = { routines: [], state: {} };
 
 // --- Central store -----------------------------------------------------------
-// localStorage is the single source of truth, but React screens need to react to
-// mutations that happen on other screens (e.g. checking a step in the detail view
-// should update the counter on the list). We expose a tiny pub/sub with cached
-// snapshots so components can subscribe via `useSyncExternalStore`.
+// An in-memory copy of `AppData` is the real source of truth once loaded;
+// IndexedDB is the write-through backing store — read once in the background
+// at startup, written to in the background on every mutation. Every read below
+// only ever touches the in-memory copy, so the whole module stays synchronous
+// from a caller's point of view even though the storage engine underneath it
+// isn't. React screens need to react to mutations that happen on other screens
+// (e.g. checking a step in the detail view should update the counter on the
+// list), so we expose a tiny pub/sub with cached snapshots components can
+// subscribe to via `useSyncExternalStore`.
 const listeners = new Set<() => void>();
 const serverRoutines: Routine[] = [];
 const serverState: RoutineState = {};
@@ -16,6 +22,39 @@ const serverState: RoutineState = {};
 let routinesSnapshot: Routine[] = serverRoutines;
 let stateSnapshot: RoutineState = serverState;
 let snapshotStale = true;
+
+let dbData: AppData = emptyData;
+let loaded: Promise<void> | null = null;
+
+function ensureLoaded(): void {
+  if (loaded) return;
+  loaded = kvGet<Partial<AppData>>(DATA_KEY)
+    .then((stored) => {
+      if (stored) {
+        dbData = {
+          routines: parseRoutines(stored.routines),
+          state: parseState(stored.state),
+        };
+      }
+    })
+    .catch(() => {
+      // Keep emptyData — same fallback as a corrupt/missing stored blob.
+    })
+    .finally(() => {
+      emitChange();
+    });
+}
+
+/**
+ * Resolves once the initial background read from IndexedDB has finished.
+ * Real screens never need this (they just re-render on the `emitChange()`
+ * this fires) — it exists so tests can await readiness deterministically
+ * instead of polling.
+ */
+export function whenLoaded(): Promise<void> {
+  ensureLoaded();
+  return loaded ?? Promise.resolve();
+}
 
 function refreshSnapshots(): void {
   const normalized = normalizeState(readData());
@@ -73,25 +112,21 @@ function readData(): AppData {
   if (typeof window === "undefined") {
     return emptyData;
   }
-
-  try {
-    const stored = window.localStorage.getItem(DATA_KEY);
-    if (!stored) {
-      return emptyData;
-    }
-
-    const parsed = JSON.parse(stored) as Partial<AppData>;
-    return {
-      routines: parseRoutines(parsed.routines),
-      state: parseState(parsed.state),
-    };
-  } catch {
-    return emptyData;
-  }
+  ensureLoaded();
+  return dbData;
 }
 
 function writeData(data: AppData): void {
-  window.localStorage.setItem(DATA_KEY, JSON.stringify(data));
+  dbData = data;
+  void persist(data);
+}
+
+async function persist(data: AppData): Promise<void> {
+  try {
+    await kvSet(DATA_KEY, data);
+  } catch {
+    // Best-effort — the in-memory copy (and this tab) already reflects it.
+  }
 }
 
 function normalizeState(data: AppData): AppData {
