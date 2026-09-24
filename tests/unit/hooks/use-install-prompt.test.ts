@@ -18,6 +18,20 @@ async function freshInstallPrompt() {
   return import("@/hooks/use-install-prompt");
 }
 
+// markInstalled()'s write is fire-and-forget, and a first-ever IndexedDB
+// open in a generation also runs the upgrade/legacy-migration path, which
+// can take more than one macrotask tick — poll for the observable effect
+// (idb-store's kvGet, re-imported fresh since a static binding wouldn't
+// follow vi.resetModules()) rather than guessing a fixed delay, or the next
+// test's resetIndexedDb() can close the connection mid-write.
+async function waitForInstalledWrite(): Promise<void> {
+  const { kvGet } = await import("@/lib/idb-store");
+  await vi.waitFor(async () => {
+    const stored = await kvGet<{ installed?: boolean }>(SETTINGS_KEY);
+    expect(stored?.installed).toBe(true);
+  });
+}
+
 // jsdom doesn't implement matchMedia at all, so a controllable fake stands in
 // for the real MediaQueryList — one shared instance per test so subscribe()
 // and the snapshot getter both observe the same "matches" state.
@@ -160,10 +174,7 @@ describe("useInstallPrompt", () => {
       window.dispatchEvent(new Event("appinstalled"));
     });
     expect(result.current.state).toBe("installed");
-    // markInstalled()'s write is fire-and-forget — let it settle before this
-    // test ends, or the next test's resetIndexedDb() can close the
-    // connection mid-write (unhandled rejection).
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await waitForInstalledWrite();
   });
 
   it("persists installed on appinstalled, surviving a later fresh load", async () => {
@@ -172,10 +183,13 @@ describe("useInstallPrompt", () => {
     act(() => {
       window.dispatchEvent(new Event("appinstalled"));
     });
-    // markInstalled()'s write is fire-and-forget — let it settle before
-    // resetModules() orphans this generation's connection, or a later
-    // test's resetIndexedDb() can close it mid-write (unhandled rejection).
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    // markInstalled()'s write is fire-and-forget — wait for it to actually
+    // land before resetModules() orphans this generation's connection, or a
+    // later test's resetIndexedDb() can close it mid-write (unhandled
+    // rejection). Real IndexedDB timing can take more than one macrotask
+    // tick (a first-ever open also runs the upgrade/migration path), so
+    // this polls for the observable effect rather than guessing a delay.
+    await waitForInstalledWrite();
 
     // Simulates a later page load: a fresh module instance, still not
     // standalone, with no beforeinstallprompt offered this time either.
@@ -191,7 +205,7 @@ describe("useInstallPrompt", () => {
     renderHook(() => useInstallPrompt());
     // Mounting already-standalone marks installed — same fire-and-forget
     // write, same reasoning as the test above.
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await waitForInstalledWrite();
 
     // Simulates opening the same app later from a plain browser tab, where
     // Chrome no longer offers beforeinstallprompt for an already-installed app.
