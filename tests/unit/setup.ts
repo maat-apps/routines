@@ -13,5 +13,8 @@ import "fake-indexeddb/auto";
 // happens to be running at that point. A trailing macrotask tick after every
 // test gives any such write a chance to settle first.
 afterEach(async () => {
-  await new Promise((resolve) => setTimeout(resolve, 0));
+  // A first-ever open in a generation also runs onupgradeneeded (and the
+  // legacy-localStorage migration inside it), which can take more than one
+  // macrotask tick — a plain setTimeout(0) wasn't consistently enough.
+  await new Promise((resolve) => setTimeout(resolve, 20));
 });

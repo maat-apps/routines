@@ -50,6 +50,15 @@ describe("hasUpdateSnapshot / hasNoUpdateSnapshotOnServer", () => {
     expect(appUpdate.hasUpdateSnapshot()).toBe(false);
   });
 
+  it("is false instead of throwing when the IndexedDB read itself rejects", async () => {
+    vi.resetModules();
+    const idbStore = await import("@/lib/idb-store");
+    vi.spyOn(idbStore, "kvGet").mockRejectedValue(new Error("blocked"));
+    const appUpdate = await import("@/lib/app-update");
+    await appUpdate.whenLoaded();
+    expect(appUpdate.hasUpdateSnapshot()).toBe(false);
+  });
+
   it("the server snapshot is always false", async () => {
     const { appUpdate } = await freshAppUpdate();
     expect(appUpdate.hasNoUpdateSnapshotOnServer()).toBe(false);

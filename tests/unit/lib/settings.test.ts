@@ -155,6 +155,42 @@ describe("isSettingsReady / isSettingsReadyOnServer", () => {
   });
 });
 
+describe("subscribeToSettingsReady", () => {
+  it("notifies a listener once the initial load resolves", async () => {
+    vi.resetModules();
+    const settings = await import("@/lib/settings");
+    const listener = vi.fn();
+    settings.subscribeToSettingsReady(listener);
+    await settings.whenLoaded();
+    expect(listener).toHaveBeenCalled();
+  });
+
+  it("stops notifying after unsubscribing", async () => {
+    vi.resetModules();
+    const settings = await import("@/lib/settings");
+    const listener = vi.fn();
+    const unsubscribe = settings.subscribeToSettingsReady(listener);
+    unsubscribe();
+    await settings.whenLoaded();
+    expect(listener).not.toHaveBeenCalled();
+  });
+});
+
+describe("ensureLoaded error handling", () => {
+  it("keeps the defaults instead of throwing when the IndexedDB read rejects", async () => {
+    vi.resetModules();
+    const idbStore = await import("@/lib/idb-store");
+    vi.spyOn(idbStore, "kvGet").mockRejectedValue(new Error("blocked"));
+    const settings = await import("@/lib/settings");
+    await settings.whenLoaded();
+    expect(settings.getSettingsSnapshot()).toEqual({
+      lock: null,
+      installed: false,
+    });
+    expect(settings.isSettingsReady()).toBe(true);
+  });
+});
+
 describe("setLockEnrolment / clearLockEnrolment", () => {
   it("persists a lock, updates the snapshot, and notifies listeners", async () => {
     const { setLockEnrolment, getSettingsSnapshot, subscribeToSettings } =

@@ -110,6 +110,15 @@ describe("useAppSettings", () => {
   });
 });
 
+describe("useSettingsReady", () => {
+  it("becomes true once settings finish loading", async () => {
+    const { useSettingsReady, settings } = await freshUseStore();
+    const { result } = renderHook(() => useSettingsReady());
+    await act(() => settings.whenLoaded());
+    expect(result.current).toBe(true);
+  });
+});
+
 describe("useRevalidateOnVisibility", () => {
   it("re-checks the daily reset when the tab becomes visible again", async () => {
     // Only Date, not setTimeout/etc — fake-indexeddb's own internals rely on
