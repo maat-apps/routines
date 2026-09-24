@@ -65,8 +65,22 @@ test.describe("settings", () => {
     await dialog.getByRole("button", { name: en.resetSettingsAction }).click();
 
     await page.waitForURL(/\/routines\/?$/);
-    const remainingKeys = await page.evaluate(() =>
-      Object.keys(window.localStorage),
+    // Settings live in IndexedDB (src/lib/idb-store.ts), not localStorage —
+    // hand-duplicated store/key names, same reasoning as seedData() in
+    // ./utils.ts, since this runs in the page context, not this test file.
+    const remainingKeys = await page.evaluate(
+      () =>
+        new Promise<string[]>((resolve, reject) => {
+          const request = indexedDB.open("routines", 1);
+          request.onsuccess = () => {
+            const transaction = request.result.transaction("kv", "readonly");
+            const keysRequest = transaction.objectStore("kv").getAllKeys();
+            keysRequest.onsuccess = () =>
+              resolve(keysRequest.result as string[]);
+            keysRequest.onerror = () => reject(keysRequest.error);
+          };
+          request.onerror = () => reject(request.error);
+        }),
     );
     // routines-settings (app lock) is never auto-recreated, but
     // routines-locale is — the locale store's first-launch detection
