@@ -4,11 +4,18 @@ import { PREFERENCE_KEYS, SETTINGS_KEY } from "@/lib/storage-keys";
 /**
  * What we keep about the app lock. The credential id is a handle the platform
  * authenticator gives back — it is not a secret and unlocks nothing on its own.
+ * `prfSalt`/`encryptionSupported` are not secret either — they're metadata
+ * about whether/how routine data is encrypted (see src/lib/webauthn-crypto.ts),
+ * not the key itself, which is never stored.
  */
 export type LockEnrolment = {
   credentialId: string;
   userId: string;
   createdAt: string;
+  /** Whether the PRF extension was available at enrolment time. */
+  encryptionSupported: boolean;
+  /** The fixed PRF `eval.first` input, present only when `encryptionSupported`. */
+  prfSalt?: string;
 };
 
 export type AppSettings = {
@@ -48,6 +55,7 @@ function parseLock(value: unknown): LockEnrolment | null {
   ) {
     return null;
   }
+  const encryptionSupported = value.encryptionSupported === true;
   return {
     credentialId: value.credentialId,
     userId: value.userId,
@@ -55,6 +63,11 @@ function parseLock(value: unknown): LockEnrolment | null {
       typeof value.createdAt === "string"
         ? value.createdAt
         : new Date().toISOString(),
+    encryptionSupported,
+    prfSalt:
+      encryptionSupported && typeof value.prfSalt === "string"
+        ? value.prfSalt
+        : undefined,
   };
 }
 

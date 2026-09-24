@@ -268,3 +268,49 @@ describe("updateApp", () => {
     expect(reload).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("setEncryptionKey", () => {
+  it("saves and reads back an encrypted snapshot", async () => {
+    const { appUpdate, storage, idbStore } = await freshAppUpdate();
+    const { deriveKey, isEncryptedBlob, randomBytes } =
+      await import("@/lib/webauthn-crypto");
+    const key = await deriveKey(randomBytes(32), randomBytes(16));
+    appUpdate.setEncryptionKey(key);
+
+    storage.saveRoutine({
+      id: "r1",
+      name: "Morning",
+      order: 0,
+      activeDays: [0, 1, 2, 3, 4, 5, 6],
+      steps: [],
+    });
+    await appUpdate.saveUpdateSnapshot();
+
+    const stored = await idbStore.kvGet(SNAPSHOT_KEY);
+    expect(isEncryptedBlob(stored)).toBe(true);
+
+    const snapshot = await appUpdate.readUpdateSnapshot();
+    expect(snapshot?.data.routines.map((r) => r.id)).toEqual(["r1"]);
+  });
+
+  it("fails to read back an encrypted snapshot with the wrong key", async () => {
+    const { appUpdate, storage } = await freshAppUpdate();
+    const { deriveKey, randomBytes } = await import("@/lib/webauthn-crypto");
+    appUpdate.setEncryptionKey(
+      await deriveKey(randomBytes(32), randomBytes(16)),
+    );
+    storage.saveRoutine({
+      id: "r1",
+      name: "Morning",
+      order: 0,
+      activeDays: [0, 1, 2, 3, 4, 5, 6],
+      steps: [],
+    });
+    await appUpdate.saveUpdateSnapshot();
+
+    appUpdate.setEncryptionKey(
+      await deriveKey(randomBytes(32), randomBytes(16)),
+    );
+    await expect(appUpdate.readUpdateSnapshot()).resolves.toBeNull();
+  });
+});

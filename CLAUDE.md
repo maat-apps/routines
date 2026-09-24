@@ -127,7 +127,15 @@ The only network traffic is the service worker fetching the app's own files.
   Tracking Prevention evicting script-writable storage after 7 days of no
   interaction in a plain browser tab (this doesn't apply the same way once
   the app is installed/standalone, which is the primary use case, but the
-  call is free either way).
+  call is free either way). `storage.ts` and `app-update.ts` each also
+  expose a `setEncryptionKey(key: CryptoKey | null)`, called from
+  `app-lock.ts` once a WebAuthn PRF-derived key is available — this is the
+  one place `storage.ts` depends on another storage module (`settings.ts`,
+  to check whether the enrolled lock actually encrypts) rather than being a
+  standalone sibling: when the lock is enrolled with `encryptionSupported:
+true`, `storage.ts`'s background load waits for that key before decrypting
+  anything, rather than racing ahead the way it does when no lock (or a
+  lock-only, unencrypted one) is active.
 
 - **Migrating from the old localStorage-only storage.** `idb-store.ts`'s
   `onupgradeneeded` handler — which only ever fires the very first time the
@@ -182,10 +190,30 @@ The only network traffic is the service worker fetching the app's own files.
   `src/components/app-lock-gate.tsx` hides the app behind a WebAuthn
   platform-authenticator prompt when the lock is on. Being unlocked is
   per-session memory state in `src/lib/app-lock.ts`; enrolling counts as
-  unlocked, or turning the switch on would lock the user out on the spot. The
-  lock is a gate, **not** encryption — there is no backend to verify the
-  assertion and `routines-data` stays readable — so the lock screen always
-  keeps an escape hatch once the authenticator fails or goes missing.
+  unlocked, or turning the switch on would lock the user out on the spot.
+  Whether the lock is a pure UI gate or real encryption depends on
+  `LockEnrolment.encryptionSupported` (`src/lib/settings.ts`) — set at
+  enrolment time based on whether the device's authenticator supports the
+  WebAuthn **PRF extension** (`src/lib/webauthn-crypto.ts`). Where PRF is
+  available, an AES-GCM key is derived from the credential's PRF output
+  (HKDF-SHA256, domain-separated) and handed to `storage.ts`/`app-update.ts`,
+  which encrypt everything they persist — there is still no backend to
+  verify the assertion, but `routines-data` genuinely stops being readable
+  without the key. Where it isn't, the lock stays exactly what it always
+  was — a UI gate with `routines-data` readable regardless — and the
+  Settings screen's copy says so explicitly (`appLockNotice` vs.
+  `appLockEncryptedNotice`). This split means the lock screen's escape hatch
+  (shown once the authenticator fails or goes missing) now has two different
+  outcomes depending on which mode was active: `disableAppLock()` (safe,
+  nothing was ever encrypted or the key is still in memory) vs.
+  `disableAppLockAndEraseData()` (the encrypted data is unrecoverable
+  without the key, so the escape hatch warns and then wipes it rather than
+  leaving orphaned ciphertext behind — see `app-lock-gate.tsx`'s
+  `confirmErase` step). PRF must be requested at credential-creation time
+  and cannot be added to an already-enrolled credential, so `enrolAppLock()`
+  does a second, immediate WebAuthn ceremony right after creating the
+  credential specifically to obtain the actual PRF secret (`create()` can
+  only report _whether_ PRF is available, never the secret itself).
 
 - **Service worker (`src/sw.ts`, built by vite-plugin-pwa).** The
   `injectManifest` strategy compiles this file and substitutes
@@ -265,8 +293,8 @@ The only network traffic is the service worker fetching the app's own files.
   `src/hooks/**` and `src/i18n/**` (the `useSyncExternalStore` store/hook
   bridge, via `@testing-library/react`'s `renderHook` — no JSX/`.tsx`
   needed, so this still stays out of component-rendering territory).
-  Views/components are **not** covered here on purpose — that's e2e's job
-  (see `.claude/tasks/features/e2e-user-flow-tests.md`); including them in
+  Views/components are **not** covered here on purpose — that's e2e's job;
+  including them in
   `vitest.config.ts`'s `coverage.include` would just show a permanently low
   number for code this suite was never meant to exercise. `coverage.include`
   enforces a 95% threshold (lines/statements/functions/branches) via
@@ -447,9 +475,11 @@ directly.
 
 ## Task tracking
 
-Work items live as **GitHub Issues**, not local files — migrated
-2026-09-24 off the old `.claude/tasks/` setup (still gitignored, still fine
-for scratch/pre-issue notes, but no longer the durable backlog). Every
+Work items live as **GitHub Issues**, not local files — the old
+`.claude/tasks/` setup (local, gitignored `.md` files) was migrated 1:1 to
+Issues and removed entirely 2026-09-24, including the scratch-notes
+convention it used to offer for pre-Issue ideas: file a real (draft-able,
+editable-later) Issue directly instead of a local file first. Every
 Issue that's ecosystem-wide or belongs to another `maat-apps` repo is also
 attached as an item to the org-level
 [Ma'at Apps Roadmap](https://github.com/orgs/maat-apps/projects/1) Project
@@ -459,18 +489,19 @@ every repo that has tasks needs Issues enabled first (`gh repo edit
 <repo> --enable-issues`).
 
 - **This repo's own work** (features, bugs): Issues directly on
-  `maat-apps/routines`.
+  `maat-apps/routines` — a bug is just an Issue with the built-in `bug`
+  label, not a separate location.
 - **Ecosystem-wide work** (shared config, UI library, CI/testing
   standards, scaffolding, etc. — anything not specific to one app): Issues
   on [`maat-apps/maat-core`](https://github.com/maat-apps/maat-core/issues),
   even before that repo has real code — it's the ecosystem's issue tracker
   as much as its future shared package.
 - **Another app's work** (e.g. `trainer`, `diet`, `to-do`, `notes`,
-  `albums`): Issues on that app's own repo once it exists. `priority.md`
-  (this repo's own backlog ordering, still local/gitignored — see
-  `.claude/tasks/README.md`) is the one exception that stays a file, not an
-  Issue, since it's an ordering decision over other Issues, not a task
-  itself.
+  `albums`): Issues on that app's own repo once it exists.
+- **Priority/ordering** (previously a local `priority.md`): the Project's
+  own `Priority` single-select field (`Now`/`Next`/`Later`) on each item,
+  not a file — set/read it via `gh project item-edit`/`item-list` rather
+  than reintroducing a parallel local ordering.
 
 ## Workflow Rules
 

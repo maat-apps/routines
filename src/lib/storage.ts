@@ -1,6 +1,15 @@
 import { kvGet, kvSet } from "@/lib/idb-store";
 import { parseRoutines, parseState } from "@/lib/schemas";
+import {
+  getSettingsSnapshot,
+  whenLoaded as whenSettingsLoaded,
+} from "@/lib/settings";
 import { DATA_KEY } from "@/lib/storage-keys";
+import {
+  decryptJson,
+  encryptJson,
+  isEncryptedBlob,
+} from "@/lib/webauthn-crypto";
 import type { AppData, Routine, RoutineState } from "@/types";
 
 const emptyData: AppData = { routines: [], state: {} };
@@ -26,23 +35,64 @@ let snapshotStale = true;
 let dbData: AppData = emptyData;
 let loaded: Promise<void> | null = null;
 
+// Set by app-lock.ts once a WebAuthn PRF-derived key is available (after a
+// successful enrol/verify). Null means "no encryption" — either no lock is
+// enrolled, or the device doesn't support PRF (see webauthn-crypto.ts).
+let encryptionKey: CryptoKey | null = null;
+let unlockResolve: (() => void) | null = null;
+let unlockPromise: Promise<void> | null = null;
+
+function whenUnlocked(): Promise<void> {
+  unlockPromise ??= new Promise((resolve) => {
+    unlockResolve = resolve;
+  });
+  return unlockPromise;
+}
+
+/**
+ * Hands storage the derived key so it can decrypt/encrypt. Called with a key
+ * right after a successful enrol/verify, and with `null` when the lock is
+ * disabled while already unlocked (data simply stops being encrypted from
+ * the next write on — see app-lock.ts's two disable paths).
+ */
+export function setEncryptionKey(key: CryptoKey | null): void {
+  encryptionKey = key;
+  if (key && unlockResolve) {
+    unlockResolve();
+    unlockResolve = null;
+  }
+}
+
+async function loadData(): Promise<void> {
+  await whenSettingsLoaded();
+  const lock = getSettingsSnapshot().lock;
+  if (lock?.encryptionSupported) {
+    // The whole app is gated behind AppLockGate until unlock succeeds, so
+    // real data is never needed — and never readable — before that.
+    await whenUnlocked();
+  }
+  try {
+    const stored = await kvGet<unknown>(DATA_KEY);
+    if (stored) {
+      const raw =
+        encryptionKey && isEncryptedBlob(stored)
+          ? await decryptJson<Partial<AppData>>(encryptionKey, stored)
+          : (stored as Partial<AppData>);
+      dbData = {
+        routines: parseRoutines(raw.routines),
+        state: parseState(raw.state),
+      };
+    }
+  } catch {
+    // Keep emptyData — same fallback as a corrupt/missing stored blob.
+  } finally {
+    emitChange();
+  }
+}
+
 function ensureLoaded(): void {
   if (loaded) return;
-  loaded = kvGet<Partial<AppData>>(DATA_KEY)
-    .then((stored) => {
-      if (stored) {
-        dbData = {
-          routines: parseRoutines(stored.routines),
-          state: parseState(stored.state),
-        };
-      }
-    })
-    .catch(() => {
-      // Keep emptyData — same fallback as a corrupt/missing stored blob.
-    })
-    .finally(() => {
-      emitChange();
-    });
+  loaded = loadData();
 }
 
 /**
@@ -123,7 +173,10 @@ function writeData(data: AppData): void {
 
 async function persist(data: AppData): Promise<void> {
   try {
-    await kvSet(DATA_KEY, data);
+    const toStore = encryptionKey
+      ? await encryptJson(encryptionKey, data)
+      : data;
+    await kvSet(DATA_KEY, toStore);
   } catch {
     // Best-effort — the in-memory copy (and this tab) already reflects it.
   }

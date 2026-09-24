@@ -102,6 +102,7 @@ describe("useAppSettings", () => {
         credentialId: "c1",
         userId: "u1",
         createdAt: "now",
+        encryptionSupported: false,
       });
     });
 

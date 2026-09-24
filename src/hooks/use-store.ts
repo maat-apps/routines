@@ -59,8 +59,7 @@ export function useSettingsReady(): boolean {
 
 // The cached snapshot only recomputes on the next `emitChange()` (a write from
 // this tab), so a routine left open across midnight keeps showing yesterday's
-// checked steps until something else happens to trigger it — see
-// .claude/tasks/bugs/midnight-toggle-can-invert-check.md. Re-checking on
+// checked steps until something else happens to trigger it. Re-checking on
 // visibility/focus catches the common case (backgrounding overnight, coming
 // back the next morning) without a ticking clock.
 export function useRevalidateOnVisibility(): void {

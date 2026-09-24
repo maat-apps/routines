@@ -260,7 +260,9 @@ export function SettingsPanel() {
         )}
         {settings.lock !== null && (
           <p className="text-muted-foreground px-1 text-xs">
-            {t("appLockNotice")}
+            {settings.lock.encryptionSupported
+              ? t("appLockEncryptedNotice")
+              : t("appLockNotice")}
           </p>
         )}
       </SettingsSection>

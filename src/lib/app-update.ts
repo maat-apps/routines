@@ -6,6 +6,11 @@ import {
 } from "@/lib/backup";
 import { kvDelete, kvGet, kvSet } from "@/lib/idb-store";
 import { SNAPSHOT_KEY } from "@/lib/storage-keys";
+import {
+  decryptJson,
+  encryptJson,
+  isEncryptedBlob,
+} from "@/lib/webauthn-crypto";
 
 // Whether a snapshot exists is browser state the settings screen renders, so
 // it is exposed as a store rather than synced into React state in an effect.
@@ -19,6 +24,17 @@ const listeners = new Set<() => void>();
 let snapshotExists = false;
 let loaded: Promise<void> | null = null;
 
+// Set by app-lock.ts, same as storage.ts's own encryption key — every call
+// site here only ever runs from an already-unlocked screen (Settings, or
+// updateApp() triggered from Settings), so unlike storage.ts there's no
+// background load to gate on it; it just needs to be present by the time
+// save/read actually happen.
+let encryptionKey: CryptoKey | null = null;
+
+export function setEncryptionKey(key: CryptoKey | null): void {
+  encryptionKey = key;
+}
+
 function notify(): void {
   for (const listener of listeners) {
     listener();
@@ -28,7 +44,7 @@ function notify(): void {
 function ensureLoaded(): void {
   if (loaded) return;
   if (typeof window === "undefined") return;
-  loaded = kvGet<Backup>(SNAPSHOT_KEY)
+  loaded = kvGet<unknown>(SNAPSHOT_KEY)
     .then((stored) => {
       snapshotExists = stored != null;
     })
@@ -57,7 +73,7 @@ export function subscribeToUpdateSnapshot(listener: () => void): () => void {
   };
 }
 
-/** Cheap existence check — does not read the stored backup itself. */
+/** Cheap existence check — does not read (or decrypt) the stored backup itself. */
 export function hasUpdateSnapshot(): boolean {
   ensureLoaded();
   return snapshotExists;
@@ -75,7 +91,10 @@ export function hasNoUpdateSnapshotOnServer(): boolean {
 export async function saveUpdateSnapshot(): Promise<Backup | null> {
   try {
     const backup = createBackup();
-    await kvSet(SNAPSHOT_KEY, backup);
+    const toStore = encryptionKey
+      ? await encryptJson(encryptionKey, backup)
+      : backup;
+    await kvSet(SNAPSHOT_KEY, toStore);
     snapshotExists = true;
     notify();
     return backup;
@@ -88,7 +107,11 @@ export async function readUpdateSnapshot(): Promise<Backup | null> {
   try {
     const stored = await kvGet<unknown>(SNAPSHOT_KEY);
     if (!stored) return null;
-    return parseBackupValue(stored);
+    const raw =
+      encryptionKey && isEncryptedBlob(stored)
+        ? await decryptJson<unknown>(encryptionKey, stored)
+        : stored;
+    return parseBackupValue(raw);
   } catch {
     return null;
   }

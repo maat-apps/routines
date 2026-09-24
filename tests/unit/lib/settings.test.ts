@@ -35,7 +35,7 @@ describe("getSettingsSnapshot", () => {
     expect(getSettingsSnapshot()).toEqual({ lock: null, installed: false });
   });
 
-  it("parses a validly stored lock", async () => {
+  it("parses a validly stored lock-only (unencrypted) enrolment", async () => {
     localStorage.setItem(
       SETTINGS_KEY,
       JSON.stringify({
@@ -44,9 +44,53 @@ describe("getSettingsSnapshot", () => {
     );
     const { getSettingsSnapshot } = await freshSettings();
     expect(getSettingsSnapshot()).toEqual({
-      lock: { credentialId: "c1", userId: "u1", createdAt: "2026-09-17" },
+      lock: {
+        credentialId: "c1",
+        userId: "u1",
+        createdAt: "2026-09-17",
+        encryptionSupported: false,
+      },
       installed: false,
     });
+  });
+
+  it("parses a validly stored encrypted enrolment, including its PRF salt", async () => {
+    localStorage.setItem(
+      SETTINGS_KEY,
+      JSON.stringify({
+        lock: {
+          credentialId: "c1",
+          userId: "u1",
+          createdAt: "2026-09-17",
+          encryptionSupported: true,
+          prfSalt: "c2FsdA",
+        },
+      }),
+    );
+    const { getSettingsSnapshot } = await freshSettings();
+    expect(getSettingsSnapshot().lock).toEqual({
+      credentialId: "c1",
+      userId: "u1",
+      createdAt: "2026-09-17",
+      encryptionSupported: true,
+      prfSalt: "c2FsdA",
+    });
+  });
+
+  it("drops prfSalt when encryptionSupported is false, even if one is present", async () => {
+    localStorage.setItem(
+      SETTINGS_KEY,
+      JSON.stringify({
+        lock: {
+          credentialId: "c1",
+          userId: "u1",
+          encryptionSupported: false,
+          prfSalt: "c2FsdA",
+        },
+      }),
+    );
+    const { getSettingsSnapshot } = await freshSettings();
+    expect(getSettingsSnapshot().lock?.prfSalt).toBeUndefined();
   });
 
   it("parses a stored installed flag", async () => {
@@ -117,12 +161,34 @@ describe("setLockEnrolment / clearLockEnrolment", () => {
       await freshSettings();
     const listener = vi.fn();
     subscribeToSettings(listener);
-    setLockEnrolment({ credentialId: "c1", userId: "u1", createdAt: "now" });
+    setLockEnrolment({
+      credentialId: "c1",
+      userId: "u1",
+      createdAt: "now",
+      encryptionSupported: false,
+    });
     expect(getSettingsSnapshot()).toEqual({
-      lock: { credentialId: "c1", userId: "u1", createdAt: "now" },
+      lock: {
+        credentialId: "c1",
+        userId: "u1",
+        createdAt: "now",
+        encryptionSupported: false,
+      },
       installed: false,
     });
     expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it("persists an encrypted enrolment's PRF salt", async () => {
+    const { setLockEnrolment, getSettingsSnapshot } = await freshSettings();
+    setLockEnrolment({
+      credentialId: "c1",
+      userId: "u1",
+      createdAt: "now",
+      encryptionSupported: true,
+      prfSalt: "c2FsdA",
+    });
+    expect(getSettingsSnapshot().lock?.prfSalt).toBe("c2FsdA");
   });
 
   it("stops notifying after unsubscribing", async () => {
@@ -130,7 +196,12 @@ describe("setLockEnrolment / clearLockEnrolment", () => {
     const listener = vi.fn();
     const unsubscribe = subscribeToSettings(listener);
     unsubscribe();
-    setLockEnrolment({ credentialId: "c1", userId: "u1", createdAt: "now" });
+    setLockEnrolment({
+      credentialId: "c1",
+      userId: "u1",
+      createdAt: "now",
+      encryptionSupported: false,
+    });
     expect(listener).not.toHaveBeenCalled();
   });
 
@@ -141,7 +212,12 @@ describe("setLockEnrolment / clearLockEnrolment", () => {
       getSettingsSnapshot,
       subscribeToSettings,
     } = await freshSettings();
-    setLockEnrolment({ credentialId: "c1", userId: "u1", createdAt: "now" });
+    setLockEnrolment({
+      credentialId: "c1",
+      userId: "u1",
+      createdAt: "now",
+      encryptionSupported: false,
+    });
     const listener = vi.fn();
     subscribeToSettings(listener);
     clearLockEnrolment();
@@ -181,7 +257,12 @@ describe("resetPreferences", () => {
       subscribeToSettings,
       kvGet,
     } = await freshSettings();
-    setLockEnrolment({ credentialId: "c1", userId: "u1", createdAt: "now" });
+    setLockEnrolment({
+      credentialId: "c1",
+      userId: "u1",
+      createdAt: "now",
+      encryptionSupported: false,
+    });
     markInstalled();
 
     const listener = vi.fn();
