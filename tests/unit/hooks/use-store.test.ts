@@ -112,7 +112,10 @@ describe("useAppSettings", () => {
 
 describe("useRevalidateOnVisibility", () => {
   it("re-checks the daily reset when the tab becomes visible again", async () => {
-    vi.useFakeTimers();
+    // Only Date, not setTimeout/etc — fake-indexeddb's own internals rely on
+    // real timers to resolve, and faking those too would hang every await
+    // on IndexedDB below (freshUseStore's whenLoaded() included).
+    vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date(2000, 0, 1));
     const { useRevalidateOnVisibility, useRoutineState, storage } =
       await freshUseStore();
@@ -145,7 +148,7 @@ describe("useRevalidateOnVisibility", () => {
   });
 
   it("does not revalidate while the document is hidden", async () => {
-    vi.useFakeTimers();
+    vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date(2000, 0, 1));
     const { useRevalidateOnVisibility, useRoutineState, storage } =
       await freshUseStore();

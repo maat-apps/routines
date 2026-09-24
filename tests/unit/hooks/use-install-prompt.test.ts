@@ -168,6 +168,10 @@ describe("useInstallPrompt", () => {
     act(() => {
       window.dispatchEvent(new Event("appinstalled"));
     });
+    // markInstalled()'s write is fire-and-forget — let it settle before
+    // resetModules() orphans this generation's connection, or a later
+    // test's resetIndexedDb() can close it mid-write (unhandled rejection).
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
     // Simulates a later page load: a fresh module instance, still not
     // standalone, with no beforeinstallprompt offered this time either.
@@ -181,6 +185,9 @@ describe("useInstallPrompt", () => {
     mql.set(true);
     const { useInstallPrompt } = await freshInstallPrompt();
     renderHook(() => useInstallPrompt());
+    // Mounting already-standalone marks installed — same fire-and-forget
+    // write, same reasoning as the test above.
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
     // Simulates opening the same app later from a plain browser tab, where
     // Chrome no longer offers beforeinstallprompt for an already-installed app.

@@ -430,19 +430,6 @@ describe("server snapshots (useSyncExternalStore's SSR fallback)", () => {
 });
 
 describe("setEncryptionKey", () => {
-  // Resolves true only if `promise` hasn't settled by the next microtask —
-  // if loadData() is genuinely waiting on a key that's never provided, this
-  // reliably wins the race every time (there's nothing that could ever let
-  // the other side resolve instead).
-  async function isPending(promise: Promise<unknown>): Promise<boolean> {
-    const pendingSentinel = Symbol("pending");
-    const result = await Promise.race([
-      promise,
-      Promise.resolve(pendingSentinel),
-    ]);
-    return result === pendingSentinel;
-  }
-
   it("persists writes as an encrypted blob once a key is set", async () => {
     const { saveRoutine, setEncryptionKey } = await freshStorage();
     const { deriveKey, isEncryptedBlob, randomBytes } =
@@ -458,10 +445,12 @@ describe("setEncryptionKey", () => {
       steps: [],
     });
 
-    // The write is fire-and-forget; give its microtask chain a moment.
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    const stored = await kvGet(DATA_KEY);
-    expect(isEncryptedBlob(stored)).toBe(true);
+    // The write (encrypt + kvSet) is fire-and-forget — poll instead of
+    // guessing a fixed delay, since real crypto.subtle + IndexedDB timing
+    // varies with the runner's load.
+    await vi.waitFor(async () => {
+      expect(isEncryptedBlob(await kvGet(DATA_KEY))).toBe(true);
+    });
   });
 
   it("decrypts an existing encrypted blob on load once the key is set", async () => {
@@ -491,7 +480,7 @@ describe("setEncryptionKey", () => {
     expect(storage.getRawData().routines).toEqual(data.routines);
   });
 
-  it("holds the background load until a key is provided, when the enrolled lock requires one", async () => {
+  it("does not reveal encrypted data until a key is provided, when the enrolled lock requires one", async () => {
     vi.resetModules();
     const settings = await import("@/lib/settings");
     await settings.whenLoaded();
@@ -503,15 +492,35 @@ describe("setEncryptionKey", () => {
       prfSalt: "c2FsdA",
     });
 
+    const { deriveKey, encryptJson, randomBytes } =
+      await import("@/lib/webauthn-crypto");
+    const { kvSet } = await import("@/lib/idb-store");
+    const key = await deriveKey(randomBytes(32), randomBytes(16));
+    const data = {
+      routines: [
+        {
+          id: "r1",
+          name: "Secret",
+          order: 0,
+          activeDays: [0, 1, 2, 3, 4, 5, 6],
+          steps: [],
+        },
+      ],
+      state: {},
+    };
+    await kvSet(DATA_KEY, await encryptJson(key, data));
+
     const storage = await import("@/lib/storage");
-    const loaded = storage.whenLoaded();
+    // Kick off the background load but never await it directly here — if
+    // it were wrongly not gated, this delay would be enough for it to have
+    // already decrypted and populated the real data.
+    void storage.whenLoaded();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(storage.getRawData()).toEqual({ routines: [], state: {} });
 
-    expect(await isPending(loaded)).toBe(true);
-
-    const { deriveKey, randomBytes } = await import("@/lib/webauthn-crypto");
-    storage.setEncryptionKey(await deriveKey(randomBytes(32), randomBytes(16)));
-
-    await expect(isPending(loaded)).resolves.toBe(false);
+    storage.setEncryptionKey(key);
+    await storage.whenLoaded();
+    expect(storage.getRawData().routines).toEqual(data.routines);
   });
 
   it("does not hold the load when the enrolled lock is lock-only (no PRF support)", async () => {
@@ -526,7 +535,10 @@ describe("setEncryptionKey", () => {
     });
 
     const storage = await import("@/lib/storage");
-    await expect(isPending(storage.whenLoaded())).resolves.toBe(false);
+    // If this were incorrectly gated on a key that's never provided, this
+    // await would hang until the test times out rather than resolving.
+    await storage.whenLoaded();
+    expect(storage.getRawData()).toEqual({ routines: [], state: {} });
   });
 
   it("stops encrypting once the key is cleared", async () => {
@@ -545,8 +557,10 @@ describe("setEncryptionKey", () => {
       steps: [],
     });
 
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    const stored = await kvGet(DATA_KEY);
-    expect(isEncryptedBlob(stored)).toBe(false);
+    await vi.waitFor(async () => {
+      const stored = await kvGet(DATA_KEY);
+      expect(stored).not.toBeUndefined();
+    });
+    expect(isEncryptedBlob(await kvGet(DATA_KEY))).toBe(false);
   });
 });
