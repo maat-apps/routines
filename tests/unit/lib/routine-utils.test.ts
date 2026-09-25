@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import {
   createId,
@@ -113,5 +113,42 @@ describe("weekOrder", () => {
         0, 1, 2, 3, 4, 5, 6,
       ]);
     }
+  });
+});
+
+// firstDayOfWeek() (not exported) branches on whether the engine supports
+// Intl.Locale#getWeekInfo() — which ICU data is available differs by
+// environment/Node version, so these stub it directly rather than relying
+// on whatever the test runner's own engine happens to support.
+describe("weekOrder — firstDayOfWeek branches", () => {
+  type LocaleWithWeekInfo = typeof Intl.Locale.prototype & {
+    getWeekInfo?: () => { firstDay: number };
+  };
+  const originalGetWeekInfo = (Intl.Locale.prototype as LocaleWithWeekInfo)
+    .getWeekInfo;
+
+  afterEach(() => {
+    (Intl.Locale.prototype as LocaleWithWeekInfo).getWeekInfo =
+      originalGetWeekInfo;
+  });
+
+  it("uses getWeekInfo's firstDay when the engine supports it", () => {
+    (Intl.Locale.prototype as LocaleWithWeekInfo).getWeekInfo = () => ({
+      firstDay: 3,
+    });
+    expect(weekOrder("en")).toEqual([3, 4, 5, 6, 0, 1, 2]);
+  });
+
+  it("falls back to a fixed default when getWeekInfo is unavailable", () => {
+    (Intl.Locale.prototype as LocaleWithWeekInfo).getWeekInfo = undefined;
+    expect(weekOrder("en")).toEqual([0, 1, 2, 3, 4, 5, 6]);
+    expect(weekOrder("pl")).toEqual([1, 2, 3, 4, 5, 6, 0]);
+  });
+
+  it("falls back to a fixed default when getWeekInfo throws", () => {
+    (Intl.Locale.prototype as LocaleWithWeekInfo).getWeekInfo = () => {
+      throw new Error("not supported");
+    };
+    expect(weekOrder("en")).toEqual([0, 1, 2, 3, 4, 5, 6]);
   });
 });
