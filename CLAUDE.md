@@ -167,8 +167,11 @@ true`, `storage.ts`'s background load waits for that key before decrypting
   state, not a route — `src/views/home/settings-panel.tsx`, which composes
   one `Section` component per settings card from sibling
   `settings-<name>-section.tsx` files (plus shared `SettingsSection`/
-  `SettingsRow`/`ConfirmDrawer` in `settings-primitives.tsx`) rather than
-  holding every section inline.
+  `SettingsRow` in `settings-primitives.tsx`) rather than holding every
+  section inline. `ConfirmDrawer` (the Cancel + destructive-button bottom
+  sheet those sections use) lives in `src/components/` instead, since
+  `home-view.tsx`'s "reset all" and `routine-edit-form.tsx`'s "delete
+  routine" confirmations are the same component, not settings-specific.
   `/all-routines` (`all-routines-view.tsx`) is a later addition: home's own
   list is scoped to routines active today (`isRoutineActiveToday`), so this
   is the only way to reach one that isn't — a plain lookup/access point, not

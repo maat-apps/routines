@@ -1,5 +1,6 @@
 import { useState, useSyncExternalStore } from "react";
 
+import { ConfirmDrawer } from "@/components/confirm-drawer";
 import { Button } from "@/components/ui/button";
 import { useInstallPrompt } from "@/hooks/use-install-prompt";
 import { useTranslation } from "@/i18n/use-translation";
@@ -11,11 +12,7 @@ import {
   subscribeToUpdateSnapshot,
   updateApp,
 } from "@/lib/app-update";
-import {
-  ConfirmDrawer,
-  SettingsRow,
-  SettingsSection,
-} from "@/views/home/settings-primitives";
+import { SettingsRow, SettingsSection } from "@/views/home/settings-primitives";
 
 export function AppSection({
   onStatus,

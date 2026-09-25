@@ -1,8 +1,9 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { type ChangeEvent, useEffect, useRef } from "react";
 
+import { DragHandle } from "@/components/drag-handle";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import type { RoutineStep } from "@/types";
@@ -70,16 +71,12 @@ export function SortableStepRow({
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
     >
-      <Button
-        className={`${editStepButtonClass} cursor-grab touch-none active:cursor-grabbing`}
-        variant="ghost"
-        size="icon-sm"
-        aria-label={dragLabel}
-        {...attributes}
-        {...listeners}
-      >
-        <GripVertical aria-hidden="true" />
-      </Button>
+      <DragHandle
+        className={editStepButtonClass}
+        dragLabel={dragLabel}
+        attributes={attributes}
+        listeners={listeners}
+      />
       <Textarea
         ref={inputRef}
         rows={1}

@@ -1,9 +1,8 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { ChevronRight, GripVertical } from "lucide-react";
 
-import { ProgressRing } from "@/components/progress-ring";
-import { Button } from "@/components/ui/button";
+import { DragHandle } from "@/components/drag-handle";
+import { RoutineRowContent } from "@/components/routine-row-content";
 import type { Routine } from "@/types";
 
 export function SortableRoutineRow({
@@ -38,33 +37,23 @@ export function SortableRoutineRow({
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
     >
-      <Button
-        className="text-muted-foreground flex-none cursor-grab touch-none active:cursor-grabbing"
-        variant="ghost"
-        size="icon-sm"
-        aria-label={dragLabel}
-        {...attributes}
-        {...listeners}
-      >
-        <GripVertical aria-hidden="true" />
-      </Button>
+      <DragHandle
+        className="text-muted-foreground flex-none"
+        dragLabel={dragLabel}
+        attributes={attributes}
+        listeners={listeners}
+      />
       <button
         data-main="true"
         className="[&>svg]:text-muted-foreground flex min-h-18 min-w-0 flex-1 items-center gap-3.5 rounded-lg border-0 bg-transparent py-3.5 pr-0 pl-2 text-left text-inherit"
         onClick={() => onOpen(routine.id)}
       >
-        <ProgressRing
-          compact
-          completed={checkedCount}
-          total={routine.steps.length}
-          ariaLabel={`${checkedCount} / ${routine.steps.length} ${completedLabel}`}
+        <RoutineRowContent
+          routine={routine}
+          checkedCount={checkedCount}
+          completedLabel={completedLabel}
+          unnamedLabel={unnamedLabel}
         />
-        <span className="grid min-w-0 flex-1 gap-1.5">
-          <strong className="font-heading overflow-hidden text-lg font-semibold text-ellipsis whitespace-nowrap">
-            {routine.name || unnamedLabel}
-          </strong>
-        </span>
-        <ChevronRight aria-hidden="true" />
       </button>
     </div>
   );

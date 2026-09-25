@@ -1,15 +1,7 @@
 import { startTransition, useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 
-import { Button } from "@/components/ui/button";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-} from "@/components/ui/drawer";
+import { ConfirmDrawer } from "@/components/confirm-drawer";
 import { useRoutines, useRoutineState } from "@/hooks/use-store";
 import { useTranslation } from "@/i18n/use-translation";
 import { prefetchRouteChunks } from "@/lib/prefetch-routes";
@@ -62,34 +54,14 @@ export function HomeView() {
         onResetAll={() => setResetAllOpen(true)}
         onReorder={reorderRoutines}
       />
-      <Drawer
-        showSwipeHandle
+      <ConfirmDrawer
         open={resetAllOpen}
         onOpenChange={setResetAllOpen}
-      >
-        <DrawerContent>
-          <DrawerHeader className="group-data-[swipe-axis=y]/drawer-popup:text-left">
-            <DrawerTitle>{t("resetAllTitle")}</DrawerTitle>
-            <DrawerDescription>{t("resetAllDescription")}</DrawerDescription>
-          </DrawerHeader>
-          <DrawerFooter className="pb-[calc(16px+env(safe-area-inset-bottom))]">
-            <Button
-              className="min-h-12.5 text-base"
-              variant="outline"
-              onClick={() => setResetAllOpen(false)}
-            >
-              {t("cancel")}
-            </Button>
-            <Button
-              className="min-h-12.5 text-base"
-              variant="destructive"
-              onClick={handleResetAll}
-            >
-              {t("reset")}
-            </Button>
-          </DrawerFooter>
-        </DrawerContent>
-      </Drawer>
+        title={t("resetAllTitle")}
+        description={t("resetAllDescription")}
+        confirmLabel={t("reset")}
+        onConfirm={handleResetAll}
+      />
     </>
   );
 }

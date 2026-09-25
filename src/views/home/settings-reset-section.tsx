@@ -1,12 +1,10 @@
 import { useState } from "react";
 
+import { ConfirmDrawer } from "@/components/confirm-drawer";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/i18n/use-translation";
 import { resetPreferences } from "@/lib/settings";
-import {
-  ConfirmDrawer,
-  SettingsSection,
-} from "@/views/home/settings-primitives";
+import { SettingsSection } from "@/views/home/settings-primitives";
 
 export function ResetSection() {
   const { t } = useTranslation();

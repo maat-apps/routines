@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 
+import { ConfirmDrawer } from "@/components/confirm-drawer";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/i18n/use-translation";
 import {
@@ -9,11 +10,7 @@ import {
   shareBackup,
   type Backup,
 } from "@/lib/backup";
-import {
-  ConfirmDrawer,
-  SettingsRow,
-  SettingsSection,
-} from "@/views/home/settings-primitives";
+import { SettingsRow, SettingsSection } from "@/views/home/settings-primitives";
 
 export function DataSection({
   onStatus,

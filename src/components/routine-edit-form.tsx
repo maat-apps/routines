@@ -12,16 +12,9 @@ import { CalendarDays, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 
 import { AppBar } from "@/components/app-bar";
+import { ConfirmDrawer } from "@/components/confirm-drawer";
 import { SortableStepRow } from "@/components/sortable-step-row";
 import { Button } from "@/components/ui/button";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-} from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
 import { useDragSensors } from "@/hooks/use-drag-sensors";
 import { useTranslation } from "@/i18n/use-translation";
@@ -257,32 +250,14 @@ export function RoutineEditForm({
           {t("done")}
         </Button>
       </div>
-      <Drawer showSwipeHandle open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <DrawerContent>
-          <DrawerHeader className="group-data-[swipe-axis=y]/drawer-popup:text-left">
-            <DrawerTitle>{t("deleteRoutineTitle")}</DrawerTitle>
-            <DrawerDescription>
-              {t("deleteRoutineDescription")}
-            </DrawerDescription>
-          </DrawerHeader>
-          <DrawerFooter className="pb-[calc(16px+env(safe-area-inset-bottom))]">
-            <Button
-              className="min-h-12.5 text-base"
-              variant="outline"
-              onClick={() => setDeleteOpen(false)}
-            >
-              {t("cancel")}
-            </Button>
-            <Button
-              className="min-h-12.5 text-base"
-              variant="destructive"
-              onClick={onDelete}
-            >
-              {t("deleteRoutine")}
-            </Button>
-          </DrawerFooter>
-        </DrawerContent>
-      </Drawer>
+      <ConfirmDrawer
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title={t("deleteRoutineTitle")}
+        description={t("deleteRoutineDescription")}
+        confirmLabel={t("deleteRoutine")}
+        onConfirm={onDelete}
+      />
     </div>
   );
 }
