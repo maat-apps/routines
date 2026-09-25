@@ -24,7 +24,7 @@ test.describe("backup export / import", () => {
     );
     const stream = await download.createReadStream();
     const chunks: Buffer[] = [];
-    for await (const chunk of stream) chunks.push(chunk as Buffer);
+    for await (const chunk of stream) chunks.push(chunk);
     const backup = JSON.parse(Buffer.concat(chunks).toString("utf-8"));
 
     expect(backup.app).toBe("routines");
