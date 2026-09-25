@@ -204,17 +204,17 @@ describe("applyBackup", () => {
 });
 
 describe("backupFileName", () => {
-  it("formats a date as routines-backup-YYYY-MM-DD.json", async () => {
+  it("formats a date as routines-backup-YYYY-MM-DD.txt", async () => {
     const { backup } = await freshBackup();
     expect(backup.backupFileName(new Date(2026, 8, 17))).toBe(
-      "routines-backup-2026-09-17.json",
+      "routines-backup-2026-09-17.txt",
     );
   });
 
   it("zero-pads single-digit month and day", async () => {
     const { backup } = await freshBackup();
     expect(backup.backupFileName(new Date(2026, 0, 5))).toBe(
-      "routines-backup-2026-01-05.json",
+      "routines-backup-2026-01-05.txt",
     );
   });
 });
@@ -258,7 +258,7 @@ describe("downloadBackup", () => {
 
     expect(createObjectURL).toHaveBeenCalledTimes(1);
     expect(capturedHref).toBe("blob:mock-url");
-    expect(capturedDownload).toBe("routines-backup-2026-09-17.json");
+    expect(capturedDownload).toBe("routines-backup-2026-09-17.txt");
   });
 
   it("revokes the object URL after a delay, not immediately", async () => {

@@ -92,39 +92,32 @@ export function applyBackup(backup: Backup): void {
   }
 }
 
+/**
+ * `.txt`/`text/plain`, not `.json`/`application/json`, on both export
+ * paths — Chromium's Web Share API file allow-list doesn't include JSON
+ * (`canShare` just silently returns `false` for it), so sharing needs
+ * plain text, and download uses the same format rather than splitting the
+ * two into different file types. `parseBackup` only ever reads the text
+ * content, never the filename/extension, so this doesn't affect import.
+ */
 export function backupFileName(date = new Date()): string {
   const stamp = [
     date.getFullYear(),
     String(date.getMonth() + 1).padStart(2, "0"),
     String(date.getDate()).padStart(2, "0"),
   ].join("-");
-  return `routines-backup-${stamp}.json`;
+  return `routines-backup-${stamp}.txt`;
 }
 
 function backupFile(backup: Backup): File {
   return new File(
     [JSON.stringify(backup, null, 2)],
     backupFileName(new Date(backup.exportedAt)),
-    { type: "application/json" },
-  );
-}
-
-/**
- * Same content as `backupFile`, but named/typed as plain text. Chromium's
- * Web Share API file allow-list doesn't include `application/json`/`.json`
- * — `canShare` just returns `false` for it, silently — so sharing uses this
- * instead. `parseBackup` only ever reads the text content, never the
- * filename, so a share round-trips through import exactly the same.
- */
-function shareableBackupFile(backup: Backup): File {
-  return new File(
-    [JSON.stringify(backup, null, 2)],
-    backupFileName(new Date(backup.exportedAt)).replace(/\.json$/, ".txt"),
     { type: "text/plain" },
   );
 }
 
-/** Hands the browser a JSON file to save. */
+/** Hands the browser a JSON file (named/typed as plain text) to save. */
 export function downloadBackup(backup: Backup = createBackup()): void {
   const url = URL.createObjectURL(backupFile(backup));
   const link = document.createElement("a");
@@ -151,7 +144,7 @@ export async function shareBackup(
   backup: Backup = createBackup(),
 ): Promise<boolean> {
   if (!navigator.canShare || !navigator.share) return false;
-  const file = shareableBackupFile(backup);
+  const file = backupFile(backup);
   if (!navigator.canShare({ files: [file] })) return false;
   try {
     await navigator.share({ files: [file] });

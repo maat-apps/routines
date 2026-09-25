@@ -20,7 +20,7 @@ test.describe("backup export / import", () => {
     ]);
 
     expect(download.suggestedFilename()).toMatch(
-      /^routines-backup-\d{4}-\d{2}-\d{2}\.json$/,
+      /^routines-backup-\d{4}-\d{2}-\d{2}\.txt$/,
     );
     const stream = await download.createReadStream();
     const chunks: Buffer[] = [];
