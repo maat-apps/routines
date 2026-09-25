@@ -55,6 +55,8 @@
   "exportData": "Export",
   "exportDataDescription": "Save your routines to a file.",
   "exportAction": "Save",
+  "exportShared": "Backup shared.",
+  "exportDone": "Backup saved to a file.",
   "importData": "Import",
   "importDataDescription": "Restore your routines from a backup.",
   "importAction": "Choose file",

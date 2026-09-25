@@ -45,6 +45,7 @@ import {
   applyBackup,
   downloadBackup,
   parseBackup,
+  shareBackup,
   type Backup,
 } from "@/lib/backup";
 import { resetPreferences } from "@/lib/settings";
@@ -201,6 +202,18 @@ export function SettingsPanel() {
     setStatus(t("importDone"));
   }
 
+  async function onExport() {
+    setStatus(null);
+    const result = await shareBackup();
+    if (result === "shared") {
+      setStatus(t("exportShared"));
+    } else if (result === "unavailable") {
+      downloadBackup();
+      setStatus(t("exportDone"));
+    }
+    // "cancelled" — the user dismissed the share sheet; nothing to report.
+  }
+
   function confirmResetSettings() {
     void (async () => {
       await resetPreferences();
@@ -291,7 +304,7 @@ export function SettingsPanel() {
             <Button
               variant="outline"
               className="min-h-10.5 px-4"
-              onClick={() => downloadBackup()}
+              onClick={() => void onExport()}
             >
               {t("exportAction")}
             </Button>
@@ -313,7 +326,7 @@ export function SettingsPanel() {
         <input
           ref={fileInputRef}
           type="file"
-          accept="application/json,.json"
+          accept="application/json,.json,text/plain,.txt"
           className="hidden"
           aria-label={t("importData")}
           onChange={(event) => {

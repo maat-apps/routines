@@ -204,17 +204,17 @@ describe("applyBackup", () => {
 });
 
 describe("backupFileName", () => {
-  it("formats a date as routines-backup-YYYY-MM-DD.json", async () => {
+  it("formats a date as routines-backup-YYYY-MM-DD.txt", async () => {
     const { backup } = await freshBackup();
     expect(backup.backupFileName(new Date(2026, 8, 17))).toBe(
-      "routines-backup-2026-09-17.json",
+      "routines-backup-2026-09-17.txt",
     );
   });
 
   it("zero-pads single-digit month and day", async () => {
     const { backup } = await freshBackup();
     expect(backup.backupFileName(new Date(2026, 0, 5))).toBe(
-      "routines-backup-2026-01-05.json",
+      "routines-backup-2026-01-05.txt",
     );
   });
 });
@@ -258,7 +258,7 @@ describe("downloadBackup", () => {
 
     expect(createObjectURL).toHaveBeenCalledTimes(1);
     expect(capturedHref).toBe("blob:mock-url");
-    expect(capturedDownload).toBe("routines-backup-2026-09-17.json");
+    expect(capturedDownload).toBe("routines-backup-2026-09-17.txt");
   });
 
   it("revokes the object URL after a delay, not immediately", async () => {
@@ -297,5 +297,77 @@ describe("downloadBackup", () => {
     // exportedAt is "now", so just check the filename reflects today.
     const today = backup.backupFileName();
     expect(capturedDownload).toBe(today);
+  });
+});
+
+describe("shareBackup", () => {
+  const backupValue = {
+    app: "routines" as const,
+    version: 1,
+    exportedAt: "2026-09-17T12:00:00.000Z",
+    locale: null,
+    data: { routines: [], state: {} },
+  };
+
+  it("returns 'unavailable' when the Web Share API isn't supported", async () => {
+    const { backup } = await freshBackup();
+    vi.stubGlobal("navigator", {
+      ...navigator,
+      canShare: undefined,
+      share: undefined,
+    });
+    await expect(backup.shareBackup(backupValue)).resolves.toBe("unavailable");
+    vi.unstubAllGlobals();
+  });
+
+  it("returns 'unavailable' when canShare rejects the file", async () => {
+    const { backup } = await freshBackup();
+    const canShare = vi.fn().mockReturnValue(false);
+    const share = vi.fn();
+    vi.stubGlobal("navigator", { ...navigator, canShare, share });
+    await expect(backup.shareBackup(backupValue)).resolves.toBe("unavailable");
+    expect(share).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+
+  it("shares the backup file and returns 'shared' on success", async () => {
+    const { backup } = await freshBackup();
+    const canShare = vi.fn().mockReturnValue(true);
+    const share = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("navigator", { ...navigator, canShare, share });
+
+    await expect(backup.shareBackup(backupValue)).resolves.toBe("shared");
+    expect(canShare).toHaveBeenCalledWith({
+      files: [expect.any(File)],
+    });
+    expect(share).toHaveBeenCalledWith({ files: [expect.any(File)] });
+    const [sharedFile] = share.mock.calls[0][0].files;
+    // Not .json — Chromium's Web Share API file allow-list excludes it, so
+    // the shared copy is named/typed as plain text (see backupFile).
+    expect(sharedFile.name).toBe("routines-backup-2026-09-17.txt");
+    expect(sharedFile.type).toBe("text/plain");
+    vi.unstubAllGlobals();
+  });
+
+  it("returns 'cancelled' for a dismissed share sheet (AbortError)", async () => {
+    const { backup } = await freshBackup();
+    const canShare = vi.fn().mockReturnValue(true);
+    const share = vi
+      .fn()
+      .mockRejectedValue(new DOMException("cancelled", "AbortError"));
+    vi.stubGlobal("navigator", { ...navigator, canShare, share });
+
+    await expect(backup.shareBackup(backupValue)).resolves.toBe("cancelled");
+    vi.unstubAllGlobals();
+  });
+
+  it("returns 'unavailable' when the share itself fails", async () => {
+    const { backup } = await freshBackup();
+    const canShare = vi.fn().mockReturnValue(true);
+    const share = vi.fn().mockRejectedValue(new Error("share failed"));
+    vi.stubGlobal("navigator", { ...navigator, canShare, share });
+
+    await expect(backup.shareBackup(backupValue)).resolves.toBe("unavailable");
+    vi.unstubAllGlobals();
   });
 });

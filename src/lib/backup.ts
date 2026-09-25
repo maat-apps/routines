@@ -92,21 +92,34 @@ export function applyBackup(backup: Backup): void {
   }
 }
 
+/**
+ * `.txt`/`text/plain`, not `.json`/`application/json`, on both export
+ * paths — Chromium's Web Share API file allow-list doesn't include JSON
+ * (`canShare` just silently returns `false` for it), so sharing needs
+ * plain text, and download uses the same format rather than splitting the
+ * two into different file types. `parseBackup` only ever reads the text
+ * content, never the filename/extension, so this doesn't affect import.
+ */
 export function backupFileName(date = new Date()): string {
   const stamp = [
     date.getFullYear(),
     String(date.getMonth() + 1).padStart(2, "0"),
     String(date.getDate()).padStart(2, "0"),
   ].join("-");
-  return `routines-backup-${stamp}.json`;
+  return `routines-backup-${stamp}.txt`;
 }
 
-/** Hands the browser a JSON file to save. */
+function backupFile(backup: Backup): File {
+  return new File(
+    [JSON.stringify(backup, null, 2)],
+    backupFileName(new Date(backup.exportedAt)),
+    { type: "text/plain" },
+  );
+}
+
+/** Hands the browser a JSON file (named/typed as plain text) to save. */
 export function downloadBackup(backup: Backup = createBackup()): void {
-  const blob = new Blob([JSON.stringify(backup, null, 2)], {
-    type: "application/json",
-  });
-  const url = URL.createObjectURL(blob);
+  const url = URL.createObjectURL(backupFile(backup));
   const link = document.createElement("a");
 
   link.href = url;
@@ -116,4 +129,39 @@ export function downloadBackup(backup: Backup = createBackup()): void {
   link.remove();
   // Revoking straight away can cancel the download in some browsers.
   window.setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
+
+export type ShareBackupResult = "shared" | "cancelled" | "unavailable";
+
+/**
+ * Offers the backup file to the OS share sheet, so it can go straight to a
+ * cloud drive instead of the phone's Downloads folder.
+ *
+ * - `"shared"` — the user picked a target and the share succeeded.
+ * - `"cancelled"` — the user dismissed the share sheet (`AbortError`); a
+ *   normal outcome, not a failure to fall back from.
+ * - `"unavailable"` — the API (or a file share) isn't supported here, or the
+ *   share itself failed outright; the caller should fall back to
+ *   `downloadBackup` instead.
+ */
+export async function shareBackup(
+  backup: Backup = createBackup(),
+): Promise<ShareBackupResult> {
+  if (!navigator.canShare || !navigator.share) return "unavailable";
+  const file = backupFile(backup);
+  if (!navigator.canShare({ files: [file] })) return "unavailable";
+  try {
+    await navigator.share({ files: [file] });
+    return "shared";
+  } catch (error) {
+    // DOMException (what navigator.share rejects with) doesn't reliably
+    // extend Error across environments, so check `name` directly rather
+    // than narrowing with `instanceof Error` first.
+    const cancelled =
+      typeof error === "object" &&
+      error !== null &&
+      "name" in error &&
+      error.name === "AbortError";
+    return cancelled ? "cancelled" : "unavailable";
+  }
 }
