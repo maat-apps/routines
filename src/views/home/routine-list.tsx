@@ -1,8 +1,4 @@
-import {
-  closestCenter,
-  DndContext,
-  type DragEndEvent,
-} from "@dnd-kit/core";
+import { closestCenter, DndContext, type DragEndEvent } from "@dnd-kit/core";
 import {
   restrictToParentElement,
   restrictToVerticalAxis,
