@@ -142,6 +142,14 @@ export async function shareBackup(
     await navigator.share({ files: [file] });
     return true;
   } catch (error) {
-    return error instanceof Error && error.name === "AbortError";
+    // DOMException (what navigator.share rejects with) doesn't reliably
+    // extend Error across environments, so check `name` directly rather
+    // than narrowing with `instanceof Error` first.
+    return (
+      typeof error === "object" &&
+      error !== null &&
+      "name" in error &&
+      error.name === "AbortError"
+    );
   }
 }
