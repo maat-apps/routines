@@ -299,3 +299,72 @@ describe("downloadBackup", () => {
     expect(capturedDownload).toBe(today);
   });
 });
+
+describe("shareBackup", () => {
+  const backupValue = {
+    app: "routines" as const,
+    version: 1,
+    exportedAt: "2026-09-17T12:00:00.000Z",
+    locale: null,
+    data: { routines: [], state: {} },
+  };
+
+  it("returns false when the Web Share API isn't supported", async () => {
+    const { backup } = await freshBackup();
+    vi.stubGlobal("navigator", {
+      ...navigator,
+      canShare: undefined,
+      share: undefined,
+    });
+    await expect(backup.shareBackup(backupValue)).resolves.toBe(false);
+    vi.unstubAllGlobals();
+  });
+
+  it("returns false when canShare rejects the file", async () => {
+    const { backup } = await freshBackup();
+    const canShare = vi.fn().mockReturnValue(false);
+    const share = vi.fn();
+    vi.stubGlobal("navigator", { ...navigator, canShare, share });
+    await expect(backup.shareBackup(backupValue)).resolves.toBe(false);
+    expect(share).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+
+  it("shares the backup file and returns true on success", async () => {
+    const { backup } = await freshBackup();
+    const canShare = vi.fn().mockReturnValue(true);
+    const share = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("navigator", { ...navigator, canShare, share });
+
+    await expect(backup.shareBackup(backupValue)).resolves.toBe(true);
+    expect(canShare).toHaveBeenCalledWith({
+      files: [expect.any(File)],
+    });
+    expect(share).toHaveBeenCalledWith({ files: [expect.any(File)] });
+    const [sharedFile] = share.mock.calls[0][0].files;
+    expect(sharedFile.name).toBe("routines-backup-2026-09-17.json");
+    vi.unstubAllGlobals();
+  });
+
+  it("treats a cancelled share sheet (AbortError) as handled", async () => {
+    const { backup } = await freshBackup();
+    const canShare = vi.fn().mockReturnValue(true);
+    const share = vi
+      .fn()
+      .mockRejectedValue(new DOMException("cancelled", "AbortError"));
+    vi.stubGlobal("navigator", { ...navigator, canShare, share });
+
+    await expect(backup.shareBackup(backupValue)).resolves.toBe(true);
+    vi.unstubAllGlobals();
+  });
+
+  it("returns false when the share itself fails", async () => {
+    const { backup } = await freshBackup();
+    const canShare = vi.fn().mockReturnValue(true);
+    const share = vi.fn().mockRejectedValue(new Error("share failed"));
+    vi.stubGlobal("navigator", { ...navigator, canShare, share });
+
+    await expect(backup.shareBackup(backupValue)).resolves.toBe(false);
+    vi.unstubAllGlobals();
+  });
+});

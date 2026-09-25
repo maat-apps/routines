@@ -45,6 +45,7 @@ import {
   applyBackup,
   downloadBackup,
   parseBackup,
+  shareBackup,
   type Backup,
 } from "@/lib/backup";
 import { resetPreferences } from "@/lib/settings";
@@ -201,6 +202,10 @@ export function SettingsPanel() {
     setStatus(t("importDone"));
   }
 
+  async function onExport() {
+    if (!(await shareBackup())) downloadBackup();
+  }
+
   function confirmResetSettings() {
     void (async () => {
       await resetPreferences();
@@ -291,7 +296,7 @@ export function SettingsPanel() {
             <Button
               variant="outline"
               className="min-h-10.5 px-4"
-              onClick={() => downloadBackup()}
+              onClick={() => void onExport()}
             >
               {t("exportAction")}
             </Button>

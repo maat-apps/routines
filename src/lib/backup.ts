@@ -101,12 +101,17 @@ export function backupFileName(date = new Date()): string {
   return `routines-backup-${stamp}.json`;
 }
 
+function backupFile(backup: Backup): File {
+  return new File(
+    [JSON.stringify(backup, null, 2)],
+    backupFileName(new Date(backup.exportedAt)),
+    { type: "application/json" },
+  );
+}
+
 /** Hands the browser a JSON file to save. */
 export function downloadBackup(backup: Backup = createBackup()): void {
-  const blob = new Blob([JSON.stringify(backup, null, 2)], {
-    type: "application/json",
-  });
-  const url = URL.createObjectURL(blob);
+  const url = URL.createObjectURL(backupFile(backup));
   const link = document.createElement("a");
 
   link.href = url;
@@ -116,4 +121,27 @@ export function downloadBackup(backup: Backup = createBackup()): void {
   link.remove();
   // Revoking straight away can cancel the download in some browsers.
   window.setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
+
+/**
+ * Offers the backup file to the OS share sheet, so it can go straight to a
+ * cloud drive instead of the phone's Downloads folder. Returns whether the
+ * share was handled (shown to the user, or successfully shared) — `false`
+ * means the caller should fall back to `downloadBackup` instead, because the
+ * API isn't supported here or the share itself failed outright. The user
+ * cancelling the share sheet (`AbortError`) counts as handled, not a
+ * failure to fall back from.
+ */
+export async function shareBackup(
+  backup: Backup = createBackup(),
+): Promise<boolean> {
+  if (!navigator.canShare || !navigator.share) return false;
+  const file = backupFile(backup);
+  if (!navigator.canShare({ files: [file] })) return false;
+  try {
+    await navigator.share({ files: [file] });
+    return true;
+  } catch (error) {
+    return error instanceof Error && error.name === "AbortError";
+  }
 }
