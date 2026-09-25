@@ -131,33 +131,37 @@ export function downloadBackup(backup: Backup = createBackup()): void {
   window.setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
+export type ShareBackupResult = "shared" | "cancelled" | "unavailable";
+
 /**
  * Offers the backup file to the OS share sheet, so it can go straight to a
- * cloud drive instead of the phone's Downloads folder. Returns whether the
- * share was handled (shown to the user, or successfully shared) — `false`
- * means the caller should fall back to `downloadBackup` instead, because the
- * API isn't supported here or the share itself failed outright. The user
- * cancelling the share sheet (`AbortError`) counts as handled, not a
- * failure to fall back from.
+ * cloud drive instead of the phone's Downloads folder.
+ *
+ * - `"shared"` — the user picked a target and the share succeeded.
+ * - `"cancelled"` — the user dismissed the share sheet (`AbortError`); a
+ *   normal outcome, not a failure to fall back from.
+ * - `"unavailable"` — the API (or a file share) isn't supported here, or the
+ *   share itself failed outright; the caller should fall back to
+ *   `downloadBackup` instead.
  */
 export async function shareBackup(
   backup: Backup = createBackup(),
-): Promise<boolean> {
-  if (!navigator.canShare || !navigator.share) return false;
+): Promise<ShareBackupResult> {
+  if (!navigator.canShare || !navigator.share) return "unavailable";
   const file = backupFile(backup);
-  if (!navigator.canShare({ files: [file] })) return false;
+  if (!navigator.canShare({ files: [file] })) return "unavailable";
   try {
     await navigator.share({ files: [file] });
-    return true;
+    return "shared";
   } catch (error) {
     // DOMException (what navigator.share rejects with) doesn't reliably
     // extend Error across environments, so check `name` directly rather
     // than narrowing with `instanceof Error` first.
-    return (
+    const cancelled =
       typeof error === "object" &&
       error !== null &&
       "name" in error &&
-      error.name === "AbortError"
-    );
+      error.name === "AbortError";
+    return cancelled ? "cancelled" : "unavailable";
   }
 }

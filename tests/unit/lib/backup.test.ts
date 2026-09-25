@@ -309,47 +309,51 @@ describe("shareBackup", () => {
     data: { routines: [], state: {} },
   };
 
-  it("returns false when the Web Share API isn't supported", async () => {
+  it("returns 'unavailable' when the Web Share API isn't supported", async () => {
     const { backup } = await freshBackup();
     vi.stubGlobal("navigator", {
       ...navigator,
       canShare: undefined,
       share: undefined,
     });
-    await expect(backup.shareBackup(backupValue)).resolves.toBe(false);
+    await expect(backup.shareBackup(backupValue)).resolves.toBe(
+      "unavailable",
+    );
     vi.unstubAllGlobals();
   });
 
-  it("returns false when canShare rejects the file", async () => {
+  it("returns 'unavailable' when canShare rejects the file", async () => {
     const { backup } = await freshBackup();
     const canShare = vi.fn().mockReturnValue(false);
     const share = vi.fn();
     vi.stubGlobal("navigator", { ...navigator, canShare, share });
-    await expect(backup.shareBackup(backupValue)).resolves.toBe(false);
+    await expect(backup.shareBackup(backupValue)).resolves.toBe(
+      "unavailable",
+    );
     expect(share).not.toHaveBeenCalled();
     vi.unstubAllGlobals();
   });
 
-  it("shares the backup file and returns true on success", async () => {
+  it("shares the backup file and returns 'shared' on success", async () => {
     const { backup } = await freshBackup();
     const canShare = vi.fn().mockReturnValue(true);
     const share = vi.fn().mockResolvedValue(undefined);
     vi.stubGlobal("navigator", { ...navigator, canShare, share });
 
-    await expect(backup.shareBackup(backupValue)).resolves.toBe(true);
+    await expect(backup.shareBackup(backupValue)).resolves.toBe("shared");
     expect(canShare).toHaveBeenCalledWith({
       files: [expect.any(File)],
     });
     expect(share).toHaveBeenCalledWith({ files: [expect.any(File)] });
     const [sharedFile] = share.mock.calls[0][0].files;
     // Not .json — Chromium's Web Share API file allow-list excludes it, so
-    // the shared copy is named/typed as plain text (see shareableBackupFile).
+    // the shared copy is named/typed as plain text (see backupFile).
     expect(sharedFile.name).toBe("routines-backup-2026-09-17.txt");
     expect(sharedFile.type).toBe("text/plain");
     vi.unstubAllGlobals();
   });
 
-  it("treats a cancelled share sheet (AbortError) as handled", async () => {
+  it("returns 'cancelled' for a dismissed share sheet (AbortError)", async () => {
     const { backup } = await freshBackup();
     const canShare = vi.fn().mockReturnValue(true);
     const share = vi
@@ -357,17 +361,19 @@ describe("shareBackup", () => {
       .mockRejectedValue(new DOMException("cancelled", "AbortError"));
     vi.stubGlobal("navigator", { ...navigator, canShare, share });
 
-    await expect(backup.shareBackup(backupValue)).resolves.toBe(true);
+    await expect(backup.shareBackup(backupValue)).resolves.toBe("cancelled");
     vi.unstubAllGlobals();
   });
 
-  it("returns false when the share itself fails", async () => {
+  it("returns 'unavailable' when the share itself fails", async () => {
     const { backup } = await freshBackup();
     const canShare = vi.fn().mockReturnValue(true);
     const share = vi.fn().mockRejectedValue(new Error("share failed"));
     vi.stubGlobal("navigator", { ...navigator, canShare, share });
 
-    await expect(backup.shareBackup(backupValue)).resolves.toBe(false);
+    await expect(backup.shareBackup(backupValue)).resolves.toBe(
+      "unavailable",
+    );
     vi.unstubAllGlobals();
   });
 });

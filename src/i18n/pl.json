@@ -55,6 +55,8 @@
   "exportData": "Eksport",
   "exportDataDescription": "Zapisz rutyny do pliku.",
   "exportAction": "Zapisz",
+  "exportShared": "Kopia zapasowa udostępniona.",
+  "exportDone": "Kopia zapasowa zapisana do pliku.",
   "importData": "Import",
   "importDataDescription": "Przywróć rutyny z kopii zapasowej.",
   "importAction": "Wybierz plik",

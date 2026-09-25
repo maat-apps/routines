@@ -203,7 +203,15 @@ export function SettingsPanel() {
   }
 
   async function onExport() {
-    if (!(await shareBackup())) downloadBackup();
+    setStatus(null);
+    const result = await shareBackup();
+    if (result === "shared") {
+      setStatus(t("exportShared"));
+    } else if (result === "unavailable") {
+      downloadBackup();
+      setStatus(t("exportDone"));
+    }
+    // "cancelled" — the user dismissed the share sheet; nothing to report.
   }
 
   function confirmResetSettings() {

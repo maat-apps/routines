@@ -31,6 +31,11 @@ test.describe("backup export / import", () => {
     expect(backup.version).toBe(1);
     expect(backup.data.routines).toHaveLength(1);
     expect(backup.data.routines[0].name).toBe("Morning");
+
+    // Headless Chromium has no share targets, so this always falls back to
+    // downloadBackup — the "shared" status is covered at the unit level
+    // (backup.test.ts), since there's no real share sheet to drive here.
+    await expect(page.getByText(en.exportDone)).toBeVisible();
   });
 
   test("importing a valid backup replaces the current routines after confirmation", async ({
