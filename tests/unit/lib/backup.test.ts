@@ -316,9 +316,7 @@ describe("shareBackup", () => {
       canShare: undefined,
       share: undefined,
     });
-    await expect(backup.shareBackup(backupValue)).resolves.toBe(
-      "unavailable",
-    );
+    await expect(backup.shareBackup(backupValue)).resolves.toBe("unavailable");
     vi.unstubAllGlobals();
   });
 
@@ -327,9 +325,7 @@ describe("shareBackup", () => {
     const canShare = vi.fn().mockReturnValue(false);
     const share = vi.fn();
     vi.stubGlobal("navigator", { ...navigator, canShare, share });
-    await expect(backup.shareBackup(backupValue)).resolves.toBe(
-      "unavailable",
-    );
+    await expect(backup.shareBackup(backupValue)).resolves.toBe("unavailable");
     expect(share).not.toHaveBeenCalled();
     vi.unstubAllGlobals();
   });
@@ -371,9 +367,7 @@ describe("shareBackup", () => {
     const share = vi.fn().mockRejectedValue(new Error("share failed"));
     vi.stubGlobal("navigator", { ...navigator, canShare, share });
 
-    await expect(backup.shareBackup(backupValue)).resolves.toBe(
-      "unavailable",
-    );
+    await expect(backup.shareBackup(backupValue)).resolves.toBe("unavailable");
     vi.unstubAllGlobals();
   });
 });
