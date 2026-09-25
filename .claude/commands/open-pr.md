@@ -32,7 +32,9 @@ Do NOT proceed past step 1 without stopping and telling the user why.
      diffs to understand _why_, not just _what_. Output a flat bulleted
      list, no markdown headers, no "Summary"/"Test plan" sections, no
      reference to `.claude/tasks/` (gitignored, invisible to reviewers),
-     changes grouped logically rather than one bullet per file.
+     changes grouped logically rather than one bullet per file, and a
+     trailing `Closes #N` line if (and only if) exactly one open Issue
+     confidently matches what this branch does.
    - Create via:
      ```
      gh pr create --title "<title>" --body "$(cat <<'EOF'
