@@ -164,7 +164,11 @@ true`, `storage.ts`'s background load waits for that key before decrypting
   the one exception — creating a routine is a forward transition to a
   different screen, not a "back," so it just replaces the disposable `/new`
   draft entry directly. Settings is a drawer opened from the home view's
-  state, not a route — `src/views/home/settings-panel.tsx`.
+  state, not a route — `src/views/home/settings-panel.tsx`, which composes
+  one `Section` component per settings card from sibling
+  `settings-<name>-section.tsx` files (plus shared `SettingsSection`/
+  `SettingsRow`/`ConfirmDrawer` in `settings-primitives.tsx`) rather than
+  holding every section inline.
   `/all-routines` (`all-routines-view.tsx`) is a later addition: home's own
   list is scoped to routines active today (`isRoutineActiveToday`), so this
   is the only way to reach one that isn't — a plain lookup/access point, not
@@ -456,6 +460,20 @@ directly.
   free of `react`/`react-dom` imports.
 - View-level UI lives in `src/views/<name>/`; `src/components/` is for UI
   shared by 2+ views only (gates, `app-bar.tsx`, `ui/` primitives).
+- Extract a component or function into its own file once either (a) it's
+  used in more than two places — including within a single view file, not
+  just across views like the bullet above — or (b) its containing file
+  grows past ~200 lines, whichever comes first. Not a mechanical
+  line-count gate: some files earn their length (a view with many short,
+  cohesive JSX sections, or a single-purpose `lib/` module already
+  documented above) — judge whether splitting actually improves
+  readability rather than splitting just to hit a number. Acted on for
+  `settings-panel.tsx` (was one 446-line file mixing every settings
+  section; now an orchestrator plus one file per section under
+  `src/views/home/settings-*-section.tsx`) and for the identical
+  `@dnd-kit` sensor setup duplicated verbatim between
+  `routine-edit-form.tsx` and `routine-list.tsx` (now `useDragSensors()`
+  in `src/hooks/`).
 - Playwright test helpers live in `e2e/utils.ts`, not `fixtures.ts` —
   a cross-project convention (all maat-apps projects, not just this one),
   chosen because these are plain reusable functions the specs call
