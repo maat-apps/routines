@@ -1,10 +1,9 @@
-import { ChevronRight } from "lucide-react";
 import { startTransition } from "react";
 import { useNavigate } from "react-router";
 
 import { AppBar } from "@/components/app-bar";
 import { EmptyState } from "@/components/empty-states";
-import { ProgressRing } from "@/components/progress-ring";
+import { RoutineRowContent } from "@/components/routine-row-content";
 import { useSmartBack } from "@/hooks/use-smart-back";
 import { useRoutines, useRoutineState } from "@/hooks/use-store";
 import { useTranslation } from "@/i18n/use-translation";
@@ -52,23 +51,19 @@ export function AllRoutinesView() {
                   )
                 }
               >
-                <ProgressRing
-                  compact
-                  completed={checkedCount}
-                  total={routine.steps.length}
-                  ariaLabel={`${checkedCount} / ${routine.steps.length} ${t("completed")}`}
+                <RoutineRowContent
+                  routine={routine}
+                  checkedCount={checkedCount}
+                  completedLabel={t("completed")}
+                  unnamedLabel={t("unnamed")}
+                  subtitle={
+                    !activeToday && (
+                      <span className="text-muted-foreground text-xs">
+                        {t("notScheduledToday")}
+                      </span>
+                    )
+                  }
                 />
-                <span className="grid min-w-0 flex-1 gap-1.5">
-                  <strong className="font-heading overflow-hidden text-lg font-semibold text-ellipsis whitespace-nowrap">
-                    {routine.name || t("unnamed")}
-                  </strong>
-                  {!activeToday && (
-                    <span className="text-muted-foreground text-xs">
-                      {t("notScheduledToday")}
-                    </span>
-                  )}
-                </span>
-                <ChevronRight aria-hidden="true" />
               </button>
             );
           })}

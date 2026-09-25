@@ -39,8 +39,6 @@ one-line summary in `CLAUDE.md`'s Conventions section and removed from here.
   `restrictToParentElement`, `afterEach` in three different test files, `getServerStandaloneSnapshot`).
   Promoted to CLAUDE.md's Workflow Rules — always add a new import in the same `Edit` call as its
   first usage.
-- Borderline size: [src/views/home/settings-panel.tsx](../../src/views/home/settings-panel.tsx)
-  is 408 lines — worth a look next time it grows, not yet a real problem.
 
 ## Naming Conventions
 

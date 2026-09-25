@@ -1,13 +1,4 @@
-import {
-  closestCenter,
-  DndContext,
-  type DragEndEvent,
-  KeyboardSensor,
-  PointerSensor,
-  TouchSensor,
-  useSensor,
-  useSensors,
-} from "@dnd-kit/core";
+import { closestCenter, DndContext, type DragEndEvent } from "@dnd-kit/core";
 import {
   restrictToParentElement,
   restrictToVerticalAxis,
@@ -15,26 +6,17 @@ import {
 import {
   arrayMove,
   SortableContext,
-  sortableKeyboardCoordinates,
-  useSortable,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
-import { CalendarDays, GripVertical, Plus, Trash2 } from "lucide-react";
-import { type ChangeEvent, useEffect, useRef, useState } from "react";
+import { CalendarDays, Plus, Trash2 } from "lucide-react";
+import { useState } from "react";
 
 import { AppBar } from "@/components/app-bar";
+import { ConfirmDrawer } from "@/components/confirm-drawer";
+import { SortableStepRow } from "@/components/sortable-step-row";
 import { Button } from "@/components/ui/button";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-} from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { useDragSensors } from "@/hooks/use-drag-sensors";
 import { useTranslation } from "@/i18n/use-translation";
 import {
   createId,
@@ -42,9 +24,7 @@ import {
   weekdayLabels,
   weekOrder,
 } from "@/lib/routine-utils";
-import type { Routine, RoutineStep } from "@/types";
-
-const editStepButtonClass = "size-10.5 flex-none [&>svg]:size-5";
+import type { Routine } from "@/types";
 
 // Shared by the "/new" and "/:id/edit" views — the only difference between
 // creating and editing a routine is what happens on save/back/delete.
@@ -89,15 +69,7 @@ export function RoutineEditForm({
         : [...current, day].sort((a, b) => a - b),
     );
   }
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(TouchSensor, {
-      activationConstraint: { delay: 180, tolerance: 8 },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    }),
-  );
+  const sensors = useDragSensors();
 
   function updateStep(stepId: string, text: string) {
     setSteps((current) =>
@@ -278,138 +250,14 @@ export function RoutineEditForm({
           {t("done")}
         </Button>
       </div>
-      <Drawer showSwipeHandle open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <DrawerContent>
-          <DrawerHeader className="group-data-[swipe-axis=y]/drawer-popup:text-left">
-            <DrawerTitle>{t("deleteRoutineTitle")}</DrawerTitle>
-            <DrawerDescription>
-              {t("deleteRoutineDescription")}
-            </DrawerDescription>
-          </DrawerHeader>
-          <DrawerFooter className="pb-[calc(16px+env(safe-area-inset-bottom))]">
-            <Button
-              className="min-h-12.5 text-base"
-              variant="outline"
-              onClick={() => setDeleteOpen(false)}
-            >
-              {t("cancel")}
-            </Button>
-            <Button
-              className="min-h-12.5 text-base"
-              variant="destructive"
-              onClick={onDelete}
-            >
-              {t("deleteRoutine")}
-            </Button>
-          </DrawerFooter>
-        </DrawerContent>
-      </Drawer>
-    </div>
-  );
-}
-
-function SortableStepRow({
-  step,
-  placeholder,
-  stepLabel,
-  dragLabel,
-  deleteLabel,
-  autoFocus = false,
-  onChange,
-  onDelete,
-  onEnter,
-  onMergeUp,
-}: {
-  step: RoutineStep;
-  placeholder: string;
-  stepLabel: string;
-  dragLabel: string;
-  deleteLabel: string;
-  autoFocus?: boolean;
-  onChange: (stepId: string, text: string) => void;
-  onDelete: (stepId: string) => void;
-  onEnter: (stepId: string) => void;
-  onMergeUp: (stepId: string) => void;
-}) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: step.id });
-  const inputRef = useRef<HTMLTextAreaElement>(null);
-
-  useEffect(() => {
-    if (autoFocus) {
-      const input = inputRef.current;
-      input?.focus();
-      input?.setSelectionRange(input.value.length, input.value.length);
-    }
-  }, [autoFocus]);
-
-  // Textareas don't grow to fit their content on their own — resize on every
-  // value change (typing, backspace, a paste) so a multi-line step never
-  // shows a scrollbar instead of just growing the row.
-  useEffect(() => {
-    const input = inputRef.current;
-    if (!input) return;
-    input.style.height = "auto";
-    input.style.height = `${input.scrollHeight}px`;
-  }, [step.text]);
-
-  return (
-    <div
-      className={`border-border flex items-center gap-2 border-b py-2.5 last:border-b-0 ${
-        isDragging
-          ? "bg-card relative z-1 shadow-[0_8px_20px_oklch(0_0_0/20%)]"
-          : ""
-      }`}
-      ref={setNodeRef}
-      style={{ transform: CSS.Transform.toString(transform), transition }}
-    >
-      <Button
-        className={`${editStepButtonClass} cursor-grab touch-none active:cursor-grabbing`}
-        variant="ghost"
-        size="icon-sm"
-        aria-label={dragLabel}
-        {...attributes}
-        {...listeners}
-      >
-        <GripVertical aria-hidden="true" />
-      </Button>
-      <Textarea
-        ref={inputRef}
-        rows={1}
-        className="h-11.5 min-w-0 flex-1 resize-none overflow-hidden border-0 text-base shadow-none focus-visible:border-0 focus-visible:ring-0"
-        value={step.text}
-        onChange={(event: ChangeEvent<HTMLTextAreaElement>) =>
-          onChange(step.id, event.target.value)
-        }
-        onKeyDown={(event) => {
-          if (event.key === "Enter" && !event.shiftKey) {
-            event.preventDefault();
-            onEnter(step.id);
-          } else if (
-            (event.key === "Backspace" || event.key === "Delete") &&
-            step.text === ""
-          ) {
-            onMergeUp(step.id);
-          }
-        }}
-        placeholder={placeholder}
-        aria-label={stepLabel}
+      <ConfirmDrawer
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title={t("deleteRoutineTitle")}
+        description={t("deleteRoutineDescription")}
+        confirmLabel={t("deleteRoutine")}
+        onConfirm={onDelete}
       />
-      <Button
-        className={editStepButtonClass}
-        variant="ghost"
-        size="icon-sm"
-        aria-label={deleteLabel}
-        onClick={() => onDelete(step.id)}
-      >
-        <Trash2 />
-      </Button>
     </div>
   );
 }
