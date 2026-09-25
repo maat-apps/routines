@@ -1,14 +1,29 @@
+import { kvGet, kvSet } from "@/lib/idb-store";
 import { parseRoutines, parseState } from "@/lib/schemas";
+import {
+  getSettingsSnapshot,
+  whenLoaded as whenSettingsLoaded,
+} from "@/lib/settings";
 import { DATA_KEY } from "@/lib/storage-keys";
+import {
+  decryptJson,
+  encryptJson,
+  isEncryptedBlob,
+} from "@/lib/webauthn-crypto";
 import type { AppData, Routine, RoutineState } from "@/types";
 
 const emptyData: AppData = { routines: [], state: {} };
 
 // --- Central store -----------------------------------------------------------
-// localStorage is the single source of truth, but React screens need to react to
-// mutations that happen on other screens (e.g. checking a step in the detail view
-// should update the counter on the list). We expose a tiny pub/sub with cached
-// snapshots so components can subscribe via `useSyncExternalStore`.
+// An in-memory copy of `AppData` is the real source of truth once loaded;
+// IndexedDB is the write-through backing store — read once in the background
+// at startup, written to in the background on every mutation. Every read below
+// only ever touches the in-memory copy, so the whole module stays synchronous
+// from a caller's point of view even though the storage engine underneath it
+// isn't. React screens need to react to mutations that happen on other screens
+// (e.g. checking a step in the detail view should update the counter on the
+// list), so we expose a tiny pub/sub with cached snapshots components can
+// subscribe to via `useSyncExternalStore`.
 const listeners = new Set<() => void>();
 const serverRoutines: Routine[] = [];
 const serverState: RoutineState = {};
@@ -16,6 +31,88 @@ const serverState: RoutineState = {};
 let routinesSnapshot: Routine[] = serverRoutines;
 let stateSnapshot: RoutineState = serverState;
 let snapshotStale = true;
+
+let dbData: AppData = emptyData;
+let loaded: Promise<void> | null = null;
+
+// Set by app-lock.ts once a WebAuthn PRF-derived key is available (after a
+// successful enrol/verify). Null means "no encryption" — either no lock is
+// enrolled, or the device doesn't support PRF (see webauthn-crypto.ts).
+let encryptionKey: CryptoKey | null = null;
+// AppLockGate mounts its children — and with them, the first real read from
+// this module — only *after* verifyAppLock() has already resolved and called
+// setEncryptionKey(). So by the time loadData() first calls whenUnlocked(),
+// the unlock may already have happened; this flag lets it resolve
+// immediately instead of waiting on an event that already fired.
+let hasUnlocked = false;
+let unlockResolve: (() => void) | null = null;
+let unlockPromise: Promise<void> | null = null;
+
+function whenUnlocked(): Promise<void> {
+  if (hasUnlocked) return Promise.resolve();
+  unlockPromise ??= new Promise((resolve) => {
+    unlockResolve = resolve;
+  });
+  return unlockPromise;
+}
+
+/**
+ * Hands storage the derived key so it can decrypt/encrypt. Called with a key
+ * right after a successful enrol/verify, and with `null` when the lock is
+ * disabled while already unlocked (data simply stops being encrypted from
+ * the next write on — see app-lock.ts's two disable paths).
+ */
+export function setEncryptionKey(key: CryptoKey | null): void {
+  encryptionKey = key;
+  if (key) {
+    hasUnlocked = true;
+    unlockResolve?.();
+    unlockResolve = null;
+  }
+}
+
+async function loadData(): Promise<void> {
+  await whenSettingsLoaded();
+  const lock = getSettingsSnapshot().lock;
+  if (lock?.encryptionSupported) {
+    // The whole app is gated behind AppLockGate until unlock succeeds, so
+    // real data is never needed — and never readable — before that.
+    await whenUnlocked();
+  }
+  try {
+    const stored = await kvGet<unknown>(DATA_KEY);
+    if (stored) {
+      const raw =
+        encryptionKey && isEncryptedBlob(stored)
+          ? await decryptJson<Partial<AppData>>(encryptionKey, stored)
+          : (stored as Partial<AppData>);
+      dbData = {
+        routines: parseRoutines(raw.routines),
+        state: parseState(raw.state),
+      };
+    }
+  } catch {
+    // Keep emptyData — same fallback as a corrupt/missing stored blob.
+  } finally {
+    emitChange();
+  }
+}
+
+function ensureLoaded(): void {
+  if (loaded) return;
+  loaded = loadData();
+}
+
+/**
+ * Resolves once the initial background read from IndexedDB has finished.
+ * Real screens never need this (they just re-render on the `emitChange()`
+ * this fires) — it exists so tests can await readiness deterministically
+ * instead of polling.
+ */
+export function whenLoaded(): Promise<void> {
+  ensureLoaded();
+  return loaded ?? Promise.resolve();
+}
 
 function refreshSnapshots(): void {
   const normalized = normalizeState(readData());
@@ -73,25 +170,24 @@ function readData(): AppData {
   if (typeof window === "undefined") {
     return emptyData;
   }
-
-  try {
-    const stored = window.localStorage.getItem(DATA_KEY);
-    if (!stored) {
-      return emptyData;
-    }
-
-    const parsed = JSON.parse(stored) as Partial<AppData>;
-    return {
-      routines: parseRoutines(parsed.routines),
-      state: parseState(parsed.state),
-    };
-  } catch {
-    return emptyData;
-  }
+  ensureLoaded();
+  return dbData;
 }
 
 function writeData(data: AppData): void {
-  window.localStorage.setItem(DATA_KEY, JSON.stringify(data));
+  dbData = data;
+  void persist(data);
+}
+
+async function persist(data: AppData): Promise<void> {
+  try {
+    const toStore = encryptionKey
+      ? await encryptJson(encryptionKey, data)
+      : data;
+    await kvSet(DATA_KEY, toStore);
+  } catch {
+    // Best-effort — the in-memory copy (and this tab) already reflects it.
+  }
 }
 
 function normalizeState(data: AppData): AppData {

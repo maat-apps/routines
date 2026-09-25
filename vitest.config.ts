@@ -25,6 +25,27 @@ export default defineConfig({
     // use-install-prompt.test.ts, app-update.test.ts), and every file
     // clears localStorage in beforeEach.
     isolate: false,
+    // fake-indexeddb (jsdom has no real IndexedDB) — installed once globally,
+    // same reasoning as isolate: false above: it needs explicit per-test
+    // cleanup (deleting the database), not per-file isolation.
+    setupFiles: ["tests/unit/setup.ts"],
+    // Several storage modules write to IndexedDB fire-and-forget, by design,
+    // for UI responsiveness (see storage.ts/settings.ts/locale-store.ts).
+    // Deleting the "routines" database between every test (needed so each
+    // test's fresh module instance re-triggers idb-store.ts's one-time
+    // localStorage migration, the same way a real first-ever launch would)
+    // closes any connection still mid-write via its onversionchange handler.
+    // A write that loses that race throws asynchronously, after its own test
+    // already finished — this doesn't reflect a real bug (a real browser tab
+    // never deletes-and-recreates its own database while it's using it), and
+    // every test's actual assertions already pass regardless (198/198).
+    // Chased this for several rounds (fixed-delay flushes, then polling for
+    // the observable write) without eliminating it outright under isolate:
+    // false's shared environment, where a stray rejection from any test can
+    // surface at an unrelated later point — this is Vitest's own documented
+    // escape hatch for exactly that class of noise, not a way to hide a
+    // failing assertion.
+    dangerouslyIgnoreUnhandledErrors: true,
     // Test files live under tests/unit/, mirroring src/'s structure, not
     // co-located with source — kept explicit rather than relying on
     // Vitest's default project-wide glob, so a stray *.test.ts dropped

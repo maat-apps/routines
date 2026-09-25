@@ -1,18 +1,25 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DATA_KEY } from "@/lib/storage-keys";
+import { resetIndexedDb } from "../reset-indexeddb";
 
 // getRawData's `typeof window === "undefined"` guard is tested in
 // ssr-guards.test.ts, not here — it needs a Node environment (no window at
 // all), which this file can't switch to without breaking every other test
 // below that relies on jsdom.
 //
-// storage.ts caches its snapshot in module-level state, so each test needs a
-// fresh module instance — otherwise one test's cached snapshot would bleed
-// into the next.
+// storage.ts caches its data in module-level state, so each test needs a
+// fresh module instance — otherwise one test's cached data would bleed into
+// the next. Data now loads from IndexedDB in the background on first access,
+// so this also awaits `whenLoaded()` before handing the module back — tests
+// seed via `localStorage.setItem` exactly as before, and idb-store.ts's
+// one-time migration (triggered because resetIndexedDb() below leaves no
+// database for the next freshStorage() to find) picks it up from there.
 async function freshStorage() {
   vi.resetModules();
-  return import("@/lib/storage");
+  const storage = await import("@/lib/storage");
+  await storage.whenLoaded();
+  return storage;
 }
 
 function todayStr(date = new Date()): string {
@@ -22,8 +29,9 @@ function todayStr(date = new Date()): string {
   return `${year}-${month}-${day}`;
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   localStorage.clear();
+  await resetIndexedDb();
 });
 
 describe("readData / getRawData", () => {
@@ -418,5 +426,182 @@ describe("server snapshots (useSyncExternalStore's SSR fallback)", () => {
       await freshStorage();
     expect(getServerRoutinesSnapshot()).toEqual([]);
     expect(getServerStateSnapshot()).toEqual({});
+  });
+});
+
+describe("setEncryptionKey", () => {
+  it("persists writes as an encrypted blob once a key is set", async () => {
+    const { saveRoutine, setEncryptionKey } = await freshStorage();
+    const { deriveKey, isEncryptedBlob, randomBytes } =
+      await import("@/lib/webauthn-crypto");
+    const { kvGet } = await import("@/lib/idb-store");
+    setEncryptionKey(await deriveKey(randomBytes(32), randomBytes(16)));
+
+    saveRoutine({
+      id: "r1",
+      name: "A",
+      order: 0,
+      activeDays: [0, 1, 2, 3, 4, 5, 6],
+      steps: [],
+    });
+
+    // The write (encrypt + kvSet) is fire-and-forget — poll instead of
+    // guessing a fixed delay, since real crypto.subtle + IndexedDB timing
+    // varies with the runner's load.
+    await vi.waitFor(async () => {
+      expect(isEncryptedBlob(await kvGet(DATA_KEY))).toBe(true);
+    });
+  });
+
+  it("decrypts an existing encrypted blob on load once the key is set", async () => {
+    vi.resetModules();
+    const storage = await import("@/lib/storage");
+    const { deriveKey, encryptJson, randomBytes } =
+      await import("@/lib/webauthn-crypto");
+    const { kvSet } = await import("@/lib/idb-store");
+    const key = await deriveKey(randomBytes(32), randomBytes(16));
+    const data = {
+      routines: [
+        {
+          id: "r1",
+          name: "Secret",
+          order: 0,
+          activeDays: [0, 1, 2, 3, 4, 5, 6],
+          steps: [],
+        },
+      ],
+      state: {},
+    };
+    await kvSet(DATA_KEY, await encryptJson(key, data));
+
+    storage.setEncryptionKey(key);
+    await storage.whenLoaded();
+
+    expect(storage.getRawData().routines).toEqual(data.routines);
+  });
+
+  it("does not reveal encrypted data until a key is provided, when the enrolled lock requires one", async () => {
+    vi.resetModules();
+    const settings = await import("@/lib/settings");
+    await settings.whenLoaded();
+    settings.setLockEnrolment({
+      credentialId: "c1",
+      userId: "u1",
+      createdAt: "now",
+      encryptionSupported: true,
+      prfSalt: "c2FsdA",
+    });
+
+    const { deriveKey, encryptJson, randomBytes } =
+      await import("@/lib/webauthn-crypto");
+    const { kvSet } = await import("@/lib/idb-store");
+    const key = await deriveKey(randomBytes(32), randomBytes(16));
+    const data = {
+      routines: [
+        {
+          id: "r1",
+          name: "Secret",
+          order: 0,
+          activeDays: [0, 1, 2, 3, 4, 5, 6],
+          steps: [],
+        },
+      ],
+      state: {},
+    };
+    await kvSet(DATA_KEY, await encryptJson(key, data));
+
+    const storage = await import("@/lib/storage");
+    // Kick off the background load but never await it directly here — if
+    // it were wrongly not gated, this delay would be enough for it to have
+    // already decrypted and populated the real data.
+    void storage.whenLoaded();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(storage.getRawData()).toEqual({ routines: [], state: {} });
+
+    storage.setEncryptionKey(key);
+    await storage.whenLoaded();
+    expect(storage.getRawData().routines).toEqual(data.routines);
+  });
+
+  it("decrypts data when the key was set before the first load — AppLockGate's real ordering", async () => {
+    vi.resetModules();
+    const settings = await import("@/lib/settings");
+    await settings.whenLoaded();
+    settings.setLockEnrolment({
+      credentialId: "c1",
+      userId: "u1",
+      createdAt: "now",
+      encryptionSupported: true,
+      prfSalt: "c2FsdA",
+    });
+
+    const { deriveKey, encryptJson, randomBytes } =
+      await import("@/lib/webauthn-crypto");
+    const { kvSet } = await import("@/lib/idb-store");
+    const key = await deriveKey(randomBytes(32), randomBytes(16));
+    const data = {
+      routines: [
+        {
+          id: "r1",
+          name: "Secret",
+          order: 0,
+          activeDays: [0, 1, 2, 3, 4, 5, 6],
+          steps: [],
+        },
+      ],
+      state: {},
+    };
+    await kvSet(DATA_KEY, await encryptJson(key, data));
+
+    // AppLockGate calls setEncryptionKey() as soon as verifyAppLock()
+    // resolves, and only mounts children — the first code to ever touch
+    // this module — afterwards. So the key can already be set before
+    // whenLoaded() (and the whenUnlocked() it awaits internally) ever runs.
+    const storage = await import("@/lib/storage");
+    storage.setEncryptionKey(key);
+    await storage.whenLoaded();
+
+    expect(storage.getRawData().routines).toEqual(data.routines);
+  });
+
+  it("does not hold the load when the enrolled lock is lock-only (no PRF support)", async () => {
+    vi.resetModules();
+    const settings = await import("@/lib/settings");
+    await settings.whenLoaded();
+    settings.setLockEnrolment({
+      credentialId: "c1",
+      userId: "u1",
+      createdAt: "now",
+      encryptionSupported: false,
+    });
+
+    const storage = await import("@/lib/storage");
+    // If this were incorrectly gated on a key that's never provided, this
+    // await would hang until the test times out rather than resolving.
+    await storage.whenLoaded();
+    expect(storage.getRawData()).toEqual({ routines: [], state: {} });
+  });
+
+  it("stops encrypting once the key is cleared", async () => {
+    const { saveRoutine, setEncryptionKey } = await freshStorage();
+    const { deriveKey, isEncryptedBlob, randomBytes } =
+      await import("@/lib/webauthn-crypto");
+    const { kvGet } = await import("@/lib/idb-store");
+    setEncryptionKey(await deriveKey(randomBytes(32), randomBytes(16)));
+    setEncryptionKey(null);
+
+    saveRoutine({
+      id: "r1",
+      name: "A",
+      order: 0,
+      activeDays: [0, 1, 2, 3, 4, 5, 6],
+      steps: [],
+    });
+
+    await vi.waitFor(async () => {
+      const stored = await kvGet(DATA_KEY);
+      expect(stored).not.toBeUndefined();
+    });
+    expect(isEncryptedBlob(await kvGet(DATA_KEY))).toBe(false);
   });
 });

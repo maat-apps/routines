@@ -1,7 +1,10 @@
-import { isLocale, setStoredLocale } from "@/lib/locale-store";
+import {
+  getLocaleSnapshot,
+  isLocale,
+  setStoredLocale,
+} from "@/lib/locale-store";
 import { parseRoutines, parseState } from "@/lib/schemas";
 import { getRawData, replaceAllData } from "@/lib/storage";
-import { LOCALE_KEY } from "@/lib/storage-keys";
 import type { AppData } from "@/types";
 
 export const BACKUP_VERSION = 1;
@@ -25,18 +28,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 /** Snapshots everything worth keeping, ready to be serialised to a file. */
 export function createBackup(): Backup {
-  let locale: string | null = null;
-  try {
-    locale = window.localStorage.getItem(LOCALE_KEY);
-  } catch {
-    // Storage can be unavailable; the backup is still worth taking.
-  }
-
   return {
     app: "routines",
     version: BACKUP_VERSION,
     exportedAt: new Date().toISOString(),
-    locale,
+    locale: getLocaleSnapshot(),
     data: getRawData(),
   };
 }
@@ -52,7 +48,15 @@ export function parseBackup(text: string): Backup {
   } catch {
     throw new BackupError("The file is not valid JSON.");
   }
+  return parseBackupValue(parsed);
+}
 
+/**
+ * Same validation as `parseBackup`, for a value that's already an object —
+ * e.g. one read back from IndexedDB, which stores structured-cloned values
+ * rather than JSON text.
+ */
+export function parseBackupValue(parsed: unknown): Backup {
   if (!isRecord(parsed) || parsed.app !== "routines") {
     throw new BackupError("The file is not a Routines backup.");
   }

@@ -1,3 +1,4 @@
+import { kvGet, kvSet } from "@/lib/idb-store";
 import { LOCALE_KEY } from "@/lib/storage-keys";
 
 // The non-React half of the i18n store: a module-level singleton so it can be
@@ -22,31 +23,56 @@ function detectLocale(): Locale {
   return language.toLowerCase().startsWith("pl") ? "pl" : DEFAULT_LOCALE;
 }
 
-function readStoredLocale(): Locale {
-  if (typeof window === "undefined") {
-    return DEFAULT_LOCALE;
-  }
-  try {
-    const stored = window.localStorage.getItem(LOCALE_KEY);
-    if (isLocale(stored)) {
-      return stored;
-    }
-    const detected = detectLocale();
-    window.localStorage.setItem(LOCALE_KEY, detected);
-    return detected;
-  } catch {
-    return DEFAULT_LOCALE;
+const listeners = new Set<() => void>();
+let localeSnapshot: Locale | null = null;
+let loaded: Promise<void> | null = null;
+
+function notify(): void {
+  for (const listener of listeners) {
+    listener();
   }
 }
 
-const listeners = new Set<() => void>();
-let localeSnapshot: Locale | null = null;
+// The snapshot starts as the instant, synchronous device-language guess so
+// there's no loading gap for locale specifically; this only ever corrects it
+// in the background if a previously-stored choice disagrees.
+function ensureLoaded(): void {
+  if (loaded) return;
+  if (typeof window === "undefined") return;
+  localeSnapshot ??= detectLocale();
+
+  loaded = kvGet<unknown>(LOCALE_KEY)
+    .then((stored) => {
+      if (isLocale(stored)) {
+        if (stored !== localeSnapshot) {
+          localeSnapshot = stored;
+          notify();
+        }
+      } else if (localeSnapshot) {
+        // First-ever run: persist the guessed default so it's what's
+        // actually stored, matching this store's "once stored, it always
+        // wins" contract above.
+        void kvSet(LOCALE_KEY, localeSnapshot);
+      }
+    })
+    .catch(() => {
+      // Keep the guessed default.
+    });
+}
+
+/**
+ * Resolves once the initial background read from IndexedDB has finished.
+ * Real screens never need this (the guessed default is already correct in
+ * the common case) — it exists so tests can await readiness deterministically.
+ */
+export function whenLoaded(): Promise<void> {
+  ensureLoaded();
+  return loaded ?? Promise.resolve();
+}
 
 export function getLocaleSnapshot(): Locale {
-  if (localeSnapshot === null) {
-    localeSnapshot = readStoredLocale();
-  }
-  return localeSnapshot;
+  ensureLoaded();
+  return localeSnapshot ?? DEFAULT_LOCALE;
 }
 
 export function getServerLocaleSnapshot(): Locale {
@@ -62,13 +88,6 @@ export function subscribeToLocale(listener: () => void): () => void {
 
 export function setStoredLocale(next: Locale): void {
   localeSnapshot = next;
-  try {
-    window.localStorage.setItem(LOCALE_KEY, next);
-  } catch {
-    // Ignore storage failures (private mode, blocked storage) — the choice
-    // simply won't persist across reloads.
-  }
-  for (const listener of listeners) {
-    listener();
-  }
+  void kvSet(LOCALE_KEY, next);
+  notify();
 }

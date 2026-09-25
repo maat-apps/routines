@@ -2,14 +2,34 @@ import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SETTINGS_KEY } from "@/lib/storage-keys";
+import { resetIndexedDb } from "../reset-indexeddb";
 
 // use-install-prompt.ts reads/writes the persisted "installed" flag through
-// settings.ts, which caches its snapshot in a module-level singleton (same
-// reasoning as settings.test.ts) — without a fresh module instance per test,
-// one test's markInstalled() would leak into every test after it.
+// settings.ts, which caches its data in a module-level singleton loaded from
+// IndexedDB in the background (same reasoning as settings.test.ts) — without
+// a fresh module instance per test, one test's markInstalled() would leak
+// into every test after it, and without awaiting settings' own
+// `whenLoaded()`, the hook would mount before a seeded "installed" flag has
+// finished loading.
 async function freshInstallPrompt() {
   vi.resetModules();
+  const settings = await import("@/lib/settings");
+  await settings.whenLoaded();
   return import("@/hooks/use-install-prompt");
+}
+
+// markInstalled()'s write is fire-and-forget, and a first-ever IndexedDB
+// open in a generation also runs the upgrade/legacy-migration path, which
+// can take more than one macrotask tick — poll for the observable effect
+// (idb-store's kvGet, re-imported fresh since a static binding wouldn't
+// follow vi.resetModules()) rather than guessing a fixed delay, or the next
+// test's resetIndexedDb() can close the connection mid-write.
+async function waitForInstalledWrite(): Promise<void> {
+  const { kvGet } = await import("@/lib/idb-store");
+  await vi.waitFor(async () => {
+    const stored = await kvGet<{ installed?: boolean }>(SETTINGS_KEY);
+    expect(stored?.installed).toBe(true);
+  });
 }
 
 // jsdom doesn't implement matchMedia at all, so a controllable fake stands in
@@ -43,8 +63,9 @@ function createMatchMediaMock(initialMatches: boolean) {
 
 let mql: ReturnType<typeof createMatchMediaMock>;
 
-beforeEach(() => {
+beforeEach(async () => {
   localStorage.clear();
+  await resetIndexedDb();
   mql = createMatchMediaMock(false);
   vi.stubGlobal(
     "matchMedia",
@@ -153,6 +174,7 @@ describe("useInstallPrompt", () => {
       window.dispatchEvent(new Event("appinstalled"));
     });
     expect(result.current.state).toBe("installed");
+    await waitForInstalledWrite();
   });
 
   it("persists installed on appinstalled, surviving a later fresh load", async () => {
@@ -161,6 +183,13 @@ describe("useInstallPrompt", () => {
     act(() => {
       window.dispatchEvent(new Event("appinstalled"));
     });
+    // markInstalled()'s write is fire-and-forget — wait for it to actually
+    // land before resetModules() orphans this generation's connection, or a
+    // later test's resetIndexedDb() can close it mid-write (unhandled
+    // rejection). Real IndexedDB timing can take more than one macrotask
+    // tick (a first-ever open also runs the upgrade/migration path), so
+    // this polls for the observable effect rather than guessing a delay.
+    await waitForInstalledWrite();
 
     // Simulates a later page load: a fresh module instance, still not
     // standalone, with no beforeinstallprompt offered this time either.
@@ -174,6 +203,9 @@ describe("useInstallPrompt", () => {
     mql.set(true);
     const { useInstallPrompt } = await freshInstallPrompt();
     renderHook(() => useInstallPrompt());
+    // Mounting already-standalone marks installed — same fire-and-forget
+    // write, same reasoning as the test above.
+    await waitForInstalledWrite();
 
     // Simulates opening the same app later from a plain browser tab, where
     // Chrome no longer offers beforeinstallprompt for an already-installed app.

@@ -65,8 +65,29 @@ test.describe("settings", () => {
     await dialog.getByRole("button", { name: en.resetSettingsAction }).click();
 
     await page.waitForURL(/\/routines\/?$/);
-    const remainingKeys = await page.evaluate(() =>
-      Object.keys(window.localStorage),
+    // confirmResetSettings() reloads the page, but the URL doesn't change —
+    // waitForURL above can resolve on the pre-reload document, so wait for
+    // the reloaded app to actually re-render before touching page context
+    // again; otherwise the reload can destroy an in-flight page.evaluate()
+    // (seen as a flaky "Execution context was destroyed" on WebKit).
+    await expect(page.getByRole("button", { name: /Morning/ })).toBeVisible();
+
+    // Settings live in IndexedDB (src/lib/idb-store.ts), not localStorage —
+    // hand-duplicated store/key names, same reasoning as seedData() in
+    // ./utils.ts, since this runs in the page context, not this test file.
+    const remainingKeys = await page.evaluate(
+      () =>
+        new Promise<string[]>((resolve, reject) => {
+          const request = indexedDB.open("routines", 1);
+          request.onsuccess = () => {
+            const transaction = request.result.transaction("kv", "readonly");
+            const keysRequest = transaction.objectStore("kv").getAllKeys();
+            keysRequest.onsuccess = () =>
+              resolve(keysRequest.result as string[]);
+            keysRequest.onerror = () => reject(keysRequest.error);
+          };
+          request.onerror = () => reject(request.error);
+        }),
     );
     // routines-settings (app lock) is never auto-recreated, but
     // routines-locale is — the locale store's first-launch detection
@@ -74,6 +95,5 @@ test.describe("settings", () => {
     // presence afterward is correct behavior, not a leftover preference.
     expect(remainingKeys).not.toContain("routines-settings");
     expect(remainingKeys).toContain("routines-data");
-    await expect(page.getByRole("button", { name: /Morning/ })).toBeVisible();
   });
 });

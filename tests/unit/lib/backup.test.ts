@@ -1,18 +1,26 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  applyBackup,
-  BackupError,
-  backupFileName,
-  downloadBackup,
-  parseBackup,
-  type Backup,
-} from "@/lib/backup";
-import { getRawData, saveRoutine } from "@/lib/storage";
 import { LOCALE_KEY } from "@/lib/storage-keys";
+import { resetIndexedDb } from "../reset-indexeddb";
 
-beforeEach(() => {
+// backup.ts itself holds no module-level state, but it calls into
+// storage.ts and locale-store.ts, which now cache data in memory after an
+// async load from IndexedDB — a fresh module instance per test (awaiting
+// storage's `whenLoaded()`) keeps one test's data from bleeding into the
+// next, same reasoning as storage.test.ts.
+async function freshBackup() {
+  vi.resetModules();
+  const storage = await import("@/lib/storage");
+  await storage.whenLoaded();
+  const localeStore = await import("@/lib/locale-store");
+  const backup = await import("@/lib/backup");
+  const idbStore = await import("@/lib/idb-store");
+  return { storage, localeStore, backup, idbStore };
+}
+
+beforeEach(async () => {
   localStorage.clear();
+  await resetIndexedDb();
 });
 
 afterEach(() => {
@@ -21,32 +29,39 @@ afterEach(() => {
 });
 
 describe("parseBackup", () => {
-  it("rejects invalid JSON", () => {
-    expect(() => parseBackup("{not json")).toThrow(BackupError);
-    expect(() => parseBackup("{not json")).toThrow(/not valid JSON/);
+  it("rejects invalid JSON", async () => {
+    const { backup } = await freshBackup();
+    expect(() => backup.parseBackup("{not json")).toThrow(backup.BackupError);
+    expect(() => backup.parseBackup("{not json")).toThrow(/not valid JSON/);
   });
 
-  it("rejects a file that isn't a Routines backup", () => {
-    expect(() => parseBackup(JSON.stringify({ app: "other" }))).toThrow(
+  it("rejects a file that isn't a Routines backup", async () => {
+    const { backup } = await freshBackup();
+    expect(() => backup.parseBackup(JSON.stringify({ app: "other" }))).toThrow(
       /not a Routines backup/,
     );
-    expect(() => parseBackup(JSON.stringify({}))).toThrow(
+    expect(() => backup.parseBackup(JSON.stringify({}))).toThrow(
       /not a Routines backup/,
     );
   });
 
-  it("rejects a mismatched version", () => {
+  it("rejects a mismatched version", async () => {
+    const { backup } = await freshBackup();
     const text = JSON.stringify({ app: "routines", version: 999 });
-    expect(() => parseBackup(text)).toThrow(/different app version/);
+    expect(() => backup.parseBackup(text)).toThrow(/different app version/);
   });
 
-  it("rejects a backup with no routines array", () => {
+  it("rejects a backup with no routines array", async () => {
+    const { backup } = await freshBackup();
     const text = JSON.stringify({ app: "routines", version: 1, data: {} });
-    expect(() => parseBackup(text)).toThrow(/does not contain any routines/);
+    expect(() => backup.parseBackup(text)).toThrow(
+      /does not contain any routines/,
+    );
   });
 
-  it("round-trips a fully valid backup", () => {
-    const backup = {
+  it("round-trips a fully valid backup", async () => {
+    const { backup } = await freshBackup();
+    const value = {
       app: "routines",
       version: 1,
       exportedAt: "2026-09-17T12:00:00.000Z",
@@ -64,10 +79,11 @@ describe("parseBackup", () => {
         state: { r1: { checkedStepIds: [], lastResetDate: "2026-09-17" } },
       },
     };
-    expect(parseBackup(JSON.stringify(backup))).toEqual(backup);
+    expect(backup.parseBackup(JSON.stringify(value))).toEqual(value);
   });
 
-  it("falls back to sane defaults for a non-string exportedAt/locale", () => {
+  it("falls back to sane defaults for a non-string exportedAt/locale", async () => {
+    const { backup } = await freshBackup();
     const text = JSON.stringify({
       app: "routines",
       version: 1,
@@ -75,13 +91,14 @@ describe("parseBackup", () => {
       locale: 42,
       data: { routines: [] },
     });
-    const result = parseBackup(text);
+    const result = backup.parseBackup(text);
     expect(typeof result.exportedAt).toBe("string");
     expect(() => new Date(result.exportedAt).toISOString()).not.toThrow();
     expect(result.locale).toBeNull();
   });
 
-  it("drops one bad routine instead of rejecting the whole import", () => {
+  it("drops one bad routine instead of rejecting the whole import", async () => {
+    const { backup } = await freshBackup();
     const text = JSON.stringify({
       app: "routines",
       version: 1,
@@ -98,7 +115,7 @@ describe("parseBackup", () => {
         ],
       },
     });
-    const result = parseBackup(text);
+    const result = backup.parseBackup(text);
     expect(result.data.routines).toEqual([
       {
         id: "r1",
@@ -111,9 +128,27 @@ describe("parseBackup", () => {
   });
 });
 
+describe("parseBackupValue", () => {
+  it("validates an already-parsed object the same way as parseBackup", async () => {
+    const { backup } = await freshBackup();
+    const value = {
+      app: "routines",
+      version: 1,
+      exportedAt: "2026-09-17T12:00:00.000Z",
+      locale: null,
+      data: { routines: [], state: {} },
+    };
+    expect(backup.parseBackupValue(value)).toEqual(value);
+    expect(() => backup.parseBackupValue({ app: "other" })).toThrow(
+      backup.BackupError,
+    );
+  });
+});
+
 describe("applyBackup", () => {
-  it("writes the backup's data via replaceAllData", () => {
-    applyBackup({
+  it("writes the backup's data via replaceAllData", async () => {
+    const { backup, storage } = await freshBackup();
+    backup.applyBackup({
       app: "routines",
       version: 1,
       exportedAt: "2026-09-17T12:00:00.000Z",
@@ -131,7 +166,7 @@ describe("applyBackup", () => {
         state: {},
       },
     });
-    expect(getRawData().routines).toEqual([
+    expect(storage.getRawData().routines).toEqual([
       {
         id: "r1",
         name: "A",
@@ -142,39 +177,43 @@ describe("applyBackup", () => {
     ]);
   });
 
-  it("updates the locale when the backup has a valid one", () => {
-    applyBackup({
+  it("updates the locale when the backup has a valid one", async () => {
+    const { backup, idbStore } = await freshBackup();
+    backup.applyBackup({
       app: "routines",
       version: 1,
       exportedAt: "2026-09-17T12:00:00.000Z",
       locale: "pl",
       data: { routines: [], state: {} },
     });
-    expect(localStorage.getItem(LOCALE_KEY)).toBe("pl");
+    await expect(idbStore.kvGet(LOCALE_KEY)).resolves.toBe("pl");
   });
 
-  it("leaves the current locale untouched for an invalid/null locale", () => {
-    localStorage.setItem(LOCALE_KEY, "en");
-    applyBackup({
+  it("leaves the current locale untouched for an invalid/null locale", async () => {
+    const { backup, localeStore, idbStore } = await freshBackup();
+    localeStore.setStoredLocale("en");
+    backup.applyBackup({
       app: "routines",
       version: 1,
       exportedAt: "2026-09-17T12:00:00.000Z",
       locale: null,
       data: { routines: [], state: {} },
     });
-    expect(localStorage.getItem(LOCALE_KEY)).toBe("en");
+    await expect(idbStore.kvGet(LOCALE_KEY)).resolves.toBe("en");
   });
 });
 
 describe("backupFileName", () => {
-  it("formats a date as routines-backup-YYYY-MM-DD.json", () => {
-    expect(backupFileName(new Date(2026, 8, 17))).toBe(
+  it("formats a date as routines-backup-YYYY-MM-DD.json", async () => {
+    const { backup } = await freshBackup();
+    expect(backup.backupFileName(new Date(2026, 8, 17))).toBe(
       "routines-backup-2026-09-17.json",
     );
   });
 
-  it("zero-pads single-digit month and day", () => {
-    expect(backupFileName(new Date(2026, 0, 5))).toBe(
+  it("zero-pads single-digit month and day", async () => {
+    const { backup } = await freshBackup();
+    expect(backup.backupFileName(new Date(2026, 0, 5))).toBe(
       "routines-backup-2026-01-05.json",
     );
   });
@@ -195,15 +234,16 @@ describe("downloadBackup", () => {
     return { createObjectURL, revokeObjectURL };
   }
 
-  const backup: Backup = {
-    app: "routines",
+  const backupValue = {
+    app: "routines" as const,
     version: 1,
     exportedAt: "2026-09-17T12:00:00.000Z",
     locale: null,
     data: { routines: [], state: {} },
   };
 
-  it("creates a download link for the backup and clicks it", () => {
+  it("creates a download link for the backup and clicks it", async () => {
+    const { backup } = await freshBackup();
     const { createObjectURL } = stubObjectUrl("blob:mock-url");
     let capturedHref = "";
     let capturedDownload = "";
@@ -214,27 +254,29 @@ describe("downloadBackup", () => {
       capturedDownload = this.download;
     });
 
-    downloadBackup(backup);
+    backup.downloadBackup(backupValue);
 
     expect(createObjectURL).toHaveBeenCalledTimes(1);
     expect(capturedHref).toBe("blob:mock-url");
     expect(capturedDownload).toBe("routines-backup-2026-09-17.json");
   });
 
-  it("revokes the object URL after a delay, not immediately", () => {
+  it("revokes the object URL after a delay, not immediately", async () => {
+    const { backup } = await freshBackup();
     vi.useFakeTimers();
     const { revokeObjectURL } = stubObjectUrl("blob:mock-url");
     vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
 
-    downloadBackup(backup);
+    backup.downloadBackup(backupValue);
     expect(revokeObjectURL).not.toHaveBeenCalled();
 
     vi.advanceTimersByTime(10_000);
     expect(revokeObjectURL).toHaveBeenCalledWith("blob:mock-url");
   });
 
-  it("defaults to a fresh createBackup() snapshot when none is given", () => {
-    saveRoutine({
+  it("defaults to a fresh createBackup() snapshot when none is given", async () => {
+    const { backup, storage } = await freshBackup();
+    storage.saveRoutine({
       id: "r1",
       name: "Morning",
       order: 0,
@@ -249,11 +291,11 @@ describe("downloadBackup", () => {
       capturedDownload = this.download;
     });
 
-    downloadBackup();
+    backup.downloadBackup();
 
     // No explicit backup passed — falls back to createBackup(), whose
     // exportedAt is "now", so just check the filename reflects today.
-    const today = backupFileName();
+    const today = backup.backupFileName();
     expect(capturedDownload).toBe(today);
   });
 });

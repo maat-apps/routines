@@ -2,12 +2,18 @@ import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { LOCALE_KEY } from "@/lib/storage-keys";
+import { resetIndexedDb } from "../reset-indexeddb";
 
 // locale-store.ts caches the locale in a module-level singleton, so each
 // test needs a fresh module instance to control what it detects/reads.
+// idb-store's kvGet is re-imported alongside it (not statically at the top
+// of this file) since a static binding wouldn't follow `vi.resetModules()`
+// and would end up pointed at a closed connection from a previous test.
 async function freshUseTranslation() {
   vi.resetModules();
-  return import("@/i18n/use-translation");
+  const useTranslation = await import("@/i18n/use-translation");
+  const { kvGet } = await import("@/lib/idb-store");
+  return { ...useTranslation, kvGet };
 }
 
 function setNavigatorLanguage(language: string) {
@@ -19,8 +25,9 @@ function setNavigatorLanguage(language: string) {
 
 const originalLanguage = window.navigator.language;
 
-beforeEach(() => {
+beforeEach(async () => {
   localStorage.clear();
+  await resetIndexedDb();
 });
 
 afterEach(() => {
@@ -44,7 +51,7 @@ describe("useTranslation", () => {
   });
 
   it("updates every subscribed hook instance in the same tick on locale switch", async () => {
-    const { useTranslation } = await freshUseTranslation();
+    const { useTranslation, kvGet } = await freshUseTranslation();
     const first = renderHook(() => useTranslation());
     const second = renderHook(() => useTranslation());
 
@@ -54,7 +61,7 @@ describe("useTranslation", () => {
 
     expect(first.result.current.locale).toBe("pl");
     expect(second.result.current.locale).toBe("pl");
-    expect(localStorage.getItem(LOCALE_KEY)).toBe("pl");
+    await expect(kvGet(LOCALE_KEY)).resolves.toBe("pl");
   });
 
   it("substitutes {placeholder} params in a message", async () => {

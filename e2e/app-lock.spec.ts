@@ -49,16 +49,29 @@ test.describe("app lock", () => {
       window.PublicKeyCredential = window.PublicKeyCredential ?? ({} as never);
       window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable =
         () => Promise.resolve(false);
-      window.localStorage.setItem(
-        "routines-settings",
-        JSON.stringify({
-          lock: {
-            credentialId: "fake",
-            userId: "fake-user",
-            createdAt: new Date().toISOString(),
+      // Settings live in IndexedDB (src/lib/idb-store.ts), not localStorage —
+      // hand-duplicated store/key names, same reasoning as seedData() in
+      // ./utils.ts, since this init script can't import from src/.
+      const request = indexedDB.open("routines", 1);
+      request.onupgradeneeded = () => {
+        if (!request.result.objectStoreNames.contains("kv")) {
+          request.result.createObjectStore("kv");
+        }
+      };
+      request.onsuccess = () => {
+        const transaction = request.result.transaction("kv", "readwrite");
+        transaction.objectStore("kv").put(
+          {
+            lock: {
+              credentialId: "fake",
+              userId: "fake-user",
+              createdAt: new Date().toISOString(),
+              encryptionSupported: false,
+            },
           },
-        }),
-      );
+          "routines-settings",
+        );
+      };
     });
     await seedData(page, [], {});
     await page.goto("");

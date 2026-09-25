@@ -5,7 +5,10 @@ import { useEffect, useSyncExternalStore } from "react";
 import {
   getServerSettingsSnapshot,
   getSettingsSnapshot,
+  isSettingsReady,
+  isSettingsReadyOnServer,
   subscribeToSettings,
+  subscribeToSettingsReady,
   type AppSettings,
 } from "@/lib/settings";
 import {
@@ -42,10 +45,21 @@ export function useAppSettings(): AppSettings {
   );
 }
 
+// Settings load from IndexedDB in the background, so "not loaded yet" and
+// "loaded, no lock enrolled" are different states — AppLockGate must not
+// treat the former as the latter, or a locked device would briefly show
+// unlocked content on every cold start.
+export function useSettingsReady(): boolean {
+  return useSyncExternalStore(
+    subscribeToSettingsReady,
+    isSettingsReady,
+    isSettingsReadyOnServer,
+  );
+}
+
 // The cached snapshot only recomputes on the next `emitChange()` (a write from
 // this tab), so a routine left open across midnight keeps showing yesterday's
-// checked steps until something else happens to trigger it — see
-// .claude/tasks/bugs/midnight-toggle-can-invert-check.md. Re-checking on
+// checked steps until something else happens to trigger it. Re-checking on
 // visibility/focus catches the common case (backgrounding overnight, coming
 // back the next morning) without a ticking clock.
 export function useRevalidateOnVisibility(): void {

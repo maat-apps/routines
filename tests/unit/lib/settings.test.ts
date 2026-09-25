@@ -1,20 +1,32 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PREFERENCE_KEYS, SETTINGS_KEY } from "@/lib/storage-keys";
+import { resetIndexedDb } from "../reset-indexeddb";
 
 // read()'s `typeof window === "undefined"` guard is tested in
 // ssr-guards.test.ts, not here — see storage.test.ts's equivalent comment
 // for why it needs its own file (a Node environment, not jsdom).
 //
-// settings.ts caches its snapshot in module-level state, so each test needs a
-// fresh module instance.
+// settings.ts caches its data in module-level state, so each test needs a
+// fresh module instance. Data now loads from IndexedDB in the background, so
+// this also awaits `whenLoaded()` before handing the module back — tests
+// seed via `localStorage.setItem` exactly as before, and idb-store.ts's
+// one-time migration (triggered because resetIndexedDb() below leaves no
+// database for the next freshSettings() to find) picks it up from there.
+// idb-store's kvGet is re-imported alongside it (not statically at the top
+// of this file) since a static binding wouldn't follow `vi.resetModules()`
+// and would end up pointed at a closed connection from a previous test.
 async function freshSettings() {
   vi.resetModules();
-  return import("@/lib/settings");
+  const settings = await import("@/lib/settings");
+  await settings.whenLoaded();
+  const { kvGet } = await import("@/lib/idb-store");
+  return { ...settings, kvGet };
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   localStorage.clear();
+  await resetIndexedDb();
 });
 
 describe("getSettingsSnapshot", () => {
@@ -23,7 +35,7 @@ describe("getSettingsSnapshot", () => {
     expect(getSettingsSnapshot()).toEqual({ lock: null, installed: false });
   });
 
-  it("parses a validly stored lock", async () => {
+  it("parses a validly stored lock-only (unencrypted) enrolment", async () => {
     localStorage.setItem(
       SETTINGS_KEY,
       JSON.stringify({
@@ -32,9 +44,53 @@ describe("getSettingsSnapshot", () => {
     );
     const { getSettingsSnapshot } = await freshSettings();
     expect(getSettingsSnapshot()).toEqual({
-      lock: { credentialId: "c1", userId: "u1", createdAt: "2026-09-17" },
+      lock: {
+        credentialId: "c1",
+        userId: "u1",
+        createdAt: "2026-09-17",
+        encryptionSupported: false,
+      },
       installed: false,
     });
+  });
+
+  it("parses a validly stored encrypted enrolment, including its PRF salt", async () => {
+    localStorage.setItem(
+      SETTINGS_KEY,
+      JSON.stringify({
+        lock: {
+          credentialId: "c1",
+          userId: "u1",
+          createdAt: "2026-09-17",
+          encryptionSupported: true,
+          prfSalt: "c2FsdA",
+        },
+      }),
+    );
+    const { getSettingsSnapshot } = await freshSettings();
+    expect(getSettingsSnapshot().lock).toEqual({
+      credentialId: "c1",
+      userId: "u1",
+      createdAt: "2026-09-17",
+      encryptionSupported: true,
+      prfSalt: "c2FsdA",
+    });
+  });
+
+  it("drops prfSalt when encryptionSupported is false, even if one is present", async () => {
+    localStorage.setItem(
+      SETTINGS_KEY,
+      JSON.stringify({
+        lock: {
+          credentialId: "c1",
+          userId: "u1",
+          encryptionSupported: false,
+          prfSalt: "c2FsdA",
+        },
+      }),
+    );
+    const { getSettingsSnapshot } = await freshSettings();
+    expect(getSettingsSnapshot().lock?.prfSalt).toBeUndefined();
   });
 
   it("parses a stored installed flag", async () => {
@@ -86,18 +142,89 @@ describe("getServerSettingsSnapshot", () => {
   });
 });
 
+describe("isSettingsReady / isSettingsReadyOnServer", () => {
+  it("becomes true once the initial load has resolved", async () => {
+    const { isSettingsReady, whenLoaded } = await freshSettings();
+    await whenLoaded();
+    expect(isSettingsReady()).toBe(true);
+  });
+
+  it("isSettingsReadyOnServer always reports not ready", async () => {
+    const { isSettingsReadyOnServer } = await freshSettings();
+    expect(isSettingsReadyOnServer()).toBe(false);
+  });
+});
+
+describe("subscribeToSettingsReady", () => {
+  it("notifies a listener once the initial load resolves", async () => {
+    vi.resetModules();
+    const settings = await import("@/lib/settings");
+    const listener = vi.fn();
+    settings.subscribeToSettingsReady(listener);
+    await settings.whenLoaded();
+    expect(listener).toHaveBeenCalled();
+  });
+
+  it("stops notifying after unsubscribing", async () => {
+    vi.resetModules();
+    const settings = await import("@/lib/settings");
+    const listener = vi.fn();
+    const unsubscribe = settings.subscribeToSettingsReady(listener);
+    unsubscribe();
+    await settings.whenLoaded();
+    expect(listener).not.toHaveBeenCalled();
+  });
+});
+
+describe("ensureLoaded error handling", () => {
+  it("keeps the defaults instead of throwing when the IndexedDB read rejects", async () => {
+    vi.resetModules();
+    const idbStore = await import("@/lib/idb-store");
+    vi.spyOn(idbStore, "kvGet").mockRejectedValue(new Error("blocked"));
+    const settings = await import("@/lib/settings");
+    await settings.whenLoaded();
+    expect(settings.getSettingsSnapshot()).toEqual({
+      lock: null,
+      installed: false,
+    });
+    expect(settings.isSettingsReady()).toBe(true);
+  });
+});
+
 describe("setLockEnrolment / clearLockEnrolment", () => {
   it("persists a lock, updates the snapshot, and notifies listeners", async () => {
     const { setLockEnrolment, getSettingsSnapshot, subscribeToSettings } =
       await freshSettings();
     const listener = vi.fn();
     subscribeToSettings(listener);
-    setLockEnrolment({ credentialId: "c1", userId: "u1", createdAt: "now" });
+    setLockEnrolment({
+      credentialId: "c1",
+      userId: "u1",
+      createdAt: "now",
+      encryptionSupported: false,
+    });
     expect(getSettingsSnapshot()).toEqual({
-      lock: { credentialId: "c1", userId: "u1", createdAt: "now" },
+      lock: {
+        credentialId: "c1",
+        userId: "u1",
+        createdAt: "now",
+        encryptionSupported: false,
+      },
       installed: false,
     });
     expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it("persists an encrypted enrolment's PRF salt", async () => {
+    const { setLockEnrolment, getSettingsSnapshot } = await freshSettings();
+    setLockEnrolment({
+      credentialId: "c1",
+      userId: "u1",
+      createdAt: "now",
+      encryptionSupported: true,
+      prfSalt: "c2FsdA",
+    });
+    expect(getSettingsSnapshot().lock?.prfSalt).toBe("c2FsdA");
   });
 
   it("stops notifying after unsubscribing", async () => {
@@ -105,7 +232,12 @@ describe("setLockEnrolment / clearLockEnrolment", () => {
     const listener = vi.fn();
     const unsubscribe = subscribeToSettings(listener);
     unsubscribe();
-    setLockEnrolment({ credentialId: "c1", userId: "u1", createdAt: "now" });
+    setLockEnrolment({
+      credentialId: "c1",
+      userId: "u1",
+      createdAt: "now",
+      encryptionSupported: false,
+    });
     expect(listener).not.toHaveBeenCalled();
   });
 
@@ -116,7 +248,12 @@ describe("setLockEnrolment / clearLockEnrolment", () => {
       getSettingsSnapshot,
       subscribeToSettings,
     } = await freshSettings();
-    setLockEnrolment({ credentialId: "c1", userId: "u1", createdAt: "now" });
+    setLockEnrolment({
+      credentialId: "c1",
+      userId: "u1",
+      createdAt: "now",
+      encryptionSupported: false,
+    });
     const listener = vi.fn();
     subscribeToSettings(listener);
     clearLockEnrolment();
@@ -147,25 +284,30 @@ describe("markInstalled", () => {
 });
 
 describe("resetPreferences", () => {
-  it("clears every preference key, resets the snapshot, and notifies listeners", async () => {
+  it("clears every preference key from IndexedDB, resets the snapshot, and notifies listeners", async () => {
     const {
       setLockEnrolment,
       markInstalled,
       resetPreferences,
       getSettingsSnapshot,
       subscribeToSettings,
+      kvGet,
     } = await freshSettings();
-    setLockEnrolment({ credentialId: "c1", userId: "u1", createdAt: "now" });
+    setLockEnrolment({
+      credentialId: "c1",
+      userId: "u1",
+      createdAt: "now",
+      encryptionSupported: false,
+    });
     markInstalled();
-    localStorage.setItem("routines-locale", "pl");
 
     const listener = vi.fn();
     subscribeToSettings(listener);
 
-    resetPreferences();
+    await resetPreferences();
 
     for (const key of PREFERENCE_KEYS) {
-      expect(localStorage.getItem(key)).toBeNull();
+      await expect(kvGet(key)).resolves.toBeUndefined();
     }
     expect(getSettingsSnapshot()).toEqual({ lock: null, installed: false });
     expect(listener).toHaveBeenCalledTimes(1);
@@ -174,7 +316,7 @@ describe("resetPreferences", () => {
   it("leaves routine data untouched", async () => {
     const { resetPreferences } = await freshSettings();
     localStorage.setItem("routines-data", JSON.stringify({ keep: true }));
-    resetPreferences();
+    await resetPreferences();
     expect(localStorage.getItem("routines-data")).toBe(
       JSON.stringify({ keep: true }),
     );
