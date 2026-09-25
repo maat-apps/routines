@@ -491,6 +491,19 @@ directly.
   array/record entries independently rather than handing a whole
   array/record to `v.array()`/`v.record()` in one call, so one malformed
   entry doesn't take an otherwise-valid whole down with it.
+- Avoid `as` type assertions where TypeScript can already infer the correct
+  type without one — a cast should mean "I know something the compiler
+  can't," not "I'm not sure, so I'll silence it." Legitimate uses stay
+  fine: narrowing `unknown`/`any` at a trust boundary (`JSON.parse`, an
+  IndexedDB/DOM API typed loosely by lib.dom, a test mock that only
+  implements part of a browser interface), or asserting a shape TS
+  genuinely can't infer (a not-yet-typed API like `Intl.Locale`'s
+  `getWeekInfo()`, a non-standard property like iOS Safari's
+  `navigator.standalone`). A cast is a smell when removing it still
+  type-checks cleanly — meaning it was never doing anything (audited
+  2026-09-25, routines#61: found and removed two of these in test files;
+  every other `as` in the codebase at that point fell into a legitimate
+  case above).
 - Full pattern log: `.claude/docs/patterns.md` — read by `/find-antipatterns`
   and `/learn-patterns`, not loaded every session.
 

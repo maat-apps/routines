@@ -112,7 +112,7 @@ describe("parseRoutines", () => {
       id: "r1",
       name: "Morning",
       order: 0,
-      activeDays: [] as number[],
+      activeDays: [],
       steps: [],
     };
     expect(parseRoutines([routine])).toEqual([routine]);
