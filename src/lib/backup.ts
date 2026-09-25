@@ -1,9 +1,12 @@
+import * as v from "valibot";
+
 import {
   getLocaleSnapshot,
   isLocale,
   setStoredLocale,
 } from "@/lib/locale-store";
-import { parseRoutines, parseState } from "@/lib/schemas";
+import { formatDateStamp } from "@/lib/routine-utils";
+import { parseBackupEnvelope, parseRoutines, parseState } from "@/lib/schemas";
 import { getRawData, replaceAllData } from "@/lib/storage";
 import type { AppData } from "@/types";
 
@@ -18,13 +21,6 @@ export type Backup = {
 };
 
 export class BackupError extends Error {}
-
-// Narrows the top-level backup envelope only (app/version/data), so parseBackup
-// can give a distinct message per broken expectation. The routines/state inside
-// data.* are validated separately by the schemas in @/lib/schemas.
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 /** Snapshots everything worth keeping, ready to be serialised to a file. */
 export function createBackup(): Backup {
@@ -57,27 +53,28 @@ export function parseBackup(text: string): Backup {
  * rather than JSON text.
  */
 export function parseBackupValue(parsed: unknown): Backup {
-  if (!isRecord(parsed) || parsed.app !== "routines") {
+  if (!v.safeParse(v.object({ app: v.literal("routines") }), parsed).success) {
     throw new BackupError("The file is not a Routines backup.");
   }
-  if (parsed.version !== BACKUP_VERSION) {
+  if (
+    !v.safeParse(v.object({ version: v.literal(BACKUP_VERSION) }), parsed)
+      .success
+  ) {
     throw new BackupError("The backup was made by a different app version.");
   }
-  if (!isRecord(parsed.data) || !Array.isArray(parsed.data.routines)) {
+  const envelope = parseBackupEnvelope(parsed);
+  if (!envelope) {
     throw new BackupError("The backup does not contain any routines.");
   }
 
-  const routines = parseRoutines(parsed.data.routines);
+  const routines = parseRoutines(envelope.data.routines);
 
   return {
     app: "routines",
     version: BACKUP_VERSION,
-    exportedAt:
-      typeof parsed.exportedAt === "string"
-        ? parsed.exportedAt
-        : new Date().toISOString(),
-    locale: typeof parsed.locale === "string" ? parsed.locale : null,
-    data: { routines, state: parseState(parsed.data.state) },
+    exportedAt: envelope.exportedAt,
+    locale: envelope.locale,
+    data: { routines, state: parseState(envelope.data.state) },
   };
 }
 
@@ -101,12 +98,7 @@ export function applyBackup(backup: Backup): void {
  * content, never the filename/extension, so this doesn't affect import.
  */
 export function backupFileName(date = new Date()): string {
-  const stamp = [
-    date.getFullYear(),
-    String(date.getMonth() + 1).padStart(2, "0"),
-    String(date.getDate()).padStart(2, "0"),
-  ].join("-");
-  return `routines-backup-${stamp}.txt`;
+  return `routines-backup-${formatDateStamp(date)}.txt`;
 }
 
 function backupFile(backup: Backup): File {

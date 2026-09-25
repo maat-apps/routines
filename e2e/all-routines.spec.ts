@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { en, seedData } from "./utils";
+import { en, openSettings, seedData } from "./utils";
 
 test.describe("all routines view", () => {
   test("reached from Settings, lists every routine including ones hidden from home today", async ({
@@ -24,7 +24,7 @@ test.describe("all routines view", () => {
     await expect(page.getByRole("button", { name: /Today/ })).toBeVisible();
     await expect(page.getByRole("button", { name: /Someday/ })).toHaveCount(0);
 
-    await page.getByRole("button", { name: en.settings }).click();
+    await openSettings(page);
     await page.getByRole("button", { name: en.viewAllRoutinesAction }).click();
 
     await expect(page).toHaveURL(/\/routines\/all-routines$/);

@@ -73,6 +73,10 @@ export interface SeedProgress {
  * first — this is the standard Playwright pattern for seeding IndexedDB, not
  * a guarantee of the spec.
  */
+export async function openSettings(page: Page): Promise<void> {
+  await page.getByRole("button", { name: en.settings }).click();
+}
+
 export async function seedData(
   page: Page,
   routines: SeedRoutine[],

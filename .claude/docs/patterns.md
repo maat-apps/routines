@@ -39,29 +39,6 @@ one-line summary in `CLAUDE.md`'s Conventions section and removed from here.
   `restrictToParentElement`, `afterEach` in three different test files, `getServerStandaloneSnapshot`).
   Promoted to CLAUDE.md's Workflow Rules — always add a new import in the same `Edit` call as its
   first usage.
-- **Duplicated date formatting:** `storage.ts`'s unexported `today()` and `backup.ts`'s
-  `backupFileName()` each hand-build a zero-padded `YYYY-MM-DD` string from `Date` getters —
-  same `padStart(2, "0")` logic, no shared helper:
-  [src/lib/storage.ts:160](../../src/lib/storage.ts#L160),
-  [src/lib/backup.ts:104](../../src/lib/backup.ts#L104). Small (3 lines), only 2 occurrences —
-  worth a shared `formatDateStamp` if a third shows up, not urgent on its own.
-- **e2e helper not in `e2e/utils.ts`:** `backup.spec.ts`'s local `openSettings(page)` wraps the
-  settings-button click, but 7 other spec files inline that exact click instead of importing it:
-  [e2e/backup.spec.ts:5](../../e2e/backup.spec.ts#L5),
-  [e2e/settings.spec.ts:9](../../e2e/settings.spec.ts#L9),
-  [e2e/a11y.spec.ts:80](../../e2e/a11y.spec.ts#L80),
-  [e2e/all-routines.spec.ts:27](../../e2e/all-routines.spec.ts#L27),
-  [e2e/app-lock.spec.ts:18](../../e2e/app-lock.spec.ts#L18),
-  [e2e/drawer-dismissal.spec.ts:11](../../e2e/drawer-dismissal.spec.ts#L11). Should move to
-  `e2e/utils.ts` per the Playwright-helpers convention below.
-- **Hand-rolled trust-boundary validation instead of a Valibot schema:** two places validate
-  external/storage-read-back data with hand-written `isRecord`/`typeof` checks rather than a
-  schema in `src/lib/schemas.ts`, unlike `parseRoutines`/`parseState` right next to them:
-  [src/lib/backup.ts:25](../../src/lib/backup.ts#L25) (the backup envelope's `app`/`version`/
-  `exportedAt`/`locale` fields — has a comment explaining this split is deliberate, so may be
-  intentional rather than a miss) and
-  [src/lib/settings.ts:46](../../src/lib/settings.ts#L46) (`LockEnrolment` read back from
-  IndexedDB via `parseLock` — no Valibot schema exists for it at all currently).
 
 ## Naming Conventions
 
