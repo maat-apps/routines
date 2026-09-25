@@ -342,7 +342,10 @@ describe("shareBackup", () => {
     });
     expect(share).toHaveBeenCalledWith({ files: [expect.any(File)] });
     const [sharedFile] = share.mock.calls[0][0].files;
-    expect(sharedFile.name).toBe("routines-backup-2026-09-17.json");
+    // Not .json — Chromium's Web Share API file allow-list excludes it, so
+    // the shared copy is named/typed as plain text (see shareableBackupFile).
+    expect(sharedFile.name).toBe("routines-backup-2026-09-17.txt");
+    expect(sharedFile.type).toBe("text/plain");
     vi.unstubAllGlobals();
   });
 
