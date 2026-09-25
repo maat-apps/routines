@@ -318,7 +318,7 @@ export function SettingsPanel() {
         <input
           ref={fileInputRef}
           type="file"
-          accept="application/json,.json"
+          accept="application/json,.json,text/plain,.txt"
           className="hidden"
           aria-label={t("importData")}
           onChange={(event) => {
