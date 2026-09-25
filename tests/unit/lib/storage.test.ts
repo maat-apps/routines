@@ -523,6 +523,47 @@ describe("setEncryptionKey", () => {
     expect(storage.getRawData().routines).toEqual(data.routines);
   });
 
+  it("decrypts data when the key was set before the first load — AppLockGate's real ordering", async () => {
+    vi.resetModules();
+    const settings = await import("@/lib/settings");
+    await settings.whenLoaded();
+    settings.setLockEnrolment({
+      credentialId: "c1",
+      userId: "u1",
+      createdAt: "now",
+      encryptionSupported: true,
+      prfSalt: "c2FsdA",
+    });
+
+    const { deriveKey, encryptJson, randomBytes } =
+      await import("@/lib/webauthn-crypto");
+    const { kvSet } = await import("@/lib/idb-store");
+    const key = await deriveKey(randomBytes(32), randomBytes(16));
+    const data = {
+      routines: [
+        {
+          id: "r1",
+          name: "Secret",
+          order: 0,
+          activeDays: [0, 1, 2, 3, 4, 5, 6],
+          steps: [],
+        },
+      ],
+      state: {},
+    };
+    await kvSet(DATA_KEY, await encryptJson(key, data));
+
+    // AppLockGate calls setEncryptionKey() as soon as verifyAppLock()
+    // resolves, and only mounts children — the first code to ever touch
+    // this module — afterwards. So the key can already be set before
+    // whenLoaded() (and the whenUnlocked() it awaits internally) ever runs.
+    const storage = await import("@/lib/storage");
+    storage.setEncryptionKey(key);
+    await storage.whenLoaded();
+
+    expect(storage.getRawData().routines).toEqual(data.routines);
+  });
+
   it("does not hold the load when the enrolled lock is lock-only (no PRF support)", async () => {
     vi.resetModules();
     const settings = await import("@/lib/settings");

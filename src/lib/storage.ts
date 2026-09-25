@@ -39,10 +39,17 @@ let loaded: Promise<void> | null = null;
 // successful enrol/verify). Null means "no encryption" — either no lock is
 // enrolled, or the device doesn't support PRF (see webauthn-crypto.ts).
 let encryptionKey: CryptoKey | null = null;
+// AppLockGate mounts its children — and with them, the first real read from
+// this module — only *after* verifyAppLock() has already resolved and called
+// setEncryptionKey(). So by the time loadData() first calls whenUnlocked(),
+// the unlock may already have happened; this flag lets it resolve
+// immediately instead of waiting on an event that already fired.
+let hasUnlocked = false;
 let unlockResolve: (() => void) | null = null;
 let unlockPromise: Promise<void> | null = null;
 
 function whenUnlocked(): Promise<void> {
+  if (hasUnlocked) return Promise.resolve();
   unlockPromise ??= new Promise((resolve) => {
     unlockResolve = resolve;
   });
@@ -57,8 +64,9 @@ function whenUnlocked(): Promise<void> {
  */
 export function setEncryptionKey(key: CryptoKey | null): void {
   encryptionKey = key;
-  if (key && unlockResolve) {
-    unlockResolve();
+  if (key) {
+    hasUnlocked = true;
+    unlockResolve?.();
     unlockResolve = null;
   }
 }
