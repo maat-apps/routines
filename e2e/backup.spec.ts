@@ -1,10 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { en, seedData } from "./utils";
-
-async function openSettings(page: import("@playwright/test").Page) {
-  await page.getByRole("button", { name: en.settings }).click();
-}
+import { en, openSettings, seedData } from "./utils";
 
 test.describe("backup export / import", () => {
   test("exporting downloads a JSON file shaped like a routines backup", async ({

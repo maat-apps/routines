@@ -49,11 +49,58 @@ export const AppDataSchema = v.object({
   state: StateSchema,
 });
 
+// The shape a LockEnrolmentSchema parse produces — declared explicitly
+// (rather than inferred purely from the schema/transform below) so
+// `prfSalt` stays an optional key, not a required `string | undefined`.
+type LockEnrolmentOutput = {
+  credentialId: string;
+  userId: string;
+  createdAt: string;
+  encryptionSupported: boolean;
+  prfSalt?: string;
+};
+
+// The app-lock enrolment persisted in settings — kept lenient the same way
+// the rest of this file is: a corrupt/partial stored value degrades to "no
+// lock" rather than throwing (see parseLockEnrolment below). prfSalt is
+// meaningless without encryptionSupported, so the transform drops it rather
+// than trusting a stale/tampered value that disagrees with that flag.
+const LockEnrolmentSchema = v.pipe(
+  v.object({
+    credentialId: v.string(),
+    userId: v.string(),
+    createdAt: v.fallback(v.string(), () => new Date().toISOString()),
+    encryptionSupported: v.fallback(v.boolean(), false),
+    prfSalt: v.optional(v.string()),
+  }),
+  v.transform((value): LockEnrolmentOutput => {
+    const { prfSalt, ...rest } = value;
+    return value.encryptionSupported ? { ...rest, prfSalt } : rest;
+  }),
+);
+
+// The top-level backup envelope (app/version/data), kept separate from the
+// routines/state inside `data` — those are validated independently by
+// parseRoutines/parseState so one malformed routine doesn't invalidate an
+// otherwise-valid backup file.
+const BackupEnvelopeSchema = v.object({
+  app: v.literal("routines"),
+  version: v.number(),
+  exportedAt: v.fallback(v.string(), () => new Date().toISOString()),
+  locale: v.fallback(v.nullable(v.string()), null),
+  data: v.object({
+    routines: v.array(v.unknown()),
+    state: v.optional(v.unknown()),
+  }),
+});
+
 export type RoutineStep = v.InferOutput<typeof StepSchema>;
 export type Routine = v.InferOutput<typeof RoutineSchema>;
 export type RoutineProgress = v.InferOutput<typeof ProgressSchema>;
 export type RoutineState = v.InferOutput<typeof StateSchema>;
 export type AppData = v.InferOutput<typeof AppDataSchema>;
+export type LockEnrolment = v.InferOutput<typeof LockEnrolmentSchema>;
+export type BackupEnvelope = v.InferOutput<typeof BackupEnvelopeSchema>;
 
 // --- Lenient parsing -------------------------------------------------------------
 // Applied to both a user-supplied backup import and whatever's actually in
@@ -98,4 +145,16 @@ export function parseState(value: unknown): RoutineState {
     if (result.success) state[routineId] = result.output;
   }
   return state;
+}
+
+/** Validates a lock enrolment read back from settings storage; `null` on anything malformed. */
+export function parseLockEnrolment(value: unknown): LockEnrolment | null {
+  const result = v.safeParse(LockEnrolmentSchema, value);
+  return result.success ? result.output : null;
+}
+
+/** Validates the shape of a backup envelope; `null` on anything malformed. */
+export function parseBackupEnvelope(value: unknown): BackupEnvelope | null {
+  const result = v.safeParse(BackupEnvelopeSchema, value);
+  return result.success ? result.output : null;
 }

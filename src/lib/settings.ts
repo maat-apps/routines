@@ -1,4 +1,5 @@
 import { kvDelete, kvGet, kvSet } from "@/lib/idb-store";
+import { parseLockEnrolment, type LockEnrolment } from "@/lib/schemas";
 import { PREFERENCE_KEYS, SETTINGS_KEY } from "@/lib/storage-keys";
 
 /**
@@ -6,17 +7,11 @@ import { PREFERENCE_KEYS, SETTINGS_KEY } from "@/lib/storage-keys";
  * authenticator gives back — it is not a secret and unlocks nothing on its own.
  * `prfSalt`/`encryptionSupported` are not secret either — they're metadata
  * about whether/how routine data is encrypted (see src/lib/webauthn-crypto.ts),
- * not the key itself, which is never stored.
+ * not the key itself, which is never stored. Defined as a schema in
+ * @/lib/schemas (LockEnrolmentSchema) rather than a parallel hand-written
+ * type, so this type and parseLockEnrolment below can't drift apart.
  */
-export type LockEnrolment = {
-  credentialId: string;
-  userId: string;
-  createdAt: string;
-  /** Whether the PRF extension was available at enrolment time. */
-  encryptionSupported: boolean;
-  /** The fixed PRF `eval.first` input, present only when `encryptionSupported`. */
-  prfSalt?: string;
-};
+export type { LockEnrolment };
 
 export type AppSettings = {
   lock: LockEnrolment | null;
@@ -43,34 +38,6 @@ let snapshot: AppSettings = defaultSettings;
 let ready = false;
 let loaded: Promise<void> | null = null;
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function parseLock(value: unknown): LockEnrolment | null {
-  if (!isRecord(value)) return null;
-  if (
-    typeof value.credentialId !== "string" ||
-    typeof value.userId !== "string"
-  ) {
-    return null;
-  }
-  const encryptionSupported = value.encryptionSupported === true;
-  return {
-    credentialId: value.credentialId,
-    userId: value.userId,
-    createdAt:
-      typeof value.createdAt === "string"
-        ? value.createdAt
-        : new Date().toISOString(),
-    encryptionSupported,
-    prfSalt:
-      encryptionSupported && typeof value.prfSalt === "string"
-        ? value.prfSalt
-        : undefined,
-  };
-}
-
 function notify(): void {
   for (const listener of listeners) {
     listener();
@@ -91,7 +58,7 @@ function ensureLoaded(): void {
     .then((stored) => {
       if (stored) {
         snapshot = {
-          lock: parseLock(stored.lock),
+          lock: parseLockEnrolment(stored.lock),
           installed: stored.installed === true,
         };
       }

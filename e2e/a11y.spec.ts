@@ -1,7 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page, test } from "@playwright/test";
 
-import { en, seedData } from "./utils";
+import { openSettings, seedData } from "./utils";
 
 // Zero violations against WCAG 2.0/2.1 A+AA, scanned per screen rather than
 // once for the whole app — a violation's exact location (which screen, which
@@ -77,7 +77,7 @@ test.describe("accessibility (axe-core)", () => {
   test("the settings drawer has no violations while open", async ({ page }) => {
     await seedData(page, []);
     await page.goto("");
-    await page.getByRole("button", { name: en.settings }).click();
+    await openSettings(page);
     await expect(page.getByRole("dialog")).toBeVisible();
     await auditIsClean(page);
   });

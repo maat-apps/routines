@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { en, seedData, swipeDown } from "./utils";
+import { en, openSettings, seedData, swipeDown } from "./utils";
 
 test.describe("drawer dismissal", () => {
   test("swiping down on the swipe handle closes the settings drawer", async ({
@@ -8,7 +8,7 @@ test.describe("drawer dismissal", () => {
   }) => {
     await seedData(page, []);
     await page.goto("");
-    await page.getByRole("button", { name: en.settings }).click();
+    await openSettings(page);
 
     const dialog = page.getByRole("dialog");
     await expect(dialog).toBeVisible();
@@ -49,7 +49,7 @@ test.describe("drawer dismissal", () => {
   }) => {
     await seedData(page, [{ id: "r1", name: "Morning", order: 0, steps: [] }]);
     await page.goto("");
-    await page.getByRole("button", { name: en.settings }).click();
+    await openSettings(page);
     await expect(page.getByRole("dialog")).toBeVisible();
 
     await page.goBack();
