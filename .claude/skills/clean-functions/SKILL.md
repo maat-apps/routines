@@ -18,7 +18,7 @@ function createUser(
   country: string,
   timezone: string,
   language: string,
-  newsletter: boolean
+  newsletter: boolean,
 ) {
   // ...
 }

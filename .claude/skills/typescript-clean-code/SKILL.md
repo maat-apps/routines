@@ -8,6 +8,7 @@ description: Use when writing, fixing, editing, reviewing, or refactoring any Ty
 Enforces all Clean Code principles from Robert C. Martin's Chapter 17, adapted for TypeScript.
 
 ## Comments (C1-C5)
+
 - C1: No metadata in comments (use Git)
 - C2: Delete obsolete comments immediately
 - C3: No redundant comments
@@ -15,16 +16,19 @@ Enforces all Clean Code principles from Robert C. Martin's Chapter 17, adapted f
 - C5: Never commit commented-out code
 
 ## Environment (E1-E2)
+
 - E1: One command to build (`npm run build`)
 - E2: One command to test (`npm test`)
 
 ## Functions (F1-F4)
+
 - F1: Maximum 3 arguments (use parameter objects/interfaces for more)
 - F2: No output arguments (return values)
 - F3: No flag arguments (split functions)
 - F4: Delete dead functions
 
 ## General (G1-G36)
+
 - G1: One language per file
 - G2: Implement expected behavior
 - G3: Handle boundary conditions
@@ -63,12 +67,15 @@ Enforces all Clean Code principles from Robert C. Martin's Chapter 17, adapted f
 - G36: Law of Demeter (no train wrecks)
 
 ## TypeScript-Specific (TS1-TS3)
+
 These adapt the Java-specific rules (J1-J3) to TypeScript conventions:
+
 - TS1: Keep imports explicit and stable; avoid namespace-style overuse and implicit dependencies
 - TS2: Use enums or literal union types, not magic constants
 - TS3: Type public interfaces explicitly and avoid `any` in boundaries
 
 ## Names (N1-N7)
+
 - N1: Choose descriptive names
 - N2: Right abstraction level
 - N3: Use standard nomenclature
@@ -78,6 +85,7 @@ These adapt the Java-specific rules (J1-J3) to TypeScript conventions:
 - N7: Names describe side effects
 
 ## Tests (T1-T9)
+
 - T1: Test everything that could break
 - T2: Use coverage tools
 - T3: Don't skip trivial tests
@@ -90,39 +98,39 @@ These adapt the Java-specific rules (J1-J3) to TypeScript conventions:
 
 ## Quick Reference Table
 
-| Category | Rule | One-Liner |
-|----------|------|-----------|
-| **Comments** | C1 | No metadata (use Git) |
-| | C3 | No redundant comments |
-| | C5 | No commented-out code |
-| **Functions** | F1 | Max 3 arguments |
-| | F3 | No flag arguments |
-| | F4 | Delete dead functions |
-| **General** | G5 | DRY—no duplication |
-| | G9 | Delete dead code |
-| | G16 | No obscured intent |
-| | G23 | Polymorphism over if/else |
-| | G25 | Named constants, not magic numbers |
-| | G30 | Functions do one thing |
-| | G36 | Law of Demeter (one dot) |
-| **Names** | N1 | Descriptive names |
-| | N5 | Name length matches scope |
-| **Tests** | T5 | Test boundary conditions |
-| | T9 | Tests must be fast |
+| Category      | Rule | One-Liner                          |
+| ------------- | ---- | ---------------------------------- |
+| **Comments**  | C1   | No metadata (use Git)              |
+|               | C3   | No redundant comments              |
+|               | C5   | No commented-out code              |
+| **Functions** | F1   | Max 3 arguments                    |
+|               | F3   | No flag arguments                  |
+|               | F4   | Delete dead functions              |
+| **General**   | G5   | DRY—no duplication                 |
+|               | G9   | Delete dead code                   |
+|               | G16  | No obscured intent                 |
+|               | G23  | Polymorphism over if/else          |
+|               | G25  | Named constants, not magic numbers |
+|               | G30  | Functions do one thing             |
+|               | G36  | Law of Demeter (one dot)           |
+| **Names**     | N1   | Descriptive names                  |
+|               | N5   | Name length matches scope          |
+| **Tests**     | T5   | Test boundary conditions           |
+|               | T9   | Tests must be fast                 |
 
 ## Anti-Patterns (Don't → Do)
 
-| ❌ Don't | ✅ Do |
-|----------|-------|
-| Comment every line | Delete obvious comments |
-| Helper for one-liner | Inline the code |
+| ❌ Don't                       | ✅ Do                                   |
+| ------------------------------ | --------------------------------------- |
+| Comment every line             | Delete obvious comments                 |
+| Helper for one-liner           | Inline the code                         |
 | `import * as utils` everywhere | Named imports for explicit dependencies |
-| `any` in public API | Specific types or `unknown` + narrowing |
-| Magic number `86400` | `const SECONDS_PER_DAY = 86400` |
-| `process(data, true)` | `processVerbose(data)` |
-| Deep nesting | Guard clauses, early returns |
-| `obj.a.b.c.value` | `obj.getValue()` |
-| 100+ line function | Split by responsibility |
+| `any` in public API            | Specific types or `unknown` + narrowing |
+| Magic number `86400`           | `const SECONDS_PER_DAY = 86400`         |
+| `process(data, true)`          | `processVerbose(data)`                  |
+| Deep nesting                   | Guard clauses, early returns            |
+| `obj.a.b.c.value`              | `obj.getValue()`                        |
+| 100+ line function             | Split by responsibility                 |
 
 ## AI Behavior
 
