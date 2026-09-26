@@ -62,6 +62,11 @@ A private, phone-first PWA for daily checklists. No accounts and no backend —
 everything lives in the browser, and nothing about the user leaves the device.
 The only network traffic is the service worker fetching the app's own files.
 
+For the generic app structure this repo follows (folder layout, routing
+pattern, i18n approach, naming conventions, testing split) see
+[`maat-core/STRUCTURE.md`](https://github.com/maat-apps/maat-core/blob/main/STRUCTURE.md).
+What follows here is what's specific to routines.
+
 - **Vite + base path, no server.** `vite.config.ts` sets `base` from
   `DEPLOY_BASE_PATH` (defaulting to `/routines/`, deployed to GitHub Pages
   under `/routines`) and builds a plain static SPA — no server at runtime.
@@ -148,24 +153,14 @@ true`, `storage.ts`'s background load waits for that key before decrypting
   always wrote as a bare string (`"pl"`/`"en"`) — the migration special-cases
   it rather than `JSON.parse`-ing it like the rest.
 
-- **Routing pattern.** `src/views/<name>/` holds one folder per screen;
-  `src/app/router.tsx` maps them to routes with React Router
-  (`<BrowserRouter basename="/routines">`), and each view is `lazy()`-loaded as
-  its own chunk. Views read the target id from the `:id` path param via
-  `useParams`. Drilling deeper (`/` → `/:id` → `/:id/edit`,
-  and `/` → `/new`) is a plain forward `navigate(...)`. Returning is
-  `src/hooks/use-smart-back.ts`'s `useSmartBack(fallback)`: every route here is
-  also a valid deep link (hard refresh, PWA relaunch, a bookmark), so a "Back"
-  action can't assume a real entry sits behind it — the hook pops real history
-  (`navigate(-1)`) when this location was actually pushed (React Router's
-  `location.key !== "default"`) and replaces to `fallback` otherwise, so
-  repeated edit/confirm round trips don't grow the stack and native back keeps
-  landing where the AppBar arrow would. `new-routine-view.tsx`'s onComplete is
-  the one exception — creating a routine is a forward transition to a
-  different screen, not a "back," so it just replaces the disposable `/new`
-  draft entry directly. Settings is a drawer opened from the home view's
-  state, not a route — `src/views/home/settings-panel.tsx`, which composes
-  one `Section` component per settings card from sibling
+- **Routing pattern (app-specific parts).** Follows the generic pattern in
+  `STRUCTURE.md`; routines-specific: `<BrowserRouter basename="/routines">`,
+  drilling `/` → `/:id` → `/:id/edit` and `/` → `/new`. `new-routine-view.tsx`'s
+  onComplete is the one exception to `useSmartBack` — creating a routine is a
+  forward transition to a different screen, not a "back," so it just replaces
+  the disposable `/new` draft entry directly. Settings is a drawer opened from
+  the home view's state, not a route — `src/views/home/settings-panel.tsx`,
+  which composes one `Section` component per settings card from sibling
   `settings-<name>-section.tsx` files (plus shared `SettingsSection`/
   `SettingsRow` in `settings-primitives.tsx`) rather than holding every
   section inline. `ConfirmDrawer` (the Cancel + destructive-button bottom
@@ -177,17 +172,13 @@ true`, `storage.ts`'s background load waits for that key before decrypting
   is the only way to reach one that isn't — a plain lookup/access point, not
   a second home screen, reached from a Settings row rather than a second nav
   affordance on home.
-  A component used by 2+ views lives in `src/components/` instead of a view
-  folder (e.g. `app-bar.tsx`, `routine-edit-form.tsx`, `missing-routine.tsx`).
 
-- **i18n is a small custom hook, not a library.** `src/i18n/use-translation.ts`
-  is a `useSyncExternalStore`-backed locale store — detects the device language
-  on first launch (`navigator.language`), then remembers the choice in
-  `localStorage` under `routines-locale` — plus a `t(key, params?)` function
-  doing `{placeholder}` substitution. No provider is needed; the store is a
-  module-level singleton. Message catalogs are `src/i18n/en.json` and
-  `src/i18n/pl.json` — keep both in sync when adding keys. Dates are formatted
-  with native `Intl.DateTimeFormat`.
+- **i18n (app-specific parts).** Follows the generic pattern in
+  `STRUCTURE.md`; routines-specific: `src/i18n/use-translation.ts` detects
+  the device language on first launch (`navigator.language`), then remembers
+  the choice in `localStorage` under `routines-locale`. Message catalogs are
+  `src/i18n/en.json` and `src/i18n/pl.json` — keep both in sync when adding
+  keys. Dates are formatted with native `Intl.DateTimeFormat`.
 
 - **Mobile gate + app lock.** `src/components/mobile-gate.tsx` renders the app
   for mobile viewports and a "desktop not supported" message otherwise, and
