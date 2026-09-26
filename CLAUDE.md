@@ -18,7 +18,9 @@ them in mind when writing or reviewing code:
   building it — the project is developed with Claude Code, which has its own
   energy cost (see README's "Built with Claude"). The build/verify side of
   that cost is why CI runs each check exactly once instead of locally too
-  — see the Automation section below.
+  — see the Automation section below, and
+  [`maat-core/VERIFICATION.md`](https://github.com/maat-apps/maat-core/blob/main/VERIFICATION.md)
+  for the size-agnostic version of this principle.
 - **Ease of use.** Favor solutions that keep the app simple and predictable
   for the user.
 - **Accessibility.** Keep components accessible — semantic markup,
