@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { en, seedData } from "./utils";
+import { en, openSettings, seedData } from "./utils";
 
 test.describe("app lock", () => {
   test("enrolling turns the lock on and unlocking with the same authenticator works", async ({
@@ -15,7 +15,7 @@ test.describe("app lock", () => {
     await seedData(page, []);
     await page.goto("");
 
-    await page.getByRole("button", { name: en.settings }).click();
+    await openSettings(page);
     const lockSwitch = page.getByRole("switch", { name: en.appLock });
     await expect(lockSwitch).toBeEnabled();
     await lockSwitch.click();

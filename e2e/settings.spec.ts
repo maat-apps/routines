@@ -1,12 +1,12 @@
 import { expect, test } from "@playwright/test";
 
-import { en, pl, seedData } from "./utils";
+import { en, openSettings, pl, seedData } from "./utils";
 
 test.describe("settings", () => {
   test("switching language updates the visible label", async ({ page }) => {
     await seedData(page, []);
     await page.goto("");
-    await page.getByRole("button", { name: en.settings }).click();
+    await openSettings(page);
 
     const dialog = page.getByRole("dialog");
     const languageTrigger = page.getByRole("combobox", {
@@ -55,7 +55,7 @@ test.describe("settings", () => {
   }) => {
     await seedData(page, [{ id: "r1", name: "Morning", order: 0, steps: [] }]);
     await page.goto("");
-    await page.getByRole("button", { name: en.settings }).click();
+    await openSettings(page);
 
     await page.getByRole("button", { name: en.resetSettings }).click();
     const dialog = page.getByRole("dialog");
