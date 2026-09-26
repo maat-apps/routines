@@ -46,12 +46,15 @@ yarn-error.log*
 
 # Claude Code local state — most of .claude/ is local-only (task notes:
 # personal/ephemeral, not meant for other contributors to read). The shared
-# workflow (hooks, commands, hook wiring, the dev-server preview config) and
-# the pattern log (docs/patterns.md: verified facts about the codebase,
-# meant to persist across sessions/clones/contributors, not scratch notes)
-# are tracked so they ship with the repo as a blueprint.
+# workflow (hooks, commands, hook wiring, the dev-server preview config), the
+# pattern log (docs/patterns.md: verified facts about the codebase, meant to
+# persist across sessions/clones/contributors, not scratch notes), and
+# project-scoped skills (clean-code rule sets, MIT-licensed and imported —
+# see skills/boy-scout/SKILL.md's note) are tracked so they ship with the
+# repo as a blueprint.
 /.claude/*
 !/.claude/hooks/
+!/.claude/skills/
 !/.claude/commands/
 !/.claude/settings.json
 !/.claude/docs/
