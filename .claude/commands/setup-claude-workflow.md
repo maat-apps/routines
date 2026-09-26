@@ -115,16 +115,42 @@ carries a short pointer to it plus the handful of items that have proven to recu
 
 ## Phase 4 — Generate CLAUDE.md
 
-If `CLAUDE.md` already exists, only rewrite the content between
-`<!-- BEGIN AUTO-GENERATED: setup-claude-workflow -->` and
-`<!-- END AUTO-GENERATED: setup-claude-workflow -->`; leave everything outside those markers
-untouched. If it doesn't exist, create it with the markers already in place.
+**Design note (why this phase works the way it does):** an earlier version of this command
+treated the whole block between the markers as one unit `--refresh` would wholesale-replace.
+That broke in practice — on a real project (routines), the Conventions/Workflow Rules sections
+grew, over many sessions, far past this template's own starting content (accumulated
+project-specific rules no detection pass could re-derive). A blind `--refresh` would have
+silently destroyed all of it. The fix below is based on what that project ended up doing by
+hand, which worked: split the block into a small part that's _safe_ to regenerate (it's pure
+fact, re-derived from `package.json`/config files, nothing to lose) and a part that's
+_accumulated judgment_ (never auto-rewritten past its first creation — only appended to, and
+only by a human or an explicit `/learn-patterns` promotion).
 
-Fill this template using the Phase 1–3 findings. Keep the whole auto-generated block under
-roughly 100–150 lines — this file is loaded on every session, so it must stay high-signal.
+**First-time setup** (`CLAUDE.md` doesn't exist yet): create it with both markers below, filling
+the template from Phase 1–3 findings.
+
+**`--refresh` behavior** depends on what's already in the file:
+
+- **Markers present**: rewrite only the content between
+  `<!-- BEGIN AUTO-GENERATED: setup-claude-workflow -->` and
+  `<!-- END AUTO-GENERATED: setup-claude-workflow -->` — and _only_ the Project Snapshot and
+  Commands sections inside it (see below). Never touch Conventions or Workflow Rules, inside the
+  markers or not — those are append-only, by design, forever. Leave everything outside the
+  markers untouched as before.
+- **No markers, but `CLAUDE.md` exists** (a project whose file outgrew the markers and had them
+  removed, same as routines did): do not write to `CLAUDE.md` at all. Instead print a report —
+  the current Phase 1 script-role table and stack summary vs. what a fresh detection pass finds
+  — so the person can reconcile any drift by hand. This is the previously-undefined case; it's
+  now defined as "report, don't write."
+- **`CLAUDE.md` doesn't exist**: same as first-time setup above; `--refresh` and no-flag behave
+  identically here.
+
+Keep the whole auto-generated block under roughly 100–150 lines on first creation — this file is
+loaded on every session, so it must stay high-signal.
 
 ```markdown
 <!-- BEGIN AUTO-GENERATED: setup-claude-workflow -->
+<!-- Only Project Snapshot and Commands below are ever rewritten by --refresh. -->
 
 ## Project Snapshot
 
@@ -145,9 +171,14 @@ roughly 100–150 lines — this file is loaded on every session, so it must sta
 
 _(omit rows for roles that don't exist in this project instead of leaving them blank)_
 
+<!-- Everything below is seeded once, then append-only — --refresh never rewrites it. -->
+
 ## Conventions
 
 - {naming/structure bullets from Phase 2, 5–10 max}
+- If Phase 1 detected Playwright: a Playwright project's reusable test-helper file belongs at
+  `e2e/utils.ts`, not `fixtures.ts` — these are plain functions specs call directly, not
+  Playwright's own `test.extend()` fixture-injection system, and "fixtures" implies the latter.
 - Full pattern log: `.claude/docs/patterns.md` — read by `/find-antipatterns` and
   `/learn-patterns`, not loaded every session.
 
