@@ -8,7 +8,7 @@ import {
   SortableContext,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { Plus, RotateCcw, Settings } from "lucide-react";
+import { ArrowCounterClockwise, Gear, Plus } from "@phosphor-icons/react";
 import { startTransition, useEffect, useState } from "react";
 
 import { SortableRoutineRow } from "@/components/sortable-routine-row";
@@ -91,7 +91,7 @@ export function RoutineList({
           aria-label={t("settings")}
           onClick={() => setSettingsOpen(true)}
         >
-          <Settings className="size-6" />
+          <Gear className="size-6" />
         </Button>
       </PageHeader>
       {routines.length === 0 ? (
@@ -156,7 +156,7 @@ export function RoutineList({
           disabled={!hasCheckedSteps}
           onClick={onResetAll}
         >
-          <RotateCcw aria-hidden="true" />
+          <ArrowCounterClockwise aria-hidden="true" />
           {t("resetAll")}
         </ResetButton>
       )}
