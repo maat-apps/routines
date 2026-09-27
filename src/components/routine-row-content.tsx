@@ -1,4 +1,4 @@
-import { ChevronRight } from "lucide-react";
+import { CaretRight } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 
 import type { Routine } from "@/types";
@@ -36,7 +36,7 @@ export function RoutineRowContent({
         </strong>
         {subtitle}
       </span>
-      <ChevronRight aria-hidden="true" />
+      <CaretRight aria-hidden="true" />
     </>
   );
 }
