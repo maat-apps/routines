@@ -3,10 +3,10 @@ import { CSS } from "@dnd-kit/utilities";
 import { Trash2 } from "lucide-react";
 import { type ChangeEvent, useEffect, useRef } from "react";
 
-import { DragHandle } from "@/components/drag-handle";
-import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import type { RoutineStep } from "@/types";
+import { Button } from "@maat-apps/ui/button";
+import { DragHandle } from "@maat-apps/ui/drag-handle";
 
 const editStepButtonClass = "size-10.5 flex-none [&>svg]:size-5";
 

@@ -8,7 +8,10 @@ import {
   enrolAppLock,
   isAppLockSupported,
 } from "@/lib/app-lock";
-import { SettingsRow, SettingsSection } from "@/views/home/settings-primitives";
+import {
+  SettingsRow,
+  SettingsSection,
+} from "@maat-apps/ui/settings-primitives";
 
 export function SecuritySection() {
   const { t } = useTranslation();

@@ -11,22 +11,22 @@ import {
 import { Plus, RotateCcw, Settings } from "lucide-react";
 import { startTransition, useEffect, useState } from "react";
 
-import { EmptyState, NoRoutinesToday } from "@/components/empty-states";
-import { FabButton } from "@/components/fab-button";
-import { PageHeader } from "@/components/page-header";
-import { ResetButton } from "@/components/reset-button";
 import { SortableRoutineRow } from "@/components/sortable-routine-row";
-import { Button } from "@/components/ui/button";
+import { useDragSensors } from "@/hooks/use-drag-sensors";
+import { useTranslation } from "@/i18n/use-translation";
+import type { Routine, RoutineProgress } from "@/types";
+import { SettingsPanel } from "@/views/home/settings-panel";
+import { Button } from "@maat-apps/ui/button";
 import {
   Drawer,
   DrawerContent,
   DrawerHeader,
   DrawerTitle,
-} from "@/components/ui/drawer";
-import { useDragSensors } from "@/hooks/use-drag-sensors";
-import { useTranslation } from "@/i18n/use-translation";
-import type { Routine, RoutineProgress } from "@/types";
-import { SettingsPanel } from "@/views/home/settings-panel";
+} from "@maat-apps/ui/drawer";
+import { EmptyState } from "@maat-apps/ui/empty-state";
+import { FabButton } from "@maat-apps/ui/fab-button";
+import { PageHeader } from "@maat-apps/ui/page-header";
+import { ResetButton } from "@maat-apps/ui/reset-button";
 
 export function RoutineList({
   routines,
@@ -96,9 +96,23 @@ export function RoutineList({
       </PageHeader>
       {routines.length === 0 ? (
         hasAnyRoutines ? (
-          <NoRoutinesToday />
+          <EmptyState
+            title={t("noRoutinesTodayTitle")}
+            description={t("noRoutinesTodayDescription")}
+          />
         ) : (
-          <EmptyState onCreate={onCreate} />
+          <EmptyState
+            title={t("emptyTitle")}
+            description={t("emptyDescription")}
+            action={{
+              label: (
+                <>
+                  <Plus /> {t("newRoutine")}
+                </>
+              ),
+              onClick: onCreate,
+            }}
+          />
         )
       ) : (
         <DndContext

@@ -1,10 +1,10 @@
 import { useState } from "react";
 
-import { ConfirmDrawer } from "@/components/confirm-drawer";
-import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/i18n/use-translation";
 import { resetPreferences } from "@/lib/settings";
-import { SettingsSection } from "@/views/home/settings-primitives";
+import { Button } from "@maat-apps/ui/button";
+import { ConfirmDrawer } from "@maat-apps/ui/confirm-drawer";
+import { SettingsSection } from "@maat-apps/ui/settings-primitives";
 
 export function ResetSection() {
   const { t } = useTranslation();
@@ -38,6 +38,7 @@ export function ResetSection() {
         onOpenChange={setConfirmReset}
         title={t("resetSettingsTitle")}
         description={t("resetSettingsConfirmDescription")}
+        cancelLabel={t("cancel")}
         confirmLabel={t("resetSettingsAction")}
         onConfirm={confirmResetSettings}
       />

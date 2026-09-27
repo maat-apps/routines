@@ -1,7 +1,5 @@
 import { useRef, useState } from "react";
 
-import { ConfirmDrawer } from "@/components/confirm-drawer";
-import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/i18n/use-translation";
 import {
   applyBackup,
@@ -10,7 +8,12 @@ import {
   shareBackup,
   type Backup,
 } from "@/lib/backup";
-import { SettingsRow, SettingsSection } from "@/views/home/settings-primitives";
+import { Button } from "@maat-apps/ui/button";
+import { ConfirmDrawer } from "@maat-apps/ui/confirm-drawer";
+import {
+  SettingsRow,
+  SettingsSection,
+} from "@maat-apps/ui/settings-primitives";
 
 export function DataSection({
   onStatus,
@@ -97,6 +100,7 @@ export function DataSection({
         onOpenChange={(open) => !open && setPendingImport(null)}
         title={t("importTitle")}
         description={t("importDescription")}
+        cancelLabel={t("cancel")}
         confirmLabel={t("importConfirm")}
         onConfirm={confirmImport}
       />

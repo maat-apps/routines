@@ -44,8 +44,8 @@ export default defineConfig({
       strategies: "injectManifest",
       srcDir: "src",
       filename: "sw.ts",
-      // The app registers the worker itself (see src/components/mobile-gate.tsx),
-      // mirroring the previous hand-written public/sw.js setup.
+      // The app registers the worker itself (see src/app/app.tsx), mirroring
+      // the previous hand-written public/sw.js setup.
       injectRegister: false,
       manifest: false,
       injectManifest: {

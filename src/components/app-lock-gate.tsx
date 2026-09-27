@@ -7,7 +7,6 @@ import {
   useSyncExternalStore,
 } from "react";
 
-import { Button } from "@/components/ui/button";
 import { useAppSettings, useSettingsReady } from "@/hooks/use-store";
 import { useTranslation } from "@/i18n/use-translation";
 import {
@@ -19,6 +18,7 @@ import {
   subscribeToUnlock,
   verifyAppLock,
 } from "@/lib/app-lock";
+import { Button } from "@maat-apps/ui/button";
 
 /**
  * Hides the app behind a platform-authenticator prompt when the lock is on.

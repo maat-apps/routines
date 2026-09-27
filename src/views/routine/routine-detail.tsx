@@ -1,13 +1,13 @@
-import { Check, Pencil } from "lucide-react";
+import { Check, Pencil, Plus } from "lucide-react";
 
-import { AppBar } from "@/components/app-bar";
-import { EmptySteps } from "@/components/empty-states";
-import { ProgressRing } from "@/components/progress-ring";
-import { ResetButton } from "@/components/reset-button";
-import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/i18n/use-translation";
 import { sortSteps } from "@/lib/routine-utils";
 import type { Routine, RoutineProgress } from "@/types";
+import { AppBar } from "@maat-apps/ui/app-bar";
+import { Button } from "@maat-apps/ui/button";
+import { EmptyState } from "@maat-apps/ui/empty-state";
+import { ProgressRing } from "@maat-apps/ui/progress-ring";
+import { ResetButton } from "@maat-apps/ui/reset-button";
 
 export function RoutineDetail({
   routine,
@@ -34,6 +34,7 @@ export function RoutineDetail({
     <div className="mx-auto min-h-dvh w-[min(100%,480px)] px-5 pt-27 pb-[calc(116px+env(safe-area-inset-bottom))]">
       <AppBar
         title={routine.name || t("unnamed")}
+        backLabel={t("back")}
         onBack={onBack}
         action={
           <Button
@@ -47,7 +48,19 @@ export function RoutineDetail({
         }
       />
       {routine.steps.length === 0 ? (
-        <EmptySteps onEdit={onEdit} />
+        <EmptyState
+          description={t("noSteps")}
+          action={{
+            label: (
+              <>
+                <Plus /> {t("addFirstStep")}
+              </>
+            ),
+            onClick: onEdit,
+            variant: "outline",
+          }}
+          className="pt-10"
+        />
       ) : (
         <section
           className="grid grid-cols-[minmax(0,1fr)]"

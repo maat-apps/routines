@@ -1,6 +1,16 @@
 @import "tailwindcss";
 @import "shadcn/tailwind.css";
 
+/* @maat-apps/ui's components (Button, Drawer, AppBar, MobileGate, and
+   every other shared component this app uses) live in node_modules,
+   which Tailwind doesn't scan by default — without this, their classes
+   would be silently purged. Scanning the whole package here (rather than
+   @source inline-ing individual classes, as trainer does for its one
+   component) is deliberate: this app uses essentially every component the
+   package ships, so there's no meaningfully-unused subset to avoid
+   pulling in. */
+@source "../../node_modules/@maat-apps/ui/dist";
+
 @custom-variant dark (&:is(.dark *));
 /* True per mobile-gate.tsx's own definition of "phone-sized": the narrow
    dimension is <=481px, not just width. A portrait phone is caught by the

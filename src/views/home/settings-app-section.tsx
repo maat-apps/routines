@@ -1,7 +1,5 @@
 import { useState, useSyncExternalStore } from "react";
 
-import { ConfirmDrawer } from "@/components/confirm-drawer";
-import { Button } from "@/components/ui/button";
 import { useInstallPrompt } from "@/hooks/use-install-prompt";
 import { useTranslation } from "@/i18n/use-translation";
 import {
@@ -12,7 +10,12 @@ import {
   subscribeToUpdateSnapshot,
   updateApp,
 } from "@/lib/app-update";
-import { SettingsRow, SettingsSection } from "@/views/home/settings-primitives";
+import { Button } from "@maat-apps/ui/button";
+import { ConfirmDrawer } from "@maat-apps/ui/confirm-drawer";
+import {
+  SettingsRow,
+  SettingsSection,
+} from "@maat-apps/ui/settings-primitives";
 
 export function AppSection({
   onStatus,
@@ -94,6 +97,7 @@ export function AppSection({
         onOpenChange={setConfirmUpdate}
         title={t("updateAppTitle")}
         description={t("updateAppConfirmDescription")}
+        cancelLabel={t("cancel")}
         confirmLabel={t("updateAppAction")}
         onConfirm={() => {
           setConfirmUpdate(false);

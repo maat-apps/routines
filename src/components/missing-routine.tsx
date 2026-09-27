@@ -1,8 +1,8 @@
 import { startTransition } from "react";
 import { useNavigate } from "react-router";
 
-import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/i18n/use-translation";
+import { Button } from "@maat-apps/ui/button";
 
 // Shown by the "/:id" and "/:id/edit" views when the id in
 // the URL no longer matches a stored routine (e.g. it was deleted in another tab).

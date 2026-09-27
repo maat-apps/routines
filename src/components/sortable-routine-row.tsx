@@ -1,9 +1,9 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
-import { DragHandle } from "@/components/drag-handle";
 import { RoutineRowContent } from "@/components/routine-row-content";
 import type { Routine } from "@/types";
+import { DragHandle } from "@maat-apps/ui/drag-handle";
 
 export function SortableRoutineRow({
   routine,
