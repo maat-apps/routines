@@ -1,12 +1,15 @@
+import { useTranslation } from "@/i18n/use-translation";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { useTranslation } from "@/i18n/use-translation";
-import { SettingsRow, SettingsSection } from "@/views/home/settings-primitives";
+} from "@maat-apps/ui/select";
+import {
+  SettingsRow,
+  SettingsSection,
+} from "@maat-apps/ui/settings-primitives";
 
 export function LanguageSection() {
   const { t, locale, setLocale } = useTranslation();

@@ -1,8 +1,8 @@
 import { ChevronRight } from "lucide-react";
 import type { ReactNode } from "react";
 
-import { ProgressRing } from "@/components/progress-ring";
 import type { Routine } from "@/types";
+import { ProgressRing } from "@maat-apps/ui/progress-ring";
 
 /**
  * The ring + name + chevron every routine row (the plain list in

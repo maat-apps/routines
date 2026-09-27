@@ -1,13 +1,13 @@
 import { startTransition, useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 
-import { ConfirmDrawer } from "@/components/confirm-drawer";
 import { useRoutines, useRoutineState } from "@/hooks/use-store";
 import { useTranslation } from "@/i18n/use-translation";
 import { prefetchRouteChunks } from "@/lib/prefetch-routes";
 import { isRoutineActiveToday } from "@/lib/routine-utils";
 import { reorderRoutines, resetAll } from "@/lib/storage";
 import { RoutineList } from "@/views/home/routine-list";
+import { ConfirmDrawer } from "@maat-apps/ui/confirm-drawer";
 
 export function HomeView() {
   const navigate = useNavigate();
@@ -59,6 +59,7 @@ export function HomeView() {
         onOpenChange={setResetAllOpen}
         title={t("resetAllTitle")}
         description={t("resetAllDescription")}
+        cancelLabel={t("cancel")}
         confirmLabel={t("reset")}
         onConfirm={handleResetAll}
       />

@@ -3,8 +3,8 @@ import { defineConfig, devices } from "@playwright/test";
 // Runs against the static production build (npm run build), served by
 // `vite preview` under the app's real base path — the same GitHub Pages
 // layout the app assumes at runtime, unlike the dev server. Phone-sized
-// viewport throughout: the mobile gate (src/components/mobile-gate.tsx)
-// hides the app entirely at widths >=481px.
+// viewport throughout: the mobile gate (@maat-apps/ui's MobileGate,
+// used from src/app/app.tsx) hides the app entirely at widths >=481px.
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,

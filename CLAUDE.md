@@ -129,8 +129,8 @@ What follows here is what's specific to routines.
   `idb-store.ts`'s one-time migration (below) stay in step. `lib/` never
   imports from `react`/`react-dom`; React hooks that wrap this state live in
   `src/hooks/` (`use-store.ts`, `use-install-prompt.ts`) instead.
-  `src/components/mobile-gate.tsx` also calls `navigator.storage.persist()`
-  once (best-effort) — mainly insurance against iOS Safari's Intelligent
+  `src/app/app.tsx` also calls `navigator.storage.persist()` once
+  (best-effort) — mainly insurance against iOS Safari's Intelligent
   Tracking Prevention evicting script-writable storage after 7 days of no
   interaction in a plain browser tab (this doesn't apply the same way once
   the app is installed/standalone, which is the primary use case, but the
@@ -164,11 +164,12 @@ true`, `storage.ts`'s background load waits for that key before decrypting
   the home view's state, not a route — `src/views/home/settings-panel.tsx`,
   which composes one `Section` component per settings card from sibling
   `settings-<name>-section.tsx` files (plus shared `SettingsSection`/
-  `SettingsRow` in `settings-primitives.tsx`) rather than holding every
-  section inline. `ConfirmDrawer` (the Cancel + destructive-button bottom
-  sheet those sections use) lives in `src/components/` instead, since
-  `home-view.tsx`'s "reset all" and `routine-edit-form.tsx`'s "delete
-  routine" confirmations are the same component, not settings-specific.
+  `SettingsRow`, from `@maat-apps/ui/settings-primitives`) rather than
+  holding every section inline. `ConfirmDrawer` (the Cancel + destructive-
+  button bottom sheet those sections use, also from `@maat-apps/ui`) isn't
+  settings-specific either, since `home-view.tsx`'s "reset all" and
+  `routine-edit-form.tsx`'s "delete routine" confirmations use the same
+  component.
   `/all-routines` (`all-routines-view.tsx`) is a later addition: home's own
   list is scoped to routines active today (`isRoutineActiveToday`), so this
   is the only way to reach one that isn't — a plain lookup/access point, not
@@ -182,11 +183,14 @@ true`, `storage.ts`'s background load waits for that key before decrypting
   `src/i18n/en.json` and `src/i18n/pl.json` — keep both in sync when adding
   keys. Dates are formatted with native `Intl.DateTimeFormat`.
 
-- **Mobile gate + app lock.** `src/components/mobile-gate.tsx` renders the app
-  for mobile viewports and a "desktop not supported" message otherwise, and
-  registers the service worker (production builds only — see the
-  `import.meta.env.PROD` guard; there's no `sw.js` in dev, and running a
-  caching worker during development would fight Vite's HMR anyway). Inside it,
+- **Mobile gate + app lock.** `@maat-apps/ui`'s `MobileGate` (used from
+  `src/app/app.tsx`) renders the app for mobile viewports and a "desktop not
+  supported" message otherwise; `app.tsx` itself registers the service
+  worker (production builds only — see the `import.meta.env.PROD` guard;
+  there's no `sw.js` in dev, and running a caching worker during development
+  would fight Vite's HMR anyway) — `MobileGate` dropped that side effect
+  when it moved to `@maat-apps/ui` (maat-apps/maat-core#3/#18), since it's
+  per-app setup, not part of the gate shape. Inside the gate,
   `src/components/app-lock-gate.tsx` hides the app behind a WebAuthn
   platform-authenticator prompt when the lock is on. Being unlocked is
   per-session memory state in `src/lib/app-lock.ts`; enrolling counts as
@@ -244,24 +248,33 @@ true`, `storage.ts`'s background load waits for that key before decrypting
   reload, since other stores cache their own snapshots.
 
 - **UI stack.** shadcn (`base-nova` style, see `components.json`, `rsc: false`)
-  built on `@base-ui/react` — primitives live in `src/components/ui`, generated
-  and not hand-edited, with one deliberate exception: `button.tsx`'s `outline`
-  variant carries a `disabled:` blurred-translucent-background treatment
-  (`disabled:bg-background/40 disabled:backdrop-blur-md`) so every disabled
-  outline button in the app gets it, not just the ones that happened to add
-  their own override — re-apply this if `button.tsx` is ever regenerated via
-  `npx shadcn add`. Always import through the aliases `components.json`
-  declares (`utils`, `ui`, `components`, `lib`, `hooks`) rather than straight
-  from the underlying package — e.g. `cn` from `@/lib/utils`, not directly
-  from the `cn` package — so a future `npx shadcn add` or hand-adjustment
-  doesn't quietly bypass the alias the way the generated components once did.
-  Tailwind v4 (via `@tailwindcss/postcss`) with design
-  tokens in `src/app/globals.css`; icons from `lucide-react`. The font is
-  self-hosted via `@fontsource-variable/outfit` (imported in `src/main.tsx`,
-  used for both `--font-sans` and `--font-heading`) rather than fetched from
-  Google Fonts at runtime — same "nothing leaves the device" invariant the
-  old `next/font` setup gave for free. Step reordering uses `@dnd-kit`.
-  Every bottom sheet is `src/components/ui/drawer.tsx` (Base UI `Drawer`) with
+  built on `@base-ui/react`. Most of what used to be hand-edited copies under
+  `src/components/`/`src/components/ui/` — `Button`/`Input`/`Select`/
+  `Drawer`, `AppBar`, `ConfirmDrawer`, `MobileGate`, `PageHeader`,
+  `ProgressRing`, `FabButton`, `ResetButton`, `DragHandle`, `EmptyState`,
+  `SettingsSection`/`SettingsRow` — moved to the real, installable
+  [`@maat-apps/ui`](https://www.npmjs.com/package/@maat-apps/ui) package
+  (maat-apps/maat-core#3/#18): this repo was the source they were extracted
+  from, and now consumes them back as a dependency instead of maintaining
+  its own copies. `Button`'s `outline` variant still carries its one
+  deliberate hand-patch on top of the generated shadcn output
+  (`disabled:bg-background/40 disabled:backdrop-blur-md`) — that patch now
+  lives in the package, so a fix there benefits every consuming app at once
+  rather than needing to be reapplied by hand per repo. `checkbox.tsx`,
+  `switch.tsx`, and `textarea.tsx` (`src/components/ui/`) weren't extracted
+  — regenerate those via `npx shadcn add` per the usual shadcn workflow if
+  they're ever touched. `@maat-apps/ui`'s components render their own
+  Tailwind classes from inside `node_modules`, which Tailwind doesn't scan
+  by default — `src/app/globals.css`'s `@source` directive points at the
+  package's compiled output so those classes aren't purged; widen or narrow
+  it if the set of components this app imports from the package changes.
+  Tailwind v4 (via `@tailwindcss/postcss`) with design tokens in
+  `src/app/globals.css`; icons from `lucide-react`. The font is self-hosted
+  via `@fontsource-variable/outfit` (imported in `src/main.tsx`, used for
+  both `--font-sans` and `--font-heading`) rather than fetched from Google
+  Fonts at runtime — same "nothing leaves the device" invariant the old
+  `next/font` setup gave for free. Step reordering uses `@dnd-kit`.
+  Every bottom sheet is `@maat-apps/ui`'s `Drawer` (Base UI `Drawer`) with
   `showSwipeHandle`, so each one has a grab pill and can be swiped down to
   dismiss. Base UI stacks nested drawers — opening a confirmation from the
   settings drawer shrinks and scales the parent behind it, which is intended.
@@ -270,12 +283,12 @@ true`, `storage.ts`'s background load waits for that key before decrypting
   Every drawer also closes on the phone's native back button/gesture, the
   same as its swipe handle or close control. On Android/Chromium this is
   Base UI's own doing (`CloseWatcher`, gated to the topmost open drawer —
-  see `DrawerRoot.js`); `drawer.tsx` adds a `useHistoryBackDismiss` fallback
-  on top (one `pushState` per open drawer, closed via `popstate`, marker-
-  tagged so nested drawers only close the topmost) to cover iOS and any
-  browser without `CloseWatcher`. Routed screens (routine view/edit, `/new`)
-  need no equivalent — `navigate(...)` already gives them a real history
-  entry, so native back lands wherever the `AppBar` arrow would.
+  see `DrawerRoot.js`); the package's `Drawer` adds a `useHistoryBackDismiss`
+  fallback on top (one `pushState` per open drawer, closed via `popstate`,
+  marker-tagged so nested drawers only close the topmost) to cover iOS and
+  any browser without `CloseWatcher`. Routed screens (routine view/edit,
+  `/new`) need no equivalent — `navigate(...)` already gives them a real
+  history entry, so native back lands wherever the `AppBar` arrow would.
 
 - **Unit tests (Vitest).** Test files live under `tests/unit/`, mirroring
   `src/`'s structure (`tests/unit/lib/storage.test.ts` for

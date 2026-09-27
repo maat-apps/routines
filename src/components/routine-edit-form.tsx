@@ -11,11 +11,7 @@ import {
 import { CalendarDays, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 
-import { AppBar } from "@/components/app-bar";
-import { ConfirmDrawer } from "@/components/confirm-drawer";
 import { SortableStepRow } from "@/components/sortable-step-row";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useDragSensors } from "@/hooks/use-drag-sensors";
 import { useTranslation } from "@/i18n/use-translation";
 import {
@@ -25,6 +21,10 @@ import {
   weekOrder,
 } from "@/lib/routine-utils";
 import type { Routine } from "@/types";
+import { AppBar } from "@maat-apps/ui/app-bar";
+import { Button } from "@maat-apps/ui/button";
+import { ConfirmDrawer } from "@maat-apps/ui/confirm-drawer";
+import { Input } from "@maat-apps/ui/input";
 
 // Shared by the "/new" and "/:id/edit" views — the only difference between
 // creating and editing a routine is what happens on save/back/delete.
@@ -148,7 +148,7 @@ export function RoutineEditForm({
 
   return (
     <div className="mx-auto min-h-dvh w-[min(100%,480px)] px-5 pt-27 pb-[calc(132px+env(safe-area-inset-bottom))]">
-      <AppBar title={title} onBack={onBack} />
+      <AppBar title={title} backLabel={t("back")} onBack={onBack} />
       <section className="mb-7.5 grid gap-2.25">
         <label htmlFor="routine-name" className="text-sm font-semibold">
           {t("routineName")}
@@ -255,6 +255,7 @@ export function RoutineEditForm({
         onOpenChange={setDeleteOpen}
         title={t("deleteRoutineTitle")}
         description={t("deleteRoutineDescription")}
+        cancelLabel={t("cancel")}
         confirmLabel={t("deleteRoutine")}
         onConfirm={onDelete}
       />

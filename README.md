@@ -162,9 +162,10 @@ The app is deployed to **GitHub Pages** as a static site.
   against the message catalogs. Catalogs are `src/i18n/en.json` and
   `src/i18n/pl.json` — keep both in sync when adding keys. Dates are formatted
   with native `Intl.DateTimeFormat`.
-- **Mobile gate + app lock.** `src/components/mobile-gate.tsx` renders the app
-  for mobile viewports (and a short "desktop not supported" message otherwise)
-  and registers the service worker in production builds. Inside it,
+- **Mobile gate + app lock.** `@maat-apps/ui`'s `MobileGate` (used from
+  `src/app/app.tsx`) renders the app for mobile viewports (and a short
+  "desktop not supported" message otherwise); `app.tsx` itself registers the
+  service worker in production builds. Inside the gate,
   `src/components/app-lock-gate.tsx` holds the app behind the WebAuthn prompt
   while the lock is on; being unlocked is per-session state in
   `src/lib/app-lock.ts`.

@@ -1,9 +1,12 @@
 import { startTransition } from "react";
 import { useNavigate } from "react-router";
 
-import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/i18n/use-translation";
-import { SettingsRow, SettingsSection } from "@/views/home/settings-primitives";
+import { Button } from "@maat-apps/ui/button";
+import {
+  SettingsRow,
+  SettingsSection,
+} from "@maat-apps/ui/settings-primitives";
 
 export function NavigationSection() {
   const navigate = useNavigate();

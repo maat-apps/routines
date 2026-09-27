@@ -1,13 +1,14 @@
+import { Plus } from "lucide-react";
 import { startTransition } from "react";
 import { useNavigate } from "react-router";
 
-import { AppBar } from "@/components/app-bar";
-import { EmptyState } from "@/components/empty-states";
 import { RoutineRowContent } from "@/components/routine-row-content";
 import { useSmartBack } from "@/hooks/use-smart-back";
 import { useRoutines, useRoutineState } from "@/hooks/use-store";
 import { useTranslation } from "@/i18n/use-translation";
 import { isRoutineActiveToday } from "@/lib/routine-utils";
+import { AppBar } from "@maat-apps/ui/app-bar";
+import { EmptyState } from "@maat-apps/ui/empty-state";
 
 // A lookup/access point for a routine home.tsx's own today-only filter hides
 // (routine-day-scheduling) — not a second home screen, so it deliberately
@@ -25,10 +26,22 @@ export function AllRoutinesView() {
     <div className="mx-auto min-h-dvh w-[min(100%,480px)] px-5 pt-27 pb-[calc(20px+env(safe-area-inset-bottom))]">
       <AppBar
         title={t("allRoutinesTitle")}
+        backLabel={t("back")}
         onBack={() => startTransition(smartBack)}
       />
       {routines.length === 0 ? (
-        <EmptyState onCreate={() => startTransition(() => navigate("/new"))} />
+        <EmptyState
+          title={t("emptyTitle")}
+          description={t("emptyDescription")}
+          action={{
+            label: (
+              <>
+                <Plus /> {t("newRoutine")}
+              </>
+            ),
+            onClick: () => startTransition(() => navigate("/new")),
+          }}
+        />
       ) : (
         <section
           className="grid grid-cols-[minmax(0,1fr)] gap-2.5"
