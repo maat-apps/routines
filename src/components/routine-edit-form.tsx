@@ -8,7 +8,7 @@ import {
   SortableContext,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { CalendarDays, Plus, Trash2 } from "lucide-react";
+import { CalendarDots, Plus, Trash } from "@phosphor-icons/react";
 import { useState } from "react";
 
 import { SortableStepRow } from "@/components/sortable-step-row";
@@ -165,7 +165,7 @@ export function RoutineEditForm({
       <section className="mb-7.5 grid gap-2.25">
         <div className="flex items-center justify-between">
           <h2 className="m-0 text-sm font-semibold">{t("activeDaysTitle")}</h2>
-          <CalendarDays
+          <CalendarDots
             className="text-muted-foreground size-4"
             aria-hidden="true"
           />
@@ -238,7 +238,7 @@ export function RoutineEditForm({
           className="mt-12 min-h-12.5 w-full text-base"
           onClick={() => setDeleteOpen(true)}
         >
-          <Trash2 /> {t("deleteRoutine")}
+          <Trash /> {t("deleteRoutine")}
         </Button>
       )}
       <div className="border-border bg-background fixed right-0 bottom-0 left-0 z-20 border-t px-5 pt-3 pb-[calc(20px+env(safe-area-inset-bottom))]">

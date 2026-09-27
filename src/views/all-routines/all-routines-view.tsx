@@ -1,4 +1,4 @@
-import { Plus } from "lucide-react";
+import { Plus } from "@phosphor-icons/react";
 import { startTransition } from "react";
 import { useNavigate } from "react-router";
 

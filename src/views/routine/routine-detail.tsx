@@ -1,4 +1,4 @@
-import { Check, Pencil, Plus } from "lucide-react";
+import { Check, PencilSimple, Plus } from "@phosphor-icons/react";
 
 import { useTranslation } from "@/i18n/use-translation";
 import { sortSteps } from "@/lib/routine-utils";
@@ -43,7 +43,7 @@ export function RoutineDetail({
             aria-label={t("editRoutine")}
             onClick={onEdit}
           >
-            <Pencil className="size-6" />
+            <PencilSimple className="size-6" />
           </Button>
         }
       />
