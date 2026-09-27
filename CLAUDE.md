@@ -562,6 +562,10 @@ every repo that has tasks needs Issues enabled first (`gh repo edit
 - Check the current branch before editing or committing anything — never
   edit or commit directly on `main`, including doc-only changes. Branch
   first, always.
+- Name branches `<type>/<short-descriptive-slug>` — see
+  `maat-core/STRUCTURE.md`'s "Branch naming" section — not a generic or
+  session-scoped name; cut a fresh branch per PR/task rather than reusing
+  one across unrelated changes.
 - Delete local branches once their PR is confirmed merged on GitHub —
   `git branch -d`, or `-D` when a squash-merge or an already-deleted
   remote branch blocks the safe check (git's ancestry check doesn't
