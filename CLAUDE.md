@@ -72,16 +72,17 @@ What follows here is what's specific to routines.
 - **Vite + base path, no server.** `vite.config.ts` sets `base` from
   `DEPLOY_BASE_PATH` (defaulting to `/routines/`, deployed to GitHub Pages
   under `/routines`) and builds a plain static SPA — no server at runtime.
-  A PR preview build (`.github/workflows/ci.yml`'s `preview-build`/
-  `preview-deploy` jobs, gated on the earlier stages in that same pipeline
-  passing) overrides it to `/routines/pr-<n>/` so an open PR can be checked
-  on a phone under its own subpath alongside `main`'s deployment — see that
-  workflow and `cd.yml` for how both share one GitHub Pages site via a
-  `pages-content` storage branch that isn't itself the Pages source.
-  Cleaning that subdirectory back up when the PR closes is a separate
-  workflow, `pr-preview-cleanup.yml` — closing a PR has nothing to
-  validate, so it doesn't run the rest of the pipeline. GitHub Pages has
-  no server-side
+  A PR preview build (`.github/workflows/deploy-preview.yml`'s
+  `preview-build`/`preview-deploy` jobs — manually dispatched from the
+  Actions tab with the PR number as input, not gated on or triggered by
+  `ci.yml`'s validate pipeline at all) overrides it to `/routines/pr-<n>/`
+  so an open PR can be checked on a phone under its own subpath alongside
+  `main`'s deployment — see that workflow and `cd.yml` for how both share
+  one GitHub Pages site via a `pages-content` storage branch that isn't
+  itself the Pages source. Cleaning that subdirectory back up when the PR
+  closes is a separate workflow, `pr-preview-cleanup.yml`, still automatic
+  on `pull_request(closed)` — closing a PR has nothing to validate, so it
+  doesn't run either of those pipelines. GitHub Pages has no server-side
   rewrites, so a hard refresh or deep link into a client-routed path would
   404; a `closeBundle` plugin in `vite.config.ts` copies the built
   `index.html` to `dist/404.html` after every build so Pages' 404 fallback
