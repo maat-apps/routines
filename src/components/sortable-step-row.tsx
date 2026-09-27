@@ -1,6 +1,6 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Trash2 } from "lucide-react";
+import { Trash } from "@phosphor-icons/react";
 import { type ChangeEvent, useEffect, useRef } from "react";
 
 import { Textarea } from "@/components/ui/textarea";
@@ -106,7 +106,7 @@ export function SortableStepRow({
         aria-label={deleteLabel}
         onClick={() => onDelete(step.id)}
       >
-        <Trash2 />
+        <Trash />
       </Button>
     </div>
   );
