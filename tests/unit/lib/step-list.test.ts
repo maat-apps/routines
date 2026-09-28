@@ -3,9 +3,9 @@ import { describe, expect, it } from "vitest";
 import {
   appendStep,
   insertStepAfter,
-  moveStep,
   previousStepId,
   removeStep,
+  reorderSteps,
   stepsForSave,
   updateStepText,
 } from "@/lib/step-list";
@@ -78,31 +78,32 @@ describe("previousStepId", () => {
   });
 });
 
-describe("moveStep", () => {
-  it("moves a step down to the drop target and renumbers", () => {
-    const result = moveStep(steps("a", "b", "c"), "s0", "s2");
+describe("reorderSteps", () => {
+  it("puts the steps in the given order and renumbers", () => {
+    const result = reorderSteps(steps("a", "b", "c"), ["s1", "s2", "s0"]);
 
     expect(ids(result)).toEqual(["s1", "s2", "s0"]);
     expect(orders(result)).toEqual([0, 1, 2]);
   });
 
-  it("moves a step up to the drop target", () => {
-    const result = moveStep(steps("a", "b", "c"), "s2", "s0");
+  it("keeps unlisted steps, in their order, after the listed ones", () => {
+    const result = reorderSteps(steps("a", "b", "c"), ["s2"]);
 
     expect(ids(result)).toEqual(["s2", "s0", "s1"]);
   });
 
-  it("returns the same array when dropped in place", () => {
-    const list = steps("a", "b");
+  it("ignores unknown ids", () => {
+    const result = reorderSteps(steps("a", "b"), ["missing", "s1", "s0"]);
 
-    expect(moveStep(list, "s0", "s0")).toBe(list);
+    expect(ids(result)).toEqual(["s1", "s0"]);
   });
 
-  it("returns the same array for an unknown id", () => {
+  it("doesn't mutate the input", () => {
     const list = steps("a", "b");
 
-    expect(moveStep(list, "s0", "missing")).toBe(list);
-    expect(moveStep(list, "missing", "s0")).toBe(list);
+    reorderSteps(list, ["s1", "s0"]);
+
+    expect(ids(list)).toEqual(["s0", "s1"]);
   });
 });
 

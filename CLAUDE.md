@@ -142,16 +142,19 @@ own files. Product intent: `PRODUCT.md`.
   `src/i18n/en.json` and `pl.json` — `t()` only accepts keys present in
   both, so keep them in sync. Dates via `Intl.DateTimeFormat`.
 
-- **UI.** shadcn `base-nova` (`rsc: false`) on `@base-ui/react`; shared
-  components (Button, Drawer, ConfirmDrawer, AppBar, MobileGate, …) come
-  from `@maat-apps/ui`. `src/app/globals.css`'s `@source` must cover the
-  package's compiled output, or its classes get purged. Local shadcn
-  primitives: `checkbox.tsx`, `switch.tsx`, `textarea.tsx` — regenerate
-  with `npx shadcn add`, don't hand-edit (moving to `@maat-apps/ui` in
-  maat-core#42). Tailwind v4, tokens in `globals.css`, `lucide-react`
-  icons, self-hosted `@fontsource-variable/outfit`, `@dnd-kit` for step
-  reordering. Accent is neutral **white** on dark surfaces; the old coral
-  accent was removed on purpose — don't reintroduce it.
+- **UI.** shadcn `base-nova` (`rsc: false`) on `@base-ui/react`; every
+  shared component — Button, Input, Switch, Textarea, Drawer,
+  ConfirmDrawer, AppBar, MobileGate, … — comes from `@maat-apps/ui`, with no
+  local `src/components/ui/` copies. `src/app/globals.css`'s `@source` must
+  cover the package's compiled output, or its classes get purged.
+  Drag-to-reorder lists (routines on home, steps in the edit form) use the
+  package's `SortableList`: routines as `SortableListRow`s,
+  steps as `SortableStepRow` built on `useSortableItem`; "all routines" uses
+  `ListRow`. Row content (`RoutineRowContent`) stays here. Tailwind v4,
+  tokens in `globals.css`, Phosphor icons, self-hosted
+  `@fontsource-variable/outfit`. Accent is neutral **white** on dark
+  surfaces; the old coral accent was removed on purpose — don't
+  reintroduce it.
 
 - **Tests** (conventions: maat-core `docs/testing-*.md`). Unit coverage
   covers `src/lib/**`, `src/hooks/**`, `src/i18n/**` at 95%; the test

@@ -9,6 +9,7 @@ import { useTranslation } from "@/i18n/use-translation";
 import { isRoutineActiveToday } from "@/lib/routine-utils";
 import { AppBar } from "@maat-apps/ui/app-bar";
 import { EmptyState } from "@maat-apps/ui/empty-state";
+import { ListRow } from "@maat-apps/ui/list-row";
 
 // A lookup/access point for a routine home.tsx's own today-only filter hides
 // (routine-day-scheduling) — not a second home screen, so it deliberately
@@ -54,10 +55,8 @@ export function AllRoutinesView() {
               ).length ?? 0;
             const activeToday = isRoutineActiveToday(routine);
             return (
-              <button
+              <ListRow
                 key={routine.id}
-                type="button"
-                className="bg-card text-card-foreground active:bg-muted [&>svg]:text-muted-foreground flex min-h-18 w-full items-center gap-3.5 rounded-lg border-0 py-3.5 pr-4 pl-4 text-left transition-colors"
                 onClick={() =>
                   startTransition(() =>
                     navigate(`/${encodeURIComponent(routine.id)}`),
@@ -77,7 +76,7 @@ export function AllRoutinesView() {
                     )
                   }
                 />
-              </button>
+              </ListRow>
             );
           })}
         </section>

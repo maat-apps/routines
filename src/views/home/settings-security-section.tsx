@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 
-import { Switch } from "@/components/ui/switch";
 import { useAppSettings } from "@/hooks/use-store";
 import { useTranslation } from "@/i18n/use-translation";
 import {
@@ -12,6 +11,7 @@ import {
   SettingsRow,
   SettingsSection,
 } from "@maat-apps/ui/settings-primitives";
+import { Switch } from "@maat-apps/ui/switch";
 
 export function SecuritySection() {
   const { t } = useTranslation();
