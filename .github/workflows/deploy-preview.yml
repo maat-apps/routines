@@ -1,11 +1,8 @@
 name: Deploy PR Preview
 
-# Manual, on-demand PR preview build+deploy — pulled out of ci.yml's
-# pipeline (where it used to run automatically once code-quality/test/
-# build-and-audit passed) so a developer can dispatch it from the Actions
-# tab whenever they actually want to eyeball a PR on a phone, instead of
-# paying for it (and racing pages-content pushes) on every push to every
-# PR. ci.yml's validate pipeline no longer gates or triggers this at all.
+# Calls maat-core's reusable app-deploy-preview.yml: builds a PR under
+# /<repo>/pr-<n>/ next to main's deployment. Manual (Actions tab → run with
+# the PR number) so previews only cost CI minutes when someone wants one.
 on:
   workflow_dispatch:
     inputs:
@@ -20,120 +17,12 @@ permissions:
   id-token: write
   pull-requests: write
 
-# Shared with cd.yml's own concurrency group — every preview push writes
-# to the same shared pages-content branch main's own deploy also writes
-# to, so two runs updating it at once would race each other's git push
-# regardless of which PR (or main) they came from. cancel-in-progress
-# stays false: cancelling this over an unrelated deploy would be wrong,
-# not just wasteful.
 concurrency:
   group: pages
   cancel-in-progress: false
 
 jobs:
-  preview-build:
-    runs-on: ubuntu-latest
-    env:
-      PR_NUM: ${{ inputs.pr_number }}
-    steps:
-      - name: Resolve PR head ref
-        id: pr_ref
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          REF=$(gh pr view "$PR_NUM" --repo "${{ github.repository }}" --json headRefName -q .headRefName)
-          echo "ref=$REF" >> "$GITHUB_OUTPUT"
-
-      - name: Checkout PR head
-        uses: actions/checkout@v5
-        with:
-          ref: ${{ steps.pr_ref.outputs.ref }}
-
-      - name: Setup Node
-        uses: actions/setup-node@v5
-        with:
-          node-version: 24
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build preview
-        run: npm run build
-        env:
-          DEPLOY_BASE_PATH: /routines/pr-${{ env.PR_NUM }}/
-
-      # See cd.yml for why this branch exists: it's this workflow's own
-      # storage for assembling the whole Pages tree (main's root + every
-      # active preview subdirectory), not the Pages source itself.
-      - name: Checkout pages-content workspace
-        uses: actions/checkout@v5
-        with:
-          path: pages-content
-          fetch-depth: 0
-
-      - name: Switch to pages-content branch (create if missing)
-        working-directory: pages-content
-        run: |
-          git fetch origin pages-content:refs/remotes/origin/pages-content || true
-          if git show-ref --verify --quiet refs/remotes/origin/pages-content; then
-            git checkout pages-content
-          else
-            git checkout --orphan pages-content
-            git rm -rf . > /dev/null
-          fi
-
-      - name: Update this PR's preview subdirectory
-        run: |
-          rm -rf "pages-content/pr-$PR_NUM"
-          mkdir -p "pages-content/pr-$PR_NUM"
-          rsync -a dist/ "pages-content/pr-$PR_NUM/"
-
-      - name: Commit and push pages-content
-        working-directory: pages-content
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -m "Preview for PR #$PR_NUM" --allow-empty
-          git push origin HEAD:pages-content
-
-      - name: Configure Pages
-        uses: actions/configure-pages@v6
-        with:
-          enablement: true
-
-      - name: Remove git metadata before upload
-        run: rm -rf pages-content/.git
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: pages-content
-
-      - name: Add preview link to PR description
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          PREVIEW_URL="https://maat-apps.github.io/routines/pr-$PR_NUM/"
-          BODY=$(gh pr view "$PR_NUM" --json body -q .body)
-          if ! printf '%s' "$BODY" | grep -qF "$PREVIEW_URL"; then
-            { printf '%s\n\n**Preview:** %s\n' "$BODY" "$PREVIEW_URL"; } | gh pr edit "$PR_NUM" --body-file -
-          fi
-
-  preview-deploy:
-    needs: preview-build
-    runs-on: ubuntu-latest
-    # A distinct environment from cd.yml's "github-pages" — that one's
-    # auto-configured by GitHub Pages setup with a branch protection rule
-    # restricting deploys to main, which a PR head ref never satisfies.
-    # actions/deploy-pages doesn't care what the environment is named, so
-    # a fresh one with no such rule sidesteps it rather than needing a
-    # manual repo-settings change.
-    environment:
-      name: github-pages-preview
-      url: https://maat-apps.github.io/routines/pr-${{ inputs.pr_number }}/
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v5
+  preview:
+    uses: maat-apps/maat-core/.github/workflows/app-deploy-preview.yml@main
+    with:
+      pr-number: ${{ inputs.pr_number }}
