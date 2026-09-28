@@ -12,7 +12,12 @@ import {
   replaceAllData,
   setEncryptionKey as setStorageEncryptionKey,
 } from "@/lib/storage";
-import { deriveKey, randomBytes } from "@/lib/webauthn-crypto";
+import {
+  deriveKey,
+  fromBase64Url,
+  randomBytes,
+  toBase64Url,
+} from "@/lib/webauthn-crypto";
 
 // The app lock is a convenience gate by default. On a device that supports
 // the WebAuthn PRF extension (LockEnrolment.encryptionSupported), it becomes
@@ -56,29 +61,6 @@ function markSessionUnlocked(): void {
   for (const listener of unlockListeners) {
     listener();
   }
-}
-
-function toBase64Url(buffer: ArrayBuffer): string {
-  let binary = "";
-  for (const byte of new Uint8Array(buffer)) {
-    binary += String.fromCharCode(byte);
-  }
-  return btoa(binary)
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/, "");
-}
-
-// WebAuthn wants a `BufferSource` backed by a plain ArrayBuffer, so both helpers
-// below pin the element type rather than returning `ArrayBufferLike`.
-function fromBase64Url(value: string): Uint8Array<ArrayBuffer> {
-  const padded = value.replace(/-/g, "+").replace(/_/g, "/");
-  const binary = atob(padded.padEnd(Math.ceil(padded.length / 4) * 4, "="));
-  const bytes = new Uint8Array(binary.length);
-  for (let index = 0; index < binary.length; index += 1) {
-    bytes[index] = binary.charCodeAt(index);
-  }
-  return bytes;
 }
 
 /** Hands the derived key (or `null`) to every module that encrypts with it. */

@@ -110,7 +110,9 @@ describe("when the IndexedDB read itself rejects", () => {
   it("keeps the guessed default instead of throwing", async () => {
     vi.resetModules();
     const idbStore = await import("@/lib/idb-store");
-    vi.spyOn(idbStore, "kvGet").mockRejectedValue(new Error("blocked"));
+    vi.spyOn(idbStore.keyValueStore, "get").mockRejectedValue(
+      new Error("blocked"),
+    );
     setNavigatorLanguage("pl-PL");
     const localeStore = await import("@/lib/locale-store");
     await localeStore.whenLoaded();

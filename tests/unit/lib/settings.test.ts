@@ -180,7 +180,9 @@ describe("ensureLoaded error handling", () => {
   it("keeps the defaults instead of throwing when the IndexedDB read rejects", async () => {
     vi.resetModules();
     const idbStore = await import("@/lib/idb-store");
-    vi.spyOn(idbStore, "kvGet").mockRejectedValue(new Error("blocked"));
+    vi.spyOn(idbStore.keyValueStore, "get").mockRejectedValue(
+      new Error("blocked"),
+    );
     const settings = await import("@/lib/settings");
     await settings.whenLoaded();
     expect(settings.getSettingsSnapshot()).toEqual({
