@@ -127,7 +127,10 @@ own files. Product intent: `PRODUCT.md`.
 
 - **Backup + settings.** `src/lib/backup.ts` writes routines, progress and
   language to versioned JSON and validates imports through the same
-  schemas as storage read-back (`parseRoutines`/`parseState`, per entry).
+  schemas as storage read-back (`parseRoutines`/`parseState`, per entry,
+  via `@maat-apps/core/validation`). The envelope checks, file format and
+  share/download come from `@maat-apps/core/backup`; the data, locale and
+  messages are routines' own.
   `src/lib/settings.ts` also holds an `installed` flag, set once
   `useInstallPrompt` sees standalone mode or `appinstalled` — Chrome stops
   firing `beforeinstallprompt` after install, so this is how a browser tab
