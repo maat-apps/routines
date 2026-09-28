@@ -1,0 +1,1 @@
+import{j as a,H as e,V as r}from"./index-Cc2Kufg5.js";function i({disabled:t,onClick:n,className:s,children:o}){return a.jsx(e,{variant:"outline",disabled:t,onClick:n,className:r("min-h-13 rounded-lg px-4.5",s),children:o})}export{i as R};
