@@ -150,11 +150,12 @@ own files. Product intent: `PRODUCT.md`.
   Drag-to-reorder lists (routines on home, steps in the edit form) use the
   package's `SortableList`: routines as `SortableListRow`s,
   steps as `SortableStepRow` built on `useSortableItem`; "all routines" uses
-  `ListRow`. Row content (`RoutineRowContent`) stays here. Tailwind v4,
-  tokens in `globals.css`, Phosphor icons, self-hosted
-  `@fontsource-variable/outfit`. Accent is neutral **white** on dark
-  surfaces; the old coral accent was removed on purpose — don't
-  reintroduce it.
+  `ListRow`. Row content (`RoutineRowContent`) stays here. Tailwind v4 with
+  the shared theme — `@import "@maat-apps/ui/theme.css"` in `globals.css`:
+  true black + white on Outfit, the tokens, base styles, `phone-sized` and
+  ProgressRing's animation. Don't redefine tokens here or reintroduce a
+  colored accent (the old coral one was removed on purpose). Phosphor
+  icons.
 
 - **Tests** (conventions: maat-core `docs/testing-*.md`). Unit coverage
   covers `src/lib/**`, `src/hooks/**`, `src/i18n/**` at 95%; the test
