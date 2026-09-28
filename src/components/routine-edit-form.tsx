@@ -4,22 +4,26 @@ import {
   restrictToVerticalAxis,
 } from "@dnd-kit/modifiers";
 import {
-  arrayMove,
   SortableContext,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { CalendarDots, Plus, Trash } from "@phosphor-icons/react";
+import { Plus, Trash } from "@phosphor-icons/react";
 import { useState } from "react";
 
 import { SortableStepRow } from "@/components/sortable-step-row";
+import { WeekdayPicker } from "@/components/weekday-picker";
 import { useDragSensors } from "@/hooks/use-drag-sensors";
 import { useTranslation } from "@/i18n/use-translation";
+import { createId, sortSteps } from "@/lib/routine-utils";
 import {
-  createId,
-  sortSteps,
-  weekdayLabels,
-  weekOrder,
-} from "@/lib/routine-utils";
+  appendStep,
+  insertStepAfter,
+  moveStep,
+  previousStepId,
+  removeStep,
+  stepsForSave,
+  updateStepText,
+} from "@/lib/step-list";
 import type { Routine } from "@/types";
 import { AppBar } from "@maat-apps/ui/app-bar";
 import { Button } from "@maat-apps/ui/button";
@@ -51,16 +55,9 @@ export function RoutineEditForm({
   const [activeDays, setActiveDays] = useState(routine.activeDays);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [focusStepId, setFocusStepId] = useState<string | null>(null);
+  const sensors = useDragSensors();
   const canSave =
     name.trim().length > 0 && steps.some((step) => step.text.trim().length > 0);
-  // Visible chips use "narrow" (a single letter, e.g. "m"/"t"); the full
-  // name goes on each button's aria-label instead — narrow labels repeat
-  // (English "T" is both Tuesday and Thursday), fine for sighted users who
-  // also see the chips in a fixed order (locale-dependent, but stable), but
-  // a genuinely ambiguous accessible name for screen readers otherwise.
-  const weekdayNames = weekdayLabels(locale, "long");
-  const narrowWeekdayLabels = weekdayLabels(locale, "narrow");
-  const orderedDays = weekOrder(locale);
 
   function toggleDay(day: number) {
     setActiveDays((current) =>
@@ -69,65 +66,37 @@ export function RoutineEditForm({
         : [...current, day].sort((a, b) => a - b),
     );
   }
-  const sensors = useDragSensors();
 
   function updateStep(stepId: string, text: string) {
-    setSteps((current) =>
-      current.map((step) => (step.id === stepId ? { ...step, text } : step)),
-    );
+    setSteps((current) => updateStepText(current, stepId, text));
   }
 
   function addStep() {
     const id = createId();
-    setSteps((current) => [
-      ...current,
-      { id, text: "", order: current.length },
-    ]);
+    setSteps((current) => appendStep(current, id));
     setFocusStepId(id);
   }
 
   function addStepAfter(stepId: string) {
     const id = createId();
-    setSteps((current) => {
-      const index = current.findIndex((step) => step.id === stepId);
-      const next = [...current];
-      next.splice(index + 1, 0, { id, text: "", order: 0 });
-      return next.map((step, position) => ({ ...step, order: position }));
-    });
+    setSteps((current) => insertStepAfter(current, stepId, id));
     setFocusStepId(id);
   }
 
-  function removeStep(stepId: string) {
-    setSteps((current) =>
-      current
-        .filter((step) => step.id !== stepId)
-        .map((step, index) => ({ ...step, order: index })),
-    );
+  function deleteStep(stepId: string) {
+    setSteps((current) => removeStep(current, stepId));
   }
 
   function mergeStepUp(stepId: string) {
-    const index = steps.findIndex((step) => step.id === stepId);
-    if (index <= 0) return;
-    const previousId = steps[index - 1].id;
-    setSteps((current) =>
-      current
-        .filter((step) => step.id !== stepId)
-        .map((step, position) => ({ ...step, order: position })),
-    );
+    const previousId = previousStepId(steps, stepId);
+    if (previousId === null) return;
+    deleteStep(stepId);
     setFocusStepId(previousId);
   }
 
   function handleDragEnd({ active, over }: DragEndEvent) {
-    if (!over || active.id === over.id) return;
-    const oldIndex = steps.findIndex((step) => step.id === active.id);
-    const newIndex = steps.findIndex((step) => step.id === over.id);
-    if (oldIndex === -1 || newIndex === -1) return;
-    setSteps(
-      arrayMove(steps, oldIndex, newIndex).map((step, index) => ({
-        ...step,
-        order: index,
-      })),
-    );
+    if (!over) return;
+    setSteps(moveStep(steps, String(active.id), String(over.id)));
   }
 
   function save() {
@@ -135,13 +104,7 @@ export function RoutineEditForm({
       ...routine,
       name: name.trim(),
       activeDays,
-      steps: steps
-        .filter((step) => step.text.trim().length > 0)
-        .map((step, index) => ({
-          ...step,
-          text: step.text.trim(),
-          order: index,
-        })),
+      steps: stepsForSave(steps),
     });
     (onComplete ?? onBack)();
   }
@@ -162,34 +125,12 @@ export function RoutineEditForm({
           autoFocus
         />
       </section>
-      <section className="mb-7.5 grid gap-2.25">
-        <div className="flex items-center justify-between">
-          <h2 className="m-0 text-sm font-semibold">{t("activeDaysTitle")}</h2>
-          <CalendarDots
-            className="text-muted-foreground size-4"
-            aria-hidden="true"
-          />
-        </div>
-        <div
-          className="mx-auto grid grid-cols-7 gap-3"
-          role="group"
-          aria-label={t("activeDaysTitle")}
-        >
-          {orderedDays.map((day) => (
-            <Button
-              key={day}
-              type="button"
-              variant={activeDays.includes(day) ? "default" : "outline"}
-              className="flex h-10 min-w-10 items-center justify-center rounded-full px-0 pb-0.5 text-sm"
-              aria-pressed={activeDays.includes(day)}
-              aria-label={weekdayNames[day]}
-              onClick={() => toggleDay(day)}
-            >
-              {narrowWeekdayLabels[day].toLowerCase()}
-            </Button>
-          ))}
-        </div>
-      </section>
+      <WeekdayPicker
+        locale={locale}
+        title={t("activeDaysTitle")}
+        activeDays={activeDays}
+        onToggle={toggleDay}
+      />
       <section className="grid gap-2.25">
         <div className="flex items-center justify-between">
           <h2 className="m-0 text-sm font-semibold">{t("stepsTitle")}</h2>
@@ -216,7 +157,7 @@ export function RoutineEditForm({
                   deleteLabel={t("deleteStep")}
                   autoFocus={step.id === focusStepId}
                   onChange={updateStep}
-                  onDelete={removeStep}
+                  onDelete={deleteStep}
                   onEnter={addStepAfter}
                   onMergeUp={mergeStepUp}
                 />
