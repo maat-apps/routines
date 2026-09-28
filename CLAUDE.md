@@ -185,7 +185,11 @@ the turn. `test:e2e`, `build` and `npm audit` run in `ci.yml` on every PR.
   `<type>/<slug>` with a Conventional Commits type (STRUCTURE.md's Branch
   naming), fresh per PR.
 - Commit automatically when a task is done, then `/open-pr` (no local
-  re-verification, no confirmation pause; merge is the human checkpoint).
+  re-verification, no confirmation pause), and merge once CI is green —
+  auto-merge is enabled here (maat-core `STRUCTURE.md`'s Claude Code
+  workflow). `.claude/commands/{open-pr,pr-description}.md` and
+  `.claude/skills/` are copies of maat-core's `configs/claude` standard:
+  change them there first, then sync.
 - Delete local branches once their PR is merged on GitHub (verify with
   `gh pr view`; use `-D` for squash merges).
 - Add a new import in the same `Edit` as its first use — the

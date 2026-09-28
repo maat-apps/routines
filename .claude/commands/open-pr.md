@@ -46,15 +46,23 @@ Do NOT proceed past step 1 without stopping and telling the user why.
      system-reminder, when one is present.
    - Then wire up CI monitoring: `ccd_pr` tools (`bind_pr`, then
      `set_monitor`) so checks are watched and Auto-fix can react —
-     instead of polling `gh` by hand. Do not enable auto-merge unless the
-     user explicitly asks for it on that specific PR.
+     instead of polling `gh` by hand.
+   - **Merge once CI is green** — the ecosystem standard (maat-core
+     `STRUCTURE.md`'s PR workflow). If the repo allows auto-merge, enable
+     it right away (`ccd_pr` `set_auto_merge`, squash) so GitHub merges on
+     green; otherwise merge with `gh pr merge <n> --squash` as soon as a
+     check result shows green. Respect a required order: a PR stacked on
+     another, or needing an unmerged prerequisite, waits for it. A red
+     check means fix and push, never merge; a PR with no checks at all
+     isn't merged without asking.
 
 4. **Existing PR: regenerate the description from the full diff, don't
    just leave it describing the state at creation.** Re-derive it the
    same way as step 3 (rules from `/pr-description`, inspecting the full
    `main..HEAD` diff, not just the new commits), then
    `gh pr edit <n> --body "$(cat <<'EOF' ... EOF)"`. CI monitoring is
-   already bound from when the PR was created — no need to re-bind.
+   already bound from when the PR was created — no need to re-bind; the
+   same merge-once-green rule applies to the new push.
 
 5. Confirm briefly that the push/PR update happened — no title/body, no
    URL.
