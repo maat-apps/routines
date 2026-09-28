@@ -53,7 +53,7 @@ describe("hasUpdateSnapshot / hasNoUpdateSnapshotOnServer", () => {
   it("is false instead of throwing when the IndexedDB read itself rejects", async () => {
     vi.resetModules();
     const idbStore = await import("@/lib/idb-store");
-    vi.spyOn(idbStore, "kvGet").mockRejectedValue(new Error("blocked"));
+    vi.spyOn(idbStore.keyValueStore, "get").mockRejectedValue(new Error("blocked"));
     const appUpdate = await import("@/lib/app-update");
     await appUpdate.whenLoaded();
     expect(appUpdate.hasUpdateSnapshot()).toBe(false);
@@ -106,7 +106,7 @@ describe("saveUpdateSnapshot / readUpdateSnapshot", () => {
 
   it("returns null instead of throwing when the write fails", async () => {
     const { appUpdate, idbStore } = await freshAppUpdate();
-    vi.spyOn(idbStore, "kvSet").mockRejectedValue(new Error("blocked"));
+    vi.spyOn(idbStore.keyValueStore, "set").mockRejectedValue(new Error("blocked"));
     await expect(appUpdate.saveUpdateSnapshot()).resolves.toBeNull();
   });
 

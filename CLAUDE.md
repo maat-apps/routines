@@ -60,10 +60,16 @@ own files. Product intent: `PRODUCT.md`.
     it on PR close. Both share one Pages site with `cd.yml` via the
     `pages-content` storage branch (not itself the Pages source).
 
-- **Storage** (pattern: maat-core `docs/storage.md`). `src/lib/idb-store.ts`
-  under `storage.ts` (routines/progress), `locale-store.ts`, `settings.ts`
-  (lock enrolment, installed flag) and `app-update.ts` (pre-update
-  snapshot, the one async API). Routines-specific:
+- **Storage** (pattern: maat-core `docs/storage.md`). The plumbing comes
+  from [`@maat-apps/core`](https://github.com/maat-apps/maat-core/tree/main/packages/core);
+  routines' `src/lib/` modules are thin wrappers that keep their own
+  exports (tests import those, not core): `idb-store.ts` (`/storage`, the
+  `"routines"` database) under `storage.ts` (routines/progress),
+  `locale-store.ts` (`/locale`), `settings.ts` (`/persisted`: lock
+  enrolment, installed flag) and `app-update.ts` (`/update`: pre-update
+  snapshot, the one async API). Tests that need a failing read/write spy
+  on `keyValueStore`'s `get`/`set`, which is what the wrappers call.
+  Routines-specific:
   - **Daily reset is a side effect of reading**: `storage.ts`'s
     `normalizeState` clears a routine's checked steps when its
     `lastResetDate` isn't today. There's no scheduled job.
@@ -75,13 +81,13 @@ own files. Product intent: `PRODUCT.md`.
     lock encrypts, its background load waits for the key.
   - `src/app/app.tsx` calls `navigator.storage.persist()` once.
 
-- **Legacy localStorage migration.** `idb-store.ts`'s `onupgradeneeded`
-  (first database creation only) copies the four `storage-keys.ts` keys
-  from `localStorage` into IndexedDB, then clears them. A corrupt value is
-  skipped, not fatal. Every key was `JSON.stringify`'d except `LOCALE_KEY`,
-  a bare string (`"pl"`/`"en"`), which the migration special-cases. Stays
-  in routines even after `@maat-apps/core` (#43) — new apps have nothing
-  to migrate.
+- **Legacy localStorage migration.** `idb-store.ts` passes it to core's
+  store as `onCreate` (first database creation only): copies the four
+  `storage-keys.ts` keys from `localStorage` into IndexedDB, then clears
+  them once the database has opened. A corrupt value is skipped, not
+  fatal. Every key was `JSON.stringify`'d except `LOCALE_KEY`, a bare
+  string (`"pl"`/`"en"`), which the migration special-cases. Routines-only
+  — new apps have nothing to migrate.
 
 - **App lock + encryption.** `@maat-apps/ui`'s `MobileGate` wraps the app;
   inside it `src/components/app-lock-gate.tsx` requires a WebAuthn
@@ -95,8 +101,11 @@ own files. Product intent: `PRODUCT.md`.
     only, and Settings says so (`appLockNotice` vs.
     `appLockEncryptedNotice`). This split is intentional — don't change it
     without the owner's decision.
-  - **Never change `HKDF_INFO` (`"routines-data-v1"`)** — it would make
-    all existing encrypted data unreadable.
+  - **Never change `HKDF_INFO` (`"routines-data-v1"`)** in
+    `webauthn-crypto.ts` — the one routines-specific input to core's
+    `deriveKey`; changing it makes all existing encrypted data unreadable.
+  - The lock itself (`app-lock.ts`, `app-lock-gate.tsx`) is still
+    routines-only, not in core — see maat-core#61.
   - Escape hatch when the authenticator fails: `disableAppLock()` (nothing
     encrypted, or key still in memory) vs. `disableAppLockAndEraseData()`
     (ciphertext is unrecoverable, so it warns then wipes — the
@@ -104,12 +113,12 @@ own files. Product intent: `PRODUCT.md`.
   - `enrolAppLock()` runs a second WebAuthn ceremony right after creating
     the credential, to obtain the PRF secret.
 
-- **Service worker** (`src/sw.ts`, vite-plugin-pwa `injectManifest`).
-  Precaches the hashed build assets; network-first for navigations and
-  `manifest.json`, cache-first otherwise. Bump `CACHE_NAME` when the shell
-  changes. Registered in `app.tsx`, production builds only. Settings'
-  "Update app" (`src/lib/app-update.ts`) backs up, drops every cache,
-  activates the waiting worker, reloads.
+- **Service worker.** `src/sw.ts` is the vite-plugin-pwa `injectManifest`
+  entry calling core's `registerAppWorker` (`/sw`): precache, network-first
+  navigations and `manifest.json`, cache-first assets. Bump its `cacheName`
+  when the shell changes. Registered in `app.tsx`, production builds only.
+  Settings' "Update app" (`src/lib/app-update.ts`, core's `updateApp`)
+  backs up, drops every cache, activates the waiting worker, reloads.
 
 - **Backup + settings.** `src/lib/backup.ts` writes routines, progress and
   language to versioned JSON and validates imports through the same
@@ -128,9 +137,10 @@ own files. Product intent: `PRODUCT.md`.
   not a route: `src/views/home/settings-panel.tsx` composes one
   `settings-<name>-section.tsx` per card.
 
-- **i18n.** `src/i18n/use-translation.ts`; choice remembered under
-  `routines-locale`. Catalogs `src/i18n/en.json` and `pl.json` — keep both
-  in sync. Dates via `Intl.DateTimeFormat`.
+- **i18n.** `src/i18n/use-translation.ts` (core's `createTranslation` over
+  `locale-store.ts`); choice remembered under `routines-locale`. Catalogs
+  `src/i18n/en.json` and `pl.json` — `t()` only accepts keys present in
+  both, so keep them in sync. Dates via `Intl.DateTimeFormat`.
 
 - **UI.** shadcn `base-nova` (`rsc: false`) on `@base-ui/react`; shared
   components (Button, Drawer, ConfirmDrawer, AppBar, MobileGate, …) come
