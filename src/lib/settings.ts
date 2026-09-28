@@ -1,6 +1,6 @@
 import { createPersistedStore } from "@maat-apps/core/persisted";
 
-import { kvDelete, keyValueStore } from "@/lib/idb-store";
+import { keyValueStore, kvDelete } from "@/lib/idb-store";
 import { parseLockEnrolment, type LockEnrolment } from "@/lib/schemas";
 import { PREFERENCE_KEYS, SETTINGS_KEY } from "@/lib/storage-keys";
 

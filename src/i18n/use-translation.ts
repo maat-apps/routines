@@ -5,8 +5,8 @@ import { localeStore } from "@/lib/locale-store";
 import en from "./en.json";
 import pl from "./pl.json";
 
-export type { Locale } from "@/lib/locale-store";
 export { DEFAULT_LOCALE } from "@/lib/locale-store";
+export type { Locale } from "@/lib/locale-store";
 
 /**
  * `{ locale, setLocale, t }` — no provider; the locale store is a singleton.
