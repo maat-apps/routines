@@ -43,7 +43,9 @@ const eslintConfig = defineConfig([
       "react-refresh/only-export-components": "off",
     },
   },
-  globalIgnores(["dist/**", "build/**"]),
+  // Claude Code worktrees each carry their own tsconfig, which makes
+  // typescript-eslint fail every file with "multiple candidate TSConfigRootDirs".
+  globalIgnores(["dist/**", "build/**", ".claude/worktrees/**"]),
 ]);
 
 export default eslintConfig;
