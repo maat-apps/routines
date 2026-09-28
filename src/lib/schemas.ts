@@ -1,3 +1,8 @@
+import {
+  isRecord,
+  parseEach,
+  parseRecordEach,
+} from "@maat-apps/core/validation";
 import * as v from "valibot";
 
 // --- Schemas -------------------------------------------------------------------
@@ -111,20 +116,7 @@ export type BackupEnvelope = v.InferOutput<typeof BackupEnvelopeSchema>;
 // validated on its own, so one bad one doesn't take the rest of an otherwise-
 // valid import or stored blob down with it: v.array/v.record fail the whole
 // container on a single bad element, which is more than this posture wants.
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function parseEach<T>(
-  schema: v.GenericSchema<unknown, T>,
-  items: unknown[],
-): T[] {
-  return items
-    .map((item) => v.safeParse(schema, item))
-    .filter((result) => result.success)
-    .map((result) => result.output);
-}
+// The per-entry helpers (parseEach, parseRecordEach) are @maat-apps/core/validation.
 
 export function parseRoutines(value: unknown): Routine[] {
   if (!Array.isArray(value)) return [];
@@ -138,13 +130,7 @@ export function parseRoutines(value: unknown): Routine[] {
 }
 
 export function parseState(value: unknown): RoutineState {
-  if (!isRecord(value)) return {};
-  const state: RoutineState = {};
-  for (const [routineId, progress] of Object.entries(value)) {
-    const result = v.safeParse(ProgressSchema, progress);
-    if (result.success) state[routineId] = result.output;
-  }
-  return state;
+  return parseRecordEach(ProgressSchema, value);
 }
 
 /** Validates a lock enrolment read back from settings storage; `null` on anything malformed. */
