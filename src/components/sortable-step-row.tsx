@@ -1,12 +1,11 @@
-import { useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 import { Trash } from "@phosphor-icons/react";
 import { type ChangeEvent, useEffect, useRef } from "react";
 
-import { Textarea } from "@/components/ui/textarea";
 import type { RoutineStep } from "@/types";
 import { Button } from "@maat-apps/ui/button";
 import { DragHandle } from "@maat-apps/ui/drag-handle";
+import { useSortableItem } from "@maat-apps/ui/sortable-list";
+import { Textarea } from "@maat-apps/ui/textarea";
 
 const editStepButtonClass = "size-10.5 flex-none [&>svg]:size-5";
 
@@ -33,14 +32,8 @@ export function SortableStepRow({
   onEnter: (stepId: string) => void;
   onMergeUp: (stepId: string) => void;
 }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: step.id });
+  const { attributes, listeners, setNodeRef, style, isDragging } =
+    useSortableItem(step.id);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -69,7 +62,7 @@ export function SortableStepRow({
           : ""
       }`}
       ref={setNodeRef}
-      style={{ transform: CSS.Transform.toString(transform), transition }}
+      style={style}
     >
       <DragHandle
         className={editStepButtonClass}

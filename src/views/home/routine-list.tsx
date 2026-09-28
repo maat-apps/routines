@@ -1,18 +1,7 @@
-import { closestCenter, DndContext, type DragEndEvent } from "@dnd-kit/core";
-import {
-  restrictToParentElement,
-  restrictToVerticalAxis,
-} from "@dnd-kit/modifiers";
-import {
-  arrayMove,
-  SortableContext,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
 import { ArrowCounterClockwise, Gear, Plus } from "@phosphor-icons/react";
 import { startTransition, useEffect, useState } from "react";
 
-import { SortableRoutineRow } from "@/components/sortable-routine-row";
-import { useDragSensors } from "@/hooks/use-drag-sensors";
+import { RoutineRowContent } from "@/components/routine-row-content";
 import { useTranslation } from "@/i18n/use-translation";
 import type { Routine, RoutineProgress } from "@/types";
 import { SettingsPanel } from "@/views/home/settings-panel";
@@ -27,6 +16,7 @@ import { EmptyState } from "@maat-apps/ui/empty-state";
 import { FabButton } from "@maat-apps/ui/fab-button";
 import { PageHeader } from "@maat-apps/ui/page-header";
 import { ResetButton } from "@maat-apps/ui/reset-button";
+import { SortableList, SortableListRow } from "@maat-apps/ui/sortable-list";
 
 export function RoutineList({
   routines,
@@ -62,15 +52,6 @@ export function RoutineList({
         day: "numeric",
       }).format(today)
     : null;
-  const sensors = useDragSensors();
-
-  function handleDragEnd({ active, over }: DragEndEvent) {
-    if (!over || active.id === over.id) return;
-    const oldIndex = routines.findIndex((routine) => routine.id === active.id);
-    const newIndex = routines.findIndex((routine) => routine.id === over.id);
-    if (oldIndex === -1 || newIndex === -1) return;
-    onReorder(arrayMove(routines, oldIndex, newIndex).map((r) => r.id));
-  }
 
   return (
     <div className="mx-auto flex min-h-dvh w-[min(100%,480px)] flex-col px-5 pt-27 pb-[calc(96px+env(safe-area-inset-bottom))]">
@@ -115,40 +96,33 @@ export function RoutineList({
           />
         )
       ) : (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          modifiers={[restrictToVerticalAxis, restrictToParentElement]}
-          onDragEnd={handleDragEnd}
-        >
-          <SortableContext
-            items={routines.map((routine) => routine.id)}
-            strategy={verticalListSortingStrategy}
-          >
-            <section
-              className="mt-auto grid grid-cols-[minmax(0,1fr)] gap-2.5"
-              aria-label={t("routinesList")}
-            >
-              {routines.map((routine) => {
-                const checkedCount =
-                  state[routine.id]?.checkedStepIds.filter((id) =>
-                    routine.steps.some((step) => step.id === id),
-                  ).length ?? 0;
-                return (
-                  <SortableRoutineRow
-                    key={routine.id}
-                    routine={routine}
-                    checkedCount={checkedCount}
-                    completedLabel={t("completed")}
-                    unnamedLabel={t("unnamed")}
-                    dragLabel={t("dragRoutine")}
-                    onOpen={onOpen}
-                  />
-                );
-              })}
-            </section>
-          </SortableContext>
-        </DndContext>
+        <SortableList
+          items={routines}
+          onReorder={onReorder}
+          className="mt-auto gap-2.5"
+          aria-label={t("routinesList")}
+          renderItem={(routine) => {
+            const checkedCount =
+              state[routine.id]?.checkedStepIds.filter((id) =>
+                routine.steps.some((step) => step.id === id),
+              ).length ?? 0;
+            return (
+              <SortableListRow
+                key={routine.id}
+                id={routine.id}
+                dragLabel={t("dragRoutine")}
+                onOpen={onOpen}
+              >
+                <RoutineRowContent
+                  routine={routine}
+                  checkedCount={checkedCount}
+                  completedLabel={t("completed")}
+                  unnamedLabel={t("unnamed")}
+                />
+              </SortableListRow>
+            );
+          }}
+        />
       )}
       {routines.length > 0 && (
         <ResetButton

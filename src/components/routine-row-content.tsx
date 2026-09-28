@@ -6,7 +6,8 @@ import { ProgressRing } from "@maat-apps/ui/progress-ring";
 
 /**
  * The ring + name + chevron every routine row (the plain list in
- * all-routines-view.tsx, the draggable one in sortable-routine-row.tsx)
+ * all-routines-view.tsx's ListRow, the draggable one in routine-list.tsx's
+ * SortableListRow)
  * shows — the caller owns the outer clickable/draggable wrapper.
  */
 export function RoutineRowContent({

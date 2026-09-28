@@ -49,21 +49,18 @@ export function previousStepId(
 }
 
 /**
- * Moves `activeId` to `overId`'s position (a drag-and-drop drop). Returns
- * the same array when nothing moves: dropped in place or an unknown id.
+ * Puts the steps in `orderedIds`' order (a drag-and-drop drop, as reported by
+ * SortableList) and renumbers. Steps missing from `orderedIds` keep their
+ * relative order after the listed ones; unknown ids are ignored.
  */
-export function moveStep(
+export function reorderSteps(
   steps: RoutineStep[],
-  activeId: string,
-  overId: string,
+  orderedIds: string[],
 ): RoutineStep[] {
-  const from = steps.findIndex((step) => step.id === activeId);
-  const to = steps.findIndex((step) => step.id === overId);
-  if (from === -1 || to === -1 || from === to) return steps;
-  const next = [...steps];
-  const [moved] = next.splice(from, 1);
-  next.splice(to, 0, moved);
-  return renumber(next);
+  const position = new Map(orderedIds.map((id, index) => [id, index]));
+  const rank = (step: RoutineStep) =>
+    position.get(step.id) ?? orderedIds.length;
+  return renumber([...steps].sort((a, b) => rank(a) - rank(b)));
 }
 
 /** What gets saved: blank steps dropped, text trimmed, order renumbered. */

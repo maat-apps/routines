@@ -1,26 +1,16 @@
-import { closestCenter, DndContext, type DragEndEvent } from "@dnd-kit/core";
-import {
-  restrictToParentElement,
-  restrictToVerticalAxis,
-} from "@dnd-kit/modifiers";
-import {
-  SortableContext,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
 import { Plus, Trash } from "@phosphor-icons/react";
 import { useState } from "react";
 
 import { SortableStepRow } from "@/components/sortable-step-row";
 import { WeekdayPicker } from "@/components/weekday-picker";
-import { useDragSensors } from "@/hooks/use-drag-sensors";
 import { useTranslation } from "@/i18n/use-translation";
 import { createId, sortSteps } from "@/lib/routine-utils";
 import {
   appendStep,
   insertStepAfter,
-  moveStep,
   previousStepId,
   removeStep,
+  reorderSteps,
   stepsForSave,
   updateStepText,
 } from "@/lib/step-list";
@@ -29,6 +19,7 @@ import { AppBar } from "@maat-apps/ui/app-bar";
 import { Button } from "@maat-apps/ui/button";
 import { ConfirmDrawer } from "@maat-apps/ui/confirm-drawer";
 import { Input } from "@maat-apps/ui/input";
+import { SortableList } from "@maat-apps/ui/sortable-list";
 
 // Shared by the "/new" and "/:id/edit" views — the only difference between
 // creating and editing a routine is what happens on save/back/delete.
@@ -55,7 +46,6 @@ export function RoutineEditForm({
   const [activeDays, setActiveDays] = useState(routine.activeDays);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [focusStepId, setFocusStepId] = useState<string | null>(null);
-  const sensors = useDragSensors();
   const canSave =
     name.trim().length > 0 && steps.some((step) => step.text.trim().length > 0);
 
@@ -94,9 +84,8 @@ export function RoutineEditForm({
     setFocusStepId(previousId);
   }
 
-  function handleDragEnd({ active, over }: DragEndEvent) {
-    if (!over) return;
-    setSteps(moveStep(steps, String(active.id), String(over.id)));
+  function reorder(orderedIds: string[]) {
+    setSteps((current) => reorderSteps(current, orderedIds));
   }
 
   function save() {
@@ -136,35 +125,25 @@ export function RoutineEditForm({
           <h2 className="m-0 text-sm font-semibold">{t("stepsTitle")}</h2>
           <span className="text-muted-foreground text-sm">{steps.length}</span>
         </div>
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          modifiers={[restrictToVerticalAxis, restrictToParentElement]}
-          onDragEnd={handleDragEnd}
-        >
-          <SortableContext
-            items={steps.map((step) => step.id)}
-            strategy={verticalListSortingStrategy}
-          >
-            <div className="grid grid-cols-[minmax(0,1fr)]">
-              {steps.map((step, index) => (
-                <SortableStepRow
-                  key={step.id}
-                  step={step}
-                  placeholder={t("addStepPlaceholder")}
-                  stepLabel={t("stepNumber", { number: index + 1 })}
-                  dragLabel={t("dragStep")}
-                  deleteLabel={t("deleteStep")}
-                  autoFocus={step.id === focusStepId}
-                  onChange={updateStep}
-                  onDelete={deleteStep}
-                  onEnter={addStepAfter}
-                  onMergeUp={mergeStepUp}
-                />
-              ))}
-            </div>
-          </SortableContext>
-        </DndContext>
+        <SortableList
+          items={steps}
+          onReorder={reorder}
+          renderItem={(step, index) => (
+            <SortableStepRow
+              key={step.id}
+              step={step}
+              placeholder={t("addStepPlaceholder")}
+              stepLabel={t("stepNumber", { number: index + 1 })}
+              dragLabel={t("dragStep")}
+              deleteLabel={t("deleteStep")}
+              autoFocus={step.id === focusStepId}
+              onChange={updateStep}
+              onDelete={deleteStep}
+              onEnter={addStepAfter}
+              onMergeUp={mergeStepUp}
+            />
+          )}
+        />
         <Button
           variant="outline"
           className="mt-2 min-h-12.5 w-full text-base"
