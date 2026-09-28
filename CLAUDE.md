@@ -59,6 +59,11 @@ own files. Product intent: `PRODUCT.md`.
     number, builds to `/routines/pr-<n>/`; `pr-preview-cleanup.yml` removes
     it on PR close. Both share one Pages site with `cd.yml` via the
     `pages-content` storage branch (not itself the Pages source).
+  - All four workflows (and `ci.yml`) are small callers of maat-core's
+    reusable workflows (`app-*.yml`, maat-core STRUCTURE.md's CI/CD) —
+    change a pipeline there, not here. Local parts: triggers/path filters
+    (incl. `postcss.config.mjs`), and CI's `e2e-command` (functional specs,
+    then `test:a11y`). `lighthouse.yml` is routines-only and stays local.
 
 - **Storage** (pattern: maat-core `docs/storage.md`). The plumbing comes
   from [`@maat-apps/core`](https://github.com/maat-apps/maat-core/tree/main/packages/core);
