@@ -2,443 +2,153 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Design principles
+Generic, ecosystem-wide rules live in maat-core and are not repeated here:
 
-This stack (and every app built on it) is guided by a few core goals. Keep
-them in mind when writing or reviewing code:
+- [`STRUCTURE.md`](https://github.com/maat-apps/maat-core/blob/main/STRUCTURE.md)
+  — design principles, folder layout, routing, i18n, conventions, branch
+  naming, testing split, task tracking.
+- [`docs/storage.md`](https://github.com/maat-apps/maat-core/blob/main/docs/storage.md)
+  — the IndexedDB write-through pattern and WebAuthn PRF encryption this
+  app implements.
+- [`docs/testing-unit.md`](https://github.com/maat-apps/maat-core/blob/main/docs/testing-unit.md)
+  and [`docs/testing-e2e.md`](https://github.com/maat-apps/maat-core/blob/main/docs/testing-e2e.md)
+  — Vitest/Playwright conventions and traps. **Read these before touching
+  tests.**
+- [`VERIFICATION.md`](https://github.com/maat-apps/maat-core/blob/main/VERIFICATION.md)
+  — why every check runs exactly once (CI), not locally too.
 
-- **Minimalism.** Prefer the simplest solution; avoid unnecessary
-  abstractions, UI complexity, or dependencies.
-- **Independence.** Avoid vendor/cloud lock-in — don't reach for a backend or
-  third-party service where a local-first approach works.
-- **Smallest possible runtime footprint.** Keep bundle sizes and components
-  lightweight to reduce battery/resource usage on the user's device — e.g.
-  prefer true black (`#000000`) backgrounds, which save power on OLED screens.
-  This is about the shipped app's runtime behavior, not the footprint of
-  building it — the project is developed with Claude Code, which has its own
-  energy cost (see README's "Built with Claude"). The build/verify side of
-  that cost is why CI runs each check exactly once instead of locally too
-  — see the Automation section below, and
-  [`maat-core/VERIFICATION.md`](https://github.com/maat-apps/maat-core/blob/main/VERIFICATION.md)
-  for the size-agnostic version of this principle.
-- **Ease of use.** Favor solutions that keep the app simple and predictable
-  for the user.
-- **Accessibility.** Keep components accessible — semantic markup,
-  keyboard/screen-reader support, sufficient contrast.
+What follows is what's specific to routines.
 
 ## Commands
 
-- `npm run dev` — local dev server (Vite, serves under `/routines/`, see below).
-- `npm run build` — `tsc -b && vite build`, output to `dist/`. This is also the
-  deploy build.
-- `npm run lint` / `npm run lint:fix` — ESLint (flat config, `eslint.config.mjs`).
-- `npm run format:check` / `npm run format` — Prettier. Prettier also runs _as an
-  ESLint rule_ (`prettier/prettier: error`), so a formatting slip fails lint too.
-- `npm run typecheck` — `tsc -b` (project references: `tsconfig.app.json` for
-  `src/`, `tsconfig.node.json` for `vite.config.ts`, `tsconfig.e2e.json` for
-  `e2e/` and `playwright.config.ts`).
-- `npm run test:unit` / `npm run test:unit:watch` — Vitest, covering
-  `src/lib/`, `src/hooks/`, and `src/i18n/`. `npm run test:coverage` runs
-  the same suite with a coverage report and enforces the threshold in
-  `vitest.config.ts`. See Architecture below.
-- `npm run test:e2e` — Playwright, `e2e/`, against the real production
-  build (`npm run build` + `vite preview`) rather than the dev server. See
-  Architecture below.
-- `npm run test:a11y` — just `e2e/a11y.spec.ts` (axe-core), for a quick
-  accessibility-only run; already included in `test:e2e`'s full sweep too.
-- `npm run test:lighthouse` — Lighthouse score audit (`e2e/lighthouse.spec.ts`),
-  a separate Playwright project so it never runs as part of `test:e2e`/
-  `validate` — see Architecture below for why.
-- `npm run validate` — lint + format:check + typecheck + test:coverage +
-  test:e2e + build + `npm audit`; the same gates CI runs. `npm run
-validate:fix` applies the autofixable ones.
-- `npm run build:analyze` — same production build, plus `dist/stats.html`, a
-  `rollup-plugin-visualizer` treemap of what's inside each chunk (opens
-  automatically). Wraps `npm run build` in `cross-env ANALYZE=1` so it works
-  the same in PowerShell and bash; opt-in only — plain `npm run build` never
-  runs it.
+- `npm run dev` — Vite dev server, under `/routines/`.
+- `npm run build` — `tsc -b && vite build` to `dist/`; also the deploy build.
+  `npm run build:analyze` adds a `dist/stats.html` bundle treemap.
+- `npm run lint` / `lint:fix` — ESLint (flat config). Prettier runs as an
+  ESLint rule, so a formatting slip fails lint too.
+- `npm run format:check` / `format` — Prettier.
+- `npm run typecheck` — `tsc -b` (project references: `tsconfig.app.json`,
+  `tsconfig.node.json`, `tsconfig.e2e.json`).
+- `npm run test:unit` / `test:unit:watch` / `test:coverage` — Vitest; the
+  coverage threshold is in `vitest.config.ts`.
+- `npm run test:e2e` — Playwright against the production build;
+  `test:a11y` runs only `e2e/a11y.spec.ts`; `test:e2e:report` opens the
+  last report.
+- `npm run test:lighthouse` — Lighthouse audit, separate project, never part
+  of `test:e2e`/`validate`.
+- `npm run validate` / `validate:fix` — lint + format:check + typecheck +
+  test:coverage + test:e2e + build + `npm audit`; the same gates CI runs.
 
 ## Architecture
 
-A private, phone-first PWA for daily checklists. No accounts and no backend —
-everything lives in the browser, and nothing about the user leaves the device.
-The only network traffic is the service worker fetching the app's own files.
+A private, phone-first PWA for daily checklists. No accounts, no backend —
+everything lives in the browser and nothing about the user leaves the
+device. The only network traffic is the service worker fetching the app's
+own files. Product intent: `PRODUCT.md`.
 
-For the generic app structure this repo follows (folder layout, routing
-pattern, i18n approach, naming conventions, testing split) see
-[`maat-core/STRUCTURE.md`](https://github.com/maat-apps/maat-core/blob/main/STRUCTURE.md).
-What follows here is what's specific to routines.
+- **Deploy and base path.** Static SPA on GitHub Pages. `vite.config.ts`
+  takes `base` from `DEPLOY_BASE_PATH` (default `/routines/`). Every
+  absolute in-app URL (SW registration, router `basename`, `sw.ts`'s
+  precache/fallback paths) reads `import.meta.env.BASE_URL` — never
+  hardcode `/routines/`. Exception: `public/manifest.json` (copied as-is),
+  so a PR preview is viewable but not installable as its own PWA.
+  - Pages has no rewrites: a `closeBundle` plugin copies `index.html` to
+    `dist/404.html` so deep links boot the app (untested under a preview
+    subpath).
+  - PR previews: `deploy-preview.yml`, dispatched manually with the PR
+    number, builds to `/routines/pr-<n>/`; `pr-preview-cleanup.yml` removes
+    it on PR close. Both share one Pages site with `cd.yml` via the
+    `pages-content` storage branch (not itself the Pages source).
 
-- **Vite + base path, no server.** `vite.config.ts` sets `base` from
-  `DEPLOY_BASE_PATH` (defaulting to `/routines/`, deployed to GitHub Pages
-  under `/routines`) and builds a plain static SPA — no server at runtime.
-  A PR preview build (`.github/workflows/deploy-preview.yml`'s
-  `preview-build`/`preview-deploy` jobs — manually dispatched from the
-  Actions tab with the PR number as input, not gated on or triggered by
-  `ci.yml`'s validate pipeline at all) overrides it to `/routines/pr-<n>/`
-  so an open PR can be checked on a phone under its own subpath alongside
-  `main`'s deployment — see that workflow and `cd.yml` for how both share
-  one GitHub Pages site via a `pages-content` storage branch that isn't
-  itself the Pages source. Cleaning that subdirectory back up when the PR
-  closes is a separate workflow, `pr-preview-cleanup.yml`, still automatic
-  on `pull_request(closed)` — closing a PR has nothing to validate, so it
-  doesn't run either of those pipelines. GitHub Pages has no server-side
-  rewrites, so a hard refresh or deep link into a client-routed path would
-  404; a `closeBundle` plugin in `vite.config.ts` copies the built
-  `index.html` to `dist/404.html` after every build so Pages' 404 fallback
-  boots the app instead (this 404 fallback is untested under a PR preview's
-  subpath — GitHub Pages' behavior for a nested `404.html` isn't guaranteed
-  the same way as one at the site root). Every absolute in-app URL (service
-  worker registration in `mobile-gate.tsx`, the router's `basename`,
-  `sw.ts`'s own precache/fallback paths) reads `import.meta.env.BASE_URL`
-  rather than hardcoding `/routines/`, so both the real deploy and a preview
-  resolve correctly. `public/manifest.json` is the one exception — its
-  `start_url`/`scope`/icon paths stay hardcoded to `/routines/`, since it's a
-  static file Vite copies as-is rather than rewriting; a PR preview is not
-  expected to be independently installable as a scoped PWA, only viewable.
+- **Storage** (pattern: maat-core `docs/storage.md`). `src/lib/idb-store.ts`
+  under `storage.ts` (routines/progress), `locale-store.ts`, `settings.ts`
+  (lock enrolment, installed flag) and `app-update.ts` (pre-update
+  snapshot, the one async API). Routines-specific:
+  - **Daily reset is a side effect of reading**: `storage.ts`'s
+    `normalizeState` clears a routine's checked steps when its
+    `lastResetDate` isn't today. There's no scheduled job.
+  - `AppLockGate` gates on `useSettingsReady()` (`src/hooks/use-store.ts`)
+    and renders nothing until settings have loaded.
+  - Every storage key is in `src/lib/storage-keys.ts`; types come from
+    `src/lib/schemas.ts`.
+  - `storage.ts` depends on `settings.ts` in one place: when the enrolled
+    lock encrypts, its background load waits for the key.
+  - `src/app/app.tsx` calls `navigator.storage.persist()` once.
 
-- **State = IndexedDB, cached in memory.** `src/lib/idb-store.ts` is a small
-  hand-rolled promise wrapper around raw IndexedDB (one database, one
-  key-value object store — no dependency, same reasoning as the custom i18n
-  hook below) that every storage module builds on: `src/lib/storage.ts`
-  (routines/progress), `src/lib/locale-store.ts`, `src/lib/settings.ts`
-  (app-lock enrolment, installed flag), and `src/lib/app-update.ts` (the
-  pre-update snapshot). Each of those keeps its own data in an in-memory
-  module-level variable that is the **real** source of truth once loaded —
-  IndexedDB is a write-through backing store, read once in the background at
-  startup and written to in the background on every mutation (fire-and-forget,
-  not awaited) — so almost every public function in these modules stays fully
-  synchronous despite the storage engine underneath being async; `app-update.ts`
-  is the one exception (see below). `storage.ts`'s reads go through
-  `normalizeState`, which **resets each routine's checked steps when its
-  `lastResetDate` is not today** — the daily-reset behavior is a side effect of
-  reading, not a scheduled job. The one real user-visible consequence of this
-  design: **first load is genuinely async** — until the background read
-  resolves, screens see the same empty defaults that exist for the
-  (currently theoretical) SSR case, so first render is empty and real data
-  appears moments after mount. This is a real, if brief, gap for
-  `settings.ts` specifically: `AppLockGate`
-  (`src/components/app-lock-gate.tsx`) can't treat "settings haven't loaded
-  yet" the same as "no lock enrolled" (that would flash a locked device's
-  content unlocked on every cold start), so it gates on a separate
-  `useSettingsReady()` (`src/hooks/use-store.ts`) and renders nothing until
-  settings have actually loaded. Types in `src/types.ts` are inferred from
-  the Valibot schemas in `src/lib/schemas.ts` (`v.InferOutput`) rather than
-  hand-written in parallel, so the type and the runtime validator can't drift
-  out of sync. Every storage key the app owns is declared in
-  `src/lib/storage-keys.ts` — add new ones there so backup, reset, and
-  `idb-store.ts`'s one-time migration (below) stay in step. `lib/` never
-  imports from `react`/`react-dom`; React hooks that wrap this state live in
-  `src/hooks/` (`use-store.ts`, `use-install-prompt.ts`) instead.
-  `src/app/app.tsx` also calls `navigator.storage.persist()` once
-  (best-effort) — mainly insurance against iOS Safari's Intelligent
-  Tracking Prevention evicting script-writable storage after 7 days of no
-  interaction in a plain browser tab (this doesn't apply the same way once
-  the app is installed/standalone, which is the primary use case, but the
-  call is free either way). `storage.ts` and `app-update.ts` each also
-  expose a `setEncryptionKey(key: CryptoKey | null)`, called from
-  `app-lock.ts` once a WebAuthn PRF-derived key is available — this is the
-  one place `storage.ts` depends on another storage module (`settings.ts`,
-  to check whether the enrolled lock actually encrypts) rather than being a
-  standalone sibling: when the lock is enrolled with `encryptionSupported:
-true`, `storage.ts`'s background load waits for that key before decrypting
-  anything, rather than racing ahead the way it does when no lock (or a
-  lock-only, unencrypted one) is active.
+- **Legacy localStorage migration.** `idb-store.ts`'s `onupgradeneeded`
+  (first database creation only) copies the four `storage-keys.ts` keys
+  from `localStorage` into IndexedDB, then clears them. A corrupt value is
+  skipped, not fatal. Every key was `JSON.stringify`'d except `LOCALE_KEY`,
+  a bare string (`"pl"`/`"en"`), which the migration special-cases. Stays
+  in routines even after `@maat-apps/core` (#43) — new apps have nothing
+  to migrate.
 
-- **Migrating from the old localStorage-only storage.** `idb-store.ts`'s
-  `onupgradeneeded` handler — which only ever fires the very first time the
-  IndexedDB database is created — reads whatever the four
-  `storage-keys.ts` keys already had in `localStorage`, copies it into the
-  new object store, and clears those `localStorage` keys once the copy
-  succeeds. A corrupt legacy value is skipped, not fatal. One asymmetry
-  worth knowing if this migration is ever touched: every key stored a
-  `JSON.stringify`'d object except `LOCALE_KEY`, which `locale-store.ts`
-  always wrote as a bare string (`"pl"`/`"en"`) — the migration special-cases
-  it rather than `JSON.parse`-ing it like the rest.
+- **App lock + encryption.** `@maat-apps/ui`'s `MobileGate` wraps the app;
+  inside it `src/components/app-lock-gate.tsx` requires a WebAuthn
+  platform-authenticator prompt when the lock is on. Unlocked state is
+  per-session memory in `src/lib/app-lock.ts`; enrolling counts as
+  unlocked.
+  - `LockEnrolment.encryptionSupported` decides the mode, set at enrolment
+    from PRF support (`src/lib/webauthn-crypto.ts`). With PRF, an AES-GCM
+    key is handed to `storage.ts`/`app-update.ts` via `setEncryptionKey`
+    and `routines-data` is encrypted. Without PRF the lock is a UI gate
+    only, and Settings says so (`appLockNotice` vs.
+    `appLockEncryptedNotice`). This split is intentional — don't change it
+    without the owner's decision.
+  - **Never change `HKDF_INFO` (`"routines-data-v1"`)** — it would make
+    all existing encrypted data unreadable.
+  - Escape hatch when the authenticator fails: `disableAppLock()` (nothing
+    encrypted, or key still in memory) vs. `disableAppLockAndEraseData()`
+    (ciphertext is unrecoverable, so it warns then wipes — the
+    `confirmErase` step).
+  - `enrolAppLock()` runs a second WebAuthn ceremony right after creating
+    the credential, to obtain the PRF secret.
 
-- **Routing pattern (app-specific parts).** Follows the generic pattern in
-  `STRUCTURE.md`; routines-specific: `<BrowserRouter basename="/routines">`,
-  drilling `/` → `/:id` → `/:id/edit` and `/` → `/new`. `new-routine-view.tsx`'s
-  onComplete is the one exception to `useSmartBack` — creating a routine is a
-  forward transition to a different screen, not a "back," so it just replaces
-  the disposable `/new` draft entry directly. Settings is a drawer opened from
-  the home view's state, not a route — `src/views/home/settings-panel.tsx`,
-  which composes one `Section` component per settings card from sibling
-  `settings-<name>-section.tsx` files (plus shared `SettingsSection`/
-  `SettingsRow`, from `@maat-apps/ui/settings-primitives`) rather than
-  holding every section inline. `ConfirmDrawer` (the Cancel + destructive-
-  button bottom sheet those sections use, also from `@maat-apps/ui`) isn't
-  settings-specific either, since `home-view.tsx`'s "reset all" and
-  `routine-edit-form.tsx`'s "delete routine" confirmations use the same
-  component.
-  `/all-routines` (`all-routines-view.tsx`) is a later addition: home's own
-  list is scoped to routines active today (`isRoutineActiveToday`), so this
-  is the only way to reach one that isn't — a plain lookup/access point, not
-  a second home screen, reached from a Settings row rather than a second nav
-  affordance on home.
+- **Service worker** (`src/sw.ts`, vite-plugin-pwa `injectManifest`).
+  Precaches the hashed build assets; network-first for navigations and
+  `manifest.json`, cache-first otherwise. Bump `CACHE_NAME` when the shell
+  changes. Registered in `app.tsx`, production builds only. Settings'
+  "Update app" (`src/lib/app-update.ts`) backs up, drops every cache,
+  activates the waiting worker, reloads.
 
-- **i18n (app-specific parts).** Follows the generic pattern in
-  `STRUCTURE.md`; routines-specific: `src/i18n/use-translation.ts` detects
-  the device language on first launch (`navigator.language`), then remembers
-  the choice in `localStorage` under `routines-locale`. Message catalogs are
-  `src/i18n/en.json` and `src/i18n/pl.json` — keep both in sync when adding
-  keys. Dates are formatted with native `Intl.DateTimeFormat`.
+- **Backup + settings.** `src/lib/backup.ts` writes routines, progress and
+  language to versioned JSON and validates imports through the same
+  schemas as storage read-back (`parseRoutines`/`parseState`, per entry).
+  `src/lib/settings.ts` also holds an `installed` flag, set once
+  `useInstallPrompt` sees standalone mode or `appinstalled` — Chrome stops
+  firing `beforeinstallprompt` after install, so this is how a browser tab
+  can still say "Already installed". `resetPreferences` clears preferences
+  only; callers must reload.
 
-- **Mobile gate + app lock.** `@maat-apps/ui`'s `MobileGate` (used from
-  `src/app/app.tsx`) renders the app for mobile viewports and a "desktop not
-  supported" message otherwise; `app.tsx` itself registers the service
-  worker (production builds only — see the `import.meta.env.PROD` guard;
-  there's no `sw.js` in dev, and running a caching worker during development
-  would fight Vite's HMR anyway) — `MobileGate` dropped that side effect
-  when it moved to `@maat-apps/ui` (maat-apps/maat-core#3/#18), since it's
-  per-app setup, not part of the gate shape. Inside the gate,
-  `src/components/app-lock-gate.tsx` hides the app behind a WebAuthn
-  platform-authenticator prompt when the lock is on. Being unlocked is
-  per-session memory state in `src/lib/app-lock.ts`; enrolling counts as
-  unlocked, or turning the switch on would lock the user out on the spot.
-  Whether the lock is a pure UI gate or real encryption depends on
-  `LockEnrolment.encryptionSupported` (`src/lib/settings.ts`) — set at
-  enrolment time based on whether the device's authenticator supports the
-  WebAuthn **PRF extension** (`src/lib/webauthn-crypto.ts`). Where PRF is
-  available, an AES-GCM key is derived from the credential's PRF output
-  (HKDF-SHA256, domain-separated) and handed to `storage.ts`/`app-update.ts`,
-  which encrypt everything they persist — there is still no backend to
-  verify the assertion, but `routines-data` genuinely stops being readable
-  without the key. Where it isn't, the lock stays exactly what it always
-  was — a UI gate with `routines-data` readable regardless — and the
-  Settings screen's copy says so explicitly (`appLockNotice` vs.
-  `appLockEncryptedNotice`). This split means the lock screen's escape hatch
-  (shown once the authenticator fails or goes missing) now has two different
-  outcomes depending on which mode was active: `disableAppLock()` (safe,
-  nothing was ever encrypted or the key is still in memory) vs.
-  `disableAppLockAndEraseData()` (the encrypted data is unrecoverable
-  without the key, so the escape hatch warns and then wipes it rather than
-  leaving orphaned ciphertext behind — see `app-lock-gate.tsx`'s
-  `confirmErase` step). PRF must be requested at credential-creation time
-  and cannot be added to an already-enrolled credential, so `enrolAppLock()`
-  does a second, immediate WebAuthn ceremony right after creating the
-  credential specifically to obtain the actual PRF secret (`create()` can
-  only report _whether_ PRF is available, never the secret itself).
+- **Routing.** `<BrowserRouter basename="/routines">`: `/` → `/:id` →
+  `/:id/edit`, `/` → `/new`, plus `/all-routines` (reached from a Settings
+  row; home only lists routines active today, `isRoutineActiveToday`).
+  `new-routine-view.tsx`'s onComplete replaces the `/new` entry instead of
+  `useSmartBack` — creating is a forward transition. Settings is a drawer,
+  not a route: `src/views/home/settings-panel.tsx` composes one
+  `settings-<name>-section.tsx` per card.
 
-- **Service worker (`src/sw.ts`, built by vite-plugin-pwa).** The
-  `injectManifest` strategy compiles this file and substitutes
-  `self.__WB_MANIFEST` with the list of content-hashed build assets, which the
-  worker precaches itself at install time — everything past that point
-  (network-first for navigations and `manifest.json`, so a deploy or a
-  manifest edit lands on the next launch; cache-first for everything else)
-  is the same hand-written logic the old Next.js `public/sw.js` had. Bump
-  `CACHE_NAME` when the shell changes.
-  Settings' "Update app" (`src/lib/app-update.ts`) takes a backup, drops every
-  cache, tells a waiting worker to activate, then reloads.
+- **i18n.** `src/i18n/use-translation.ts`; choice remembered under
+  `routines-locale`. Catalogs `src/i18n/en.json` and `pl.json` — keep both
+  in sync. Dates via `Intl.DateTimeFormat`.
 
-- **Backup + settings.** `src/lib/backup.ts` serialises routines, progress and
-  the language to a versioned JSON file and validates anything imported through
-  the same schemas `storage.ts`'s `readData` uses (the file is user-supplied —
-  unrecognised entries are dropped, not trusted). `parseRoutines`/`parseState`
-  in `schemas.ts` validate each routine/step/progress entry independently
-  rather than handing a whole array/record to `v.array()`/`v.record()` — one
-  malformed entry is dropped without taking an otherwise-valid import or
-  stored blob down with it. `src/lib/settings.ts` holds preferences (the lock
-  enrolment, plus an `installed` flag set once `useInstallPrompt`
-  (`src/hooks/use-install-prompt.ts`) ever observes the app running
-  standalone or receives `appinstalled` — Chrome stops re-offering
-  `beforeinstallprompt` once installed, so this is the only way a later visit
-  from a plain browser tab can still show "Already installed" instead of a
-  disabled button with no explanation) in the same external-store shape as
-  `use-store.ts`; `resetPreferences` clears preferences only and callers must
-  reload, since other stores cache their own snapshots.
+- **UI.** shadcn `base-nova` (`rsc: false`) on `@base-ui/react`; shared
+  components (Button, Drawer, ConfirmDrawer, AppBar, MobileGate, …) come
+  from `@maat-apps/ui`. `src/app/globals.css`'s `@source` must cover the
+  package's compiled output, or its classes get purged. Local shadcn
+  primitives: `checkbox.tsx`, `switch.tsx`, `textarea.tsx` — regenerate
+  with `npx shadcn add`, don't hand-edit (moving to `@maat-apps/ui` in
+  maat-core#42). Tailwind v4, tokens in `globals.css`, `lucide-react`
+  icons, self-hosted `@fontsource-variable/outfit`, `@dnd-kit` for step
+  reordering. Accent is neutral **white** on dark surfaces; the old coral
+  accent was removed on purpose — don't reintroduce it.
 
-- **UI stack.** shadcn (`base-nova` style, see `components.json`, `rsc: false`)
-  built on `@base-ui/react`. Most of what used to be hand-edited copies under
-  `src/components/`/`src/components/ui/` — `Button`/`Input`/`Select`/
-  `Drawer`, `AppBar`, `ConfirmDrawer`, `MobileGate`, `PageHeader`,
-  `ProgressRing`, `FabButton`, `ResetButton`, `DragHandle`, `EmptyState`,
-  `SettingsSection`/`SettingsRow` — moved to the real, installable
-  [`@maat-apps/ui`](https://www.npmjs.com/package/@maat-apps/ui) package
-  (maat-apps/maat-core#3/#18): this repo was the source they were extracted
-  from, and now consumes them back as a dependency instead of maintaining
-  its own copies. `Button`'s `outline` variant still carries its one
-  deliberate hand-patch on top of the generated shadcn output
-  (`disabled:bg-background/40 disabled:backdrop-blur-md`) — that patch now
-  lives in the package, so a fix there benefits every consuming app at once
-  rather than needing to be reapplied by hand per repo. `checkbox.tsx`,
-  `switch.tsx`, and `textarea.tsx` (`src/components/ui/`) weren't extracted
-  — regenerate those via `npx shadcn add` per the usual shadcn workflow if
-  they're ever touched. `@maat-apps/ui`'s components render their own
-  Tailwind classes from inside `node_modules`, which Tailwind doesn't scan
-  by default — `src/app/globals.css`'s `@source` directive points at the
-  package's compiled output so those classes aren't purged; widen or narrow
-  it if the set of components this app imports from the package changes.
-  Tailwind v4 (via `@tailwindcss/postcss`) with design tokens in
-  `src/app/globals.css`; icons from `lucide-react`. The font is self-hosted
-  via `@fontsource-variable/outfit` (imported in `src/main.tsx`, used for
-  both `--font-sans` and `--font-heading`) rather than fetched from Google
-  Fonts at runtime — same "nothing leaves the device" invariant the old
-  `next/font` setup gave for free. Step reordering uses `@dnd-kit`.
-  Every bottom sheet is `@maat-apps/ui`'s `Drawer` (Base UI `Drawer`) with
-  `showSwipeHandle`, so each one has a grab pill and can be swiped down to
-  dismiss. Base UI stacks nested drawers — opening a confirmation from the
-  settings drawer shrinks and scales the parent behind it, which is intended.
-  The drawer reacts to touch gestures, so e2e swipes need CDP
-  `Input.dispatchTouchEvent`; synthetic mouse drags do not dismiss it.
-  Every drawer also closes on the phone's native back button/gesture, the
-  same as its swipe handle or close control. On Android/Chromium this is
-  Base UI's own doing (`CloseWatcher`, gated to the topmost open drawer —
-  see `DrawerRoot.js`); the package's `Drawer` adds a `useHistoryBackDismiss`
-  fallback on top (one `pushState` per open drawer, closed via `popstate`,
-  marker-tagged so nested drawers only close the topmost) to cover iOS and
-  any browser without `CloseWatcher`. Routed screens (routine view/edit,
-  `/new`) need no equivalent — `navigate(...)` already gives them a real
-  history entry, so native back lands wherever the `AppBar` arrow would.
-
-- **Unit tests (Vitest).** Test files live under `tests/unit/`, mirroring
-  `src/`'s structure (`tests/unit/lib/storage.test.ts` for
-  `src/lib/storage.ts`, etc.) rather than co-located with the source —
-  `vitest.config.ts`'s `test.include` is scoped to `tests/unit/**/*.test.ts`
-  explicitly, so a stray test file dropped elsewhere is never picked up.
-  `vitest.config.ts` is deliberately separate from
-  `vite.config.ts` so the PWA/build plugins never run during tests; `jsdom`
-  environment for the functions that touch `localStorage`/`navigator`/
-  WebAuthn directly. `coverage.include` (what gets _measured_, independent
-  of where the tests themselves live) is split by what it actually
-  exercises, not by file location alone: `src/lib/**` (pure logic —
-  schemas, storage, backup, locale-store, settings, app-lock, app-update,
-  routine-utils),
-  `src/hooks/**` and `src/i18n/**` (the `useSyncExternalStore` store/hook
-  bridge, via `@testing-library/react`'s `renderHook` — no JSX/`.tsx`
-  needed, so this still stays out of component-rendering territory).
-  Views/components are **not** covered here on purpose — that's e2e's job;
-  including them in
-  `vitest.config.ts`'s `coverage.include` would just show a permanently low
-  number for code this suite was never meant to exercise. `coverage.include`
-  enforces a 95% threshold (lines/statements/functions/branches) via
-  `@vitest/coverage-v8`, scoped to exactly the dirs above — deliberately not
-  100% even though the suite currently clears 100%, since a literal 100%
-  gate has zero slack for any future line landing in these dirs without a
-  test in the same change.
-  `storage.ts`/`settings.ts`/`locale-store.ts` cache state in module-level
-  singletons, so their tests use `vi.resetModules()` + a dynamic `import()`
-  per test rather than exporting internal reset hooks just for testing.
-  This landed in two branches, not one — `feature/unit-tests-ts` (lib/
-  only, zero React-testing dependencies) merged first, then
-  `feature/unit-tests-react` (hooks/i18n, needs `@testing-library/react`)
-  as a deliberately separate follow-up.
-  Missing browser globals (`navigator.serviceWorker`, `caches`,
-  `URL.createObjectURL`/`revokeObjectURL`, `matchMedia`) are not a reason
-  to skip coverage on the code that uses them — stub/mock them with
-  `vi.stubGlobal`/`vi.spyOn` (see `app-update.test.ts`'s service-worker/
-  cache-clearing tests, `backup.test.ts`'s `downloadBackup` tests, and
-  `use-install-prompt.test.ts`'s hand-rolled `matchMedia` fake) rather than
-  leaving that code untested by default. Do this even at medium effort —
-  only skip a gap after actually weighing it against a specific reason not
-  to, not by default because mocking looks like more setup than a plain
-  assertion. Even a `typeof window === "undefined"` SSR guard — which
-  jsdom (every other test file's environment) can never produce — turned
-  out testable: `ssr-guards.test.ts` uses Vitest's per-file
-  `// @vitest-environment node` docblock override to exercise those
-  branches for real, rather than leaving them permanently uncovered as a
-  default "not worth it."
-  `vitest.config.ts` also sets `isolate: false`, reusing one plain jsdom
-  environment across every test file instead of a fresh one per file
-  (cut CI time — jsdom setup was ~85% of the run). The real consequence:
-  globals like `document`/`window`/`Storage.prototype` are the _same
-  object_ shared across the whole run, not per-file. Every test that
-  mutates or spies on one must restore it in its own `afterEach`
-  (`vi.stubGlobal` values via `vi.unstubAllGlobals()`, `vi.spyOn` mocks via
-  `vi.restoreAllMocks()` — the two are not interchangeable, and a missed
-  restore fails a _different_, unrelated test rather than the one that
-  leaked it). This already caused one real bug: an un-restored
-  `vi.spyOn(Storage.prototype, ...)` in `app-update.test.ts` broke a
-  different test in the same file until the missing `restoreAllMocks()`
-  was added.
-  jsdom has no IndexedDB implementation at all, so `tests/unit/setup.ts`
-  (wired via `vitest.config.ts`'s `test.setupFiles`) installs
-  `fake-indexeddb/auto` globally for the whole run — same `isolate: false`
-  consequence as above: every test touching the storage layer deletes the
-  `"routines"` database itself (`tests/unit/reset-indexeddb.ts`'s
-  `resetIndexedDb()`, called in `beforeEach` alongside the usual
-  `localStorage.clear()`), rather than getting a fresh fake IndexedDB per
-  file. Each storage module also exports a test-only `whenLoaded()`
-  (resolves once its background read from IndexedDB finishes) so tests can
-  await readiness deterministically instead of polling — the same spirit as
-  the `vi.resetModules()` + dynamic `import()` pattern above, a small testing
-  seam rather than a production branch added just for tests.
-
-- **E2E tests (Playwright).** `e2e/*.spec.ts` + `playwright.config.ts` — its
-  own `tsconfig.e2e.json` project reference, since neither
-  `tsconfig.app.json` nor `tsconfig.node.json` covers it. Runs against the
-  real production build (`webServer` does `npm run build` + `vite preview`,
-  not the dev server), same phone-sized-viewport constraint as the Mobile
-  gate bullet above. Two device projects, two OSes, deliberately not a
-  third (a Playwright device preset only changes viewport/UA, never the
-  engine, so another Android profile would be redundant with
-  `mobile-chromium`): `mobile-chromium` (`devices["Galaxy A55"]`) and
-  `mobile-iphone` (`devices["iPhone 13"]`, real **WebKit** — the reasoning
-  behind both specific models is in git history, not reproduced here since
-  it'll only go stale). A third project, `lighthouse`, exists solely to
-  scope `lighthouse.spec.ts` to its own `npm run test:lighthouse` — see the
-  Accessibility + Lighthouse audits bullet below. `test:e2e` selects
-  `mobile-chromium`/`mobile-iphone` explicitly (`--project` twice) rather
-  than running `playwright test` bare, specifically so it never picks up
-  `lighthouse`; CI installs both `chromium` and `webkit` binaries. WebKit
-  has no CDP session API, so
-  `mobile-iphone` excludes `drawer-dismissal.spec.ts` (raw CDP touch
-  events, no native Playwright touch-drag primitive exists yet) via its
-  own `testIgnore` rather than that one hard-failing there; **remember to
-  add the same exclusion if a future spec needs raw CDP too.**
-  `app-lock.spec.ts` used to need the same exclusion (a CDP virtual
-  WebAuthn authenticator) but moved to `context.credentials` (Playwright
-  1.61+, cross-browser unlike `newCDPSession`), so it now runs on both
-  projects. `e2e/utils.ts` holds reusable helpers — `seedData` (seeds
-  `localStorage` via `page.addInitScript`, skipping the create/edit UI)
-  and `swipeDown` (the one still-CDP-based helper, raw Playwright APIs
-  don't cover touch drag). One easy trap: `page.goto("/new")` against this
-  `baseURL` (already ending in
-  `/routines/`) resolves to the _origin_ root
-  (`http://localhost:4173/new`), not `/routines/new` — a leading `/` in a
-  relative navigation replaces the whole path. Always navigate with no
-  leading slash (`page.goto("new")`, `page.goto("")` for home). Debugging a
-  failure locally: `npm run test:e2e:report`.
-
-- **Accessibility + Lighthouse audits.** Two different kinds of check,
-  deliberately split by how they gate: `e2e/a11y.spec.ts`
-  (`@axe-core/playwright`, `AxeBuilder` against each screen — home, empty
-  home, routine detail, edit, the settings drawer open — scoped to
-  `wcag2a`/`wcag2aa`/`wcag21a`/`wcag21aa`/`wcag22aa`, zero violations
-  asserted) is cheap and deterministic, so it's a normal spec in the
-  `mobile-chromium` project — it runs as part of `npm run test:e2e` and
-  therefore `validate`/CI with no extra wiring. Excluded from
-  `mobile-iphone` via `testIgnore` (same reasoning as not adding a third
-  device elsewhere): axe-core scans the DOM/ARIA tree, which doesn't
-  meaningfully differ by rendering engine, so running it on both would just
-  be redundant. `e2e/lighthouse.spec.ts`
-  (`playwright-lighthouse` + `lighthouse`) is its own Playwright project
-  (`playwright.config.ts`'s `testIgnore`/`testMatch` split) specifically so
-  it's excluded from `test:e2e` — Lighthouse's own timing-based scoring is
-  slower and can be flaky on shared runners, so it only runs via `npm run
-test:lighthouse` / `.github/workflows/lighthouse.yml`
-  (`workflow_dispatch`-only, not on every PR). It launches its own
-  `chromium` instance with a fixed `--remote-debugging-port` rather than
-  using the test runner's managed `page` fixture, since Lighthouse drives
-  Chrome directly over that CDP port — this is a `playAudit` requirement,
-  not a stylistic choice. `playwright-lighthouse` is unmaintained since
-  early 2024 and its own default thresholds/categories still list `pwa`,
-  which current `lighthouse` versions reject outright (the category was
-  removed) — the spec always passes an explicit `thresholds` object
-  covering only `performance`/`accessibility`/`best-practices`/`seo` to
-  route around this, not `opts.onlyCategories` directly (the package
-  derives `onlyCategories` from `thresholds`'s own keys when `opts` is
-  omitted). Thresholds are set from a real baseline run against the home
-  screen (2026-09-18: performance 96, accessibility/best-practices/seo all 100) — performance's threshold (85) leaves real slack since it's the one
-  timing-based, flakiness-prone category; the other three stay at the
-  baseline they already clear.
-
-## Product context
-
-See `PRODUCT.md` for the design intent: a calm, quiet checklist — no history,
-gamification, or notifications. Keep the UI restrained: the accent is a neutral
-**white** on dark surfaces. The earlier coral accent was removed deliberately —
-do not reintroduce it.
+- **Tests** (conventions: maat-core `docs/testing-*.md`). Unit coverage
+  covers `src/lib/**`, `src/hooks/**`, `src/i18n/**` at 95%; the test
+  database is `"routines"`. E2E: `mobile-chromium` + `mobile-iphone`;
+  `drawer-dismissal.spec.ts` (raw CDP) is excluded from `mobile-iphone`,
+  `a11y.spec.ts` runs on chromium only. Lighthouse baseline: performance
+  96, others 100; thresholds 85 / 100.
 
 ## Automation
 
@@ -449,144 +159,30 @@ do not reintroduce it.
 | Typecheck        | `npm run typecheck`     | Stop hook, every turn, summary only                                         |
 | Tests + coverage | `npm run test:coverage` | Stop hook, only when `src/`/`tests/` have uncommitted changes, summary only |
 
-`.claude/hooks/session-validate.sh` runs both on `Stop`. Typecheck runs on
-every turn (cheap enough to tolerate constantly); the test suite only runs
-when this turn actually touched `src/`/`tests/` — most turns (planning,
-docs, git operations, pure Q&A) don't, and skipping them avoids paying the
-~10-15s test cost for nothing to check. Neither blocks the turn — both are
-summary-only warnings. `test:e2e`/`build`/`npm audit` aren't tied to any
-hook (e2e needs a real browser + a built app, too slow/heavy for a
-per-turn hook), but `ci.yml` covers all three in CI on every PR. For
-a full manual check (all seven steps at once), run `npm run validate`
-directly.
+`.claude/hooks/session-validate.sh` runs both Stop checks; neither blocks
+the turn. `test:e2e`, `build` and `npm audit` run in `ci.yml` on every PR.
 
-## Conventions
+## Workflow rules
 
-- Filenames: kebab-case everywhere, including components (not PascalCase);
-  component names inside a file are still PascalCase (`routine-view.tsx`
-  exports `RoutineView`).
-- Named exports throughout; no framework forces a default export here.
-- Hooks (`use*`) live in `src/hooks/`, not in `src/lib` — `lib/` must stay
-  free of `react`/`react-dom` imports.
-- View-level UI lives in `src/views/<name>/`; `src/components/` is for UI
-  shared by 2+ views only (gates, `app-bar.tsx`, `ui/` primitives).
-- Extract a component or function into its own file once either (a) it's
-  used in more than two places — including within a single view file, not
-  just across views like the bullet above — or (b) its containing file
-  grows past ~200 lines, whichever comes first. Not a mechanical
-  line-count gate: some files earn their length (a view with many short,
-  cohesive JSX sections, or a single-purpose `lib/` module already
-  documented above) — judge whether splitting actually improves
-  readability rather than splitting just to hit a number. Acted on for
-  `settings-panel.tsx` (was one 446-line file mixing every settings
-  section; now an orchestrator plus one file per section under
-  `src/views/home/settings-*-section.tsx`) and for the identical
-  `@dnd-kit` sensor setup duplicated verbatim between
-  `routine-edit-form.tsx` and `routine-list.tsx` (now `useDragSensors()`
-  in `src/hooks/`).
-- Playwright test helpers live in `e2e/utils.ts`, not `fixtures.ts` —
-  a cross-project convention (all maat-apps projects, not just this one),
-  chosen because these are plain reusable functions the specs call
-  directly, not Playwright's own `test.extend()` fixture-injection system;
-  naming the file "fixtures" would suggest the latter.
-- Validate anything crossing a trust boundary (backup imports, localStorage
-  read-back) with Valibot schemas (`src/lib/schemas.ts`), not hand-rolled
-  `typeof`/`isRecord` checks — see the State bullet above for why schemas are
-  the single source of truth here. Also the standard validation library
-  across the maat-apps ecosystem, not just this repo (see
-  [maat-core#2](https://github.com/maat-apps/maat-core/issues/2)). Validate
-  array/record entries independently rather than handing a whole
-  array/record to `v.array()`/`v.record()` in one call, so one malformed
-  entry doesn't take an otherwise-valid whole down with it.
-- Avoid `as` type assertions where TypeScript can already infer the correct
-  type without one — a cast should mean "I know something the compiler
-  can't," not "I'm not sure, so I'll silence it." Legitimate uses stay
-  fine: narrowing `unknown`/`any` at a trust boundary (`JSON.parse`, an
-  IndexedDB/DOM API typed loosely by lib.dom, a test mock that only
-  implements part of a browser interface), or asserting a shape TS
-  genuinely can't infer (a not-yet-typed API like `Intl.Locale`'s
-  `getWeekInfo()`, a non-standard property like iOS Safari's
-  `navigator.standalone`). A cast is a smell when removing it still
-  type-checks cleanly — meaning it was never doing anything (audited
-  2026-09-25, routines#61: found and removed two of these in test files;
-  every other `as` in the codebase at that point fell into a legitimate
-  case above).
-- Full pattern log: `.claude/docs/patterns.md` — read by `/find-antipatterns`
-  and `/learn-patterns`, not loaded every session.
-
-## Task tracking
-
-Work items live as **GitHub Issues**, not local files — the old
-`.claude/tasks/` setup (local, gitignored `.md` files) was migrated 1:1 to
-Issues and removed entirely 2026-09-24, including the scratch-notes
-convention it used to offer for pre-Issue ideas: file a real (draft-able,
-editable-later) Issue directly instead of a local file first. Every
-Issue that's ecosystem-wide or belongs to another `maat-apps` repo is also
-attached as an item to the org-level
-[Ma'at Apps Roadmap](https://github.com/orgs/maat-apps/projects/1) Project
-— a GitHub Project can only hold real Issues/PRs (each needs a repo) or
-repo-less "draft issues"; this ecosystem uses real Issues throughout, so
-every repo that has tasks needs Issues enabled first (`gh repo edit
-<repo> --enable-issues`).
-
-- **This repo's own work** (features, bugs): Issues directly on
-  `maat-apps/routines` — a bug is just an Issue with the built-in `bug`
-  label, not a separate location.
-- **Ecosystem-wide work** (shared config, UI library, CI/testing
-  standards, scaffolding, etc. — anything not specific to one app): Issues
-  on [`maat-apps/maat-core`](https://github.com/maat-apps/maat-core/issues),
-  even before that repo has real code — it's the ecosystem's issue tracker
-  as much as its future shared package.
-- **Another app's work** (e.g. `trainer`, `diet`, `to-do`, `notes`,
-  `albums`): Issues on that app's own repo once it exists.
-- **Priority/ordering** (previously a local `priority.md`): the Project's
-  own `Priority` single-select field (`Now`/`Next`/`Later`) on each item,
-  not a file — set/read it via `gh project item-edit`/`item-list` rather
-  than reintroducing a parallel local ordering.
-
-## Workflow Rules
-
-- Don't manually re-run format/lint/typecheck/build/test:coverage/test:e2e
-  (individually, via `npm run validate`, or by invoking the underlying tool
-  directly — `tsc`, `eslint`, `vitest`, `playwright`, etc. — the rule is
-  about the check, not the exact command spelling) to double-check a
-  change before committing or pushing, or narrate that you're about to —
-  see the Automation table above for what already runs per-edit/per-turn,
-  and `ci.yml` for what CI covers on every PR. This applies even to a
-  trivial or comment-only edit, and even right after fixing something —
-  the hooks and CI already re-check it; running any of it again locally is
-  redundant work against what's already covered, not extra safety.
-- Prefer `Grep`/`Glob` over reading whole files; read only what a task needs.
-- For broad codebase audits, use `/find-antipatterns` instead of reading many
-  files inline.
-- After a non-trivial session, run `/learn-patterns` to record what recurred.
-- Check the current branch before editing or committing anything — never
-  edit or commit directly on `main`, including doc-only changes. Branch
-  first, always.
-- Name branches `<type>/<short-descriptive-slug>` — see
-  `maat-core/STRUCTURE.md`'s "Branch naming" section — not a generic or
-  session-scoped name; cut a fresh branch per PR/task rather than reusing
-  one across unrelated changes.
-- Delete local branches once their PR is confirmed merged on GitHub —
-  `git branch -d`, or `-D` when a squash-merge or an already-deleted
-  remote branch blocks the safe check (git's ancestry check doesn't
-  understand squash merges). Don't wait to be asked; verify via GitHub
-  first (`gh pr view`/`gh api`), not just local heuristics.
-- Commit automatically once a task's changes are complete, then use
-  `/open-pr` to push and open the PR — see that command for the full
-  flow (no local re-verification, no confirmation pause, merge is the
-  human checkpoint).
-- When a change touches something CLAUDE.md or README.md describes
-  (architecture, stack, file locations), update those docs in the same
-  session rather than leaving them to drift until a later cleanup pass finds
-  them stale.
-- If the dev server throws stale-module/HMR errors (e.g. "does not provide
-  an export named ...") — especially right after a branch switch — restart
-  it before assuming there's a real regression; Vite's module graph can go
-  stale across branch changes and the error is almost always the restart,
-  not the code.
-- Add a new import in the same `Edit` call as its first usage, not as a
-  separate edit beforehand — the PostToolUse format/lint hook runs
-  `eslint --fix` after every edit, and it will strip an import that's
-  unused at that intermediate moment, before the usage lands in a later
-  edit. Hit repeatedly across sessions; always costs an extra edit to fix.
+- **Don't re-run checks locally** before committing or pushing — no
+  format/lint/typecheck/build/test, via npm scripts or `tsc`/`eslint`/
+  `vitest`/`playwright` directly, not even after a trivial fix. Hooks and
+  CI cover it.
+- **Never edit or commit on `main`**, not even docs. Branch
+  `<type>/<slug>` with a Conventional Commits type (STRUCTURE.md's Branch
+  naming), fresh per PR.
+- Commit automatically when a task is done, then `/open-pr` (no local
+  re-verification, no confirmation pause; merge is the human checkpoint).
+- Delete local branches once their PR is merged on GitHub (verify with
+  `gh pr view`; use `-D` for squash merges).
+- Add a new import in the same `Edit` as its first use — the
+  PostToolUse `eslint --fix` strips an import that's unused in between.
+- When a change touches what this file or README.md describes, update them
+  in the same session.
+- Stale-module/HMR errors after a branch switch: restart the dev server
+  before assuming a regression.
+- Work items are GitHub Issues (routines' own on this repo, ecosystem-wide
+  on maat-core) — see STRUCTURE.md's Task tracking.
+- Prefer `Grep`/`Glob` over reading whole files. For broad audits use
+  `/find-antipatterns`; after a non-trivial session run `/learn-patterns`.
+  Pattern log: `.claude/docs/patterns.md`.
