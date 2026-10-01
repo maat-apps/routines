@@ -1,3 +1,4 @@
+import { encryptionKey } from "@/lib/encryption-key";
 import { kvGet, kvSet } from "@/lib/idb-store";
 import { formatDateStamp } from "@/lib/routine-utils";
 import { parseRoutines, parseState } from "@/lib/schemas";
@@ -36,56 +37,23 @@ let snapshotStale = true;
 let dbData: AppData = emptyData;
 let loaded: Promise<void> | null = null;
 
-// Set by app-lock.ts once a WebAuthn PRF-derived key is available (after a
-// successful enrol/verify). Null means "no encryption" — either no lock is
-// enrolled, or the device doesn't support PRF (see webauthn-crypto.ts).
-let encryptionKey: CryptoKey | null = null;
-// AppLockGate mounts its children — and with them, the first real read from
-// this module — only *after* verifyAppLock() has already resolved and called
-// setEncryptionKey(). So by the time loadData() first calls whenUnlocked(),
-// the unlock may already have happened; this flag lets it resolve
-// immediately instead of waiting on an event that already fired.
-let hasUnlocked = false;
-let unlockResolve: (() => void) | null = null;
-let unlockPromise: Promise<void> | null = null;
-
-function whenUnlocked(): Promise<void> {
-  if (hasUnlocked) return Promise.resolve();
-  unlockPromise ??= new Promise((resolve) => {
-    unlockResolve = resolve;
-  });
-  return unlockPromise;
-}
-
-/**
- * Hands storage the derived key so it can decrypt/encrypt. Called with a key
- * right after a successful enrol/verify, and with `null` when the lock is
- * disabled while already unlocked (data simply stops being encrypted from
- * the next write on — see app-lock.ts's two disable paths).
- */
-export function setEncryptionKey(key: CryptoKey | null): void {
-  encryptionKey = key;
-  if (key) {
-    hasUnlocked = true;
-    unlockResolve?.();
-    unlockResolve = null;
-  }
-}
-
 async function loadData(): Promise<void> {
   await whenSettingsLoaded();
   const lock = getSettingsSnapshot().lock;
   if (lock?.encryptionSupported) {
     // The whole app is gated behind AppLockGate until unlock succeeds, so
-    // real data is never needed — and never readable — before that.
-    await whenUnlocked();
+    // real data is never needed — and never readable — before that. The
+    // unlock may already have happened by the time this runs; whenSet()
+    // resolves immediately then.
+    await encryptionKey.whenSet();
   }
   try {
     const stored = await kvGet<unknown>(DATA_KEY);
     if (stored) {
+      const key = encryptionKey.get();
       const raw =
-        encryptionKey && isEncryptedBlob(stored)
-          ? await decryptJson<Partial<AppData>>(encryptionKey, stored)
+        key && isEncryptedBlob(stored)
+          ? await decryptJson<Partial<AppData>>(key, stored)
           : (stored as Partial<AppData>);
       dbData = {
         routines: parseRoutines(raw.routines),
@@ -177,9 +145,8 @@ function writeData(data: AppData): void {
 
 async function persist(data: AppData): Promise<void> {
   try {
-    const toStore = encryptionKey
-      ? await encryptJson(encryptionKey, data)
-      : data;
+    const key = encryptionKey.get();
+    const toStore = key ? await encryptJson(key, data) : data;
     await kvSet(DATA_KEY, toStore);
   } catch {
     // Best-effort — the in-memory copy (and this tab) already reflects it.

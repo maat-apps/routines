@@ -429,13 +429,14 @@ describe("server snapshots (useSyncExternalStore's SSR fallback)", () => {
   });
 });
 
-describe("setEncryptionKey", () => {
+describe("encryption", () => {
   it("persists writes as an encrypted blob once a key is set", async () => {
-    const { saveRoutine, setEncryptionKey } = await freshStorage();
+    const { saveRoutine } = await freshStorage();
+    const { encryptionKey } = await import("@/lib/encryption-key");
     const { deriveKey, isEncryptedBlob, randomBytes } =
       await import("@/lib/webauthn-crypto");
     const { kvGet } = await import("@/lib/idb-store");
-    setEncryptionKey(await deriveKey(randomBytes(32), randomBytes(16)));
+    encryptionKey.set(await deriveKey(randomBytes(32), randomBytes(16)));
 
     saveRoutine({
       id: "r1",
@@ -474,7 +475,8 @@ describe("setEncryptionKey", () => {
     };
     await kvSet(DATA_KEY, await encryptJson(key, data));
 
-    storage.setEncryptionKey(key);
+    const { encryptionKey } = await import("@/lib/encryption-key");
+    encryptionKey.set(key);
     await storage.whenLoaded();
 
     expect(storage.getRawData().routines).toEqual(data.routines);
@@ -518,7 +520,8 @@ describe("setEncryptionKey", () => {
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(storage.getRawData()).toEqual({ routines: [], state: {} });
 
-    storage.setEncryptionKey(key);
+    const { encryptionKey } = await import("@/lib/encryption-key");
+    encryptionKey.set(key);
     await storage.whenLoaded();
     expect(storage.getRawData().routines).toEqual(data.routines);
   });
@@ -553,12 +556,13 @@ describe("setEncryptionKey", () => {
     };
     await kvSet(DATA_KEY, await encryptJson(key, data));
 
-    // AppLockGate calls setEncryptionKey() as soon as verifyAppLock()
+    // The lock sets the key as soon as verify() resolves,
     // resolves, and only mounts children — the first code to ever touch
     // this module — afterwards. So the key can already be set before
-    // whenLoaded() (and the whenUnlocked() it awaits internally) ever runs.
+    // whenLoaded() (and the whenSet() it awaits internally) ever runs.
     const storage = await import("@/lib/storage");
-    storage.setEncryptionKey(key);
+    const { encryptionKey } = await import("@/lib/encryption-key");
+    encryptionKey.set(key);
     await storage.whenLoaded();
 
     expect(storage.getRawData().routines).toEqual(data.routines);
@@ -583,12 +587,13 @@ describe("setEncryptionKey", () => {
   });
 
   it("stops encrypting once the key is cleared", async () => {
-    const { saveRoutine, setEncryptionKey } = await freshStorage();
+    const { saveRoutine } = await freshStorage();
+    const { encryptionKey } = await import("@/lib/encryption-key");
     const { deriveKey, isEncryptedBlob, randomBytes } =
       await import("@/lib/webauthn-crypto");
     const { kvGet } = await import("@/lib/idb-store");
-    setEncryptionKey(await deriveKey(randomBytes(32), randomBytes(16)));
-    setEncryptionKey(null);
+    encryptionKey.set(await deriveKey(randomBytes(32), randomBytes(16)));
+    encryptionKey.set(null);
 
     saveRoutine({
       id: "r1",
