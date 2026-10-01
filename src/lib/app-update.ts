@@ -9,21 +9,15 @@ import {
   parseBackupValue,
   type Backup,
 } from "@/lib/backup";
+import { encryptionKey } from "@/lib/encryption-key";
 import { keyValueStore } from "@/lib/idb-store";
 import { SNAPSHOT_KEY } from "@/lib/storage-keys";
 
 // Settings' "Update app" and its pre-update snapshot (@maat-apps/core/update),
 // with routines' own backup format as the snapshot and the lock's key
-// encrypting it like the rest of routines' data.
-
-// Set by app-lock.ts, same as storage.ts's own encryption key. Every caller
-// only runs from an already-unlocked screen, so unlike storage.ts there's no
-// background load to gate on it.
-let encryptionKey: CryptoKey | null = null;
-
-export function setEncryptionKey(key: CryptoKey | null): void {
-  encryptionKey = key;
-}
+// encrypting it like the rest of routines' data. Every caller only runs from
+// an already-unlocked screen, so unlike storage.ts there's no background
+// load to gate on the key.
 
 const snapshot = createUpdateSnapshot<Backup>({
   storage: keyValueStore,
@@ -33,7 +27,7 @@ const snapshot = createUpdateSnapshot<Backup>({
     parse: parseBackupValue,
     apply: applyBackup,
   },
-  encryption: { getKey: () => encryptionKey },
+  encryption: { getKey: encryptionKey.get },
 });
 
 /** Test-only: resolves once the initial existence check has finished. */

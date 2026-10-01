@@ -282,13 +282,13 @@ describe("updateApp", () => {
   });
 });
 
-describe("setEncryptionKey", () => {
+describe("encryption", () => {
   it("saves and reads back an encrypted snapshot", async () => {
     const { appUpdate, storage, idbStore } = await freshAppUpdate();
     const { deriveKey, isEncryptedBlob, randomBytes } =
       await import("@/lib/webauthn-crypto");
     const key = await deriveKey(randomBytes(32), randomBytes(16));
-    appUpdate.setEncryptionKey(key);
+    (await import("@/lib/encryption-key")).encryptionKey.set(key);
 
     storage.saveRoutine({
       id: "r1",
@@ -309,7 +309,7 @@ describe("setEncryptionKey", () => {
   it("fails to read back an encrypted snapshot with the wrong key", async () => {
     const { appUpdate, storage } = await freshAppUpdate();
     const { deriveKey, randomBytes } = await import("@/lib/webauthn-crypto");
-    appUpdate.setEncryptionKey(
+    (await import("@/lib/encryption-key")).encryptionKey.set(
       await deriveKey(randomBytes(32), randomBytes(16)),
     );
     storage.saveRoutine({
@@ -321,7 +321,7 @@ describe("setEncryptionKey", () => {
     });
     await appUpdate.saveUpdateSnapshot();
 
-    appUpdate.setEncryptionKey(
+    (await import("@/lib/encryption-key")).encryptionKey.set(
       await deriveKey(randomBytes(32), randomBytes(16)),
     );
     await expect(appUpdate.readUpdateSnapshot()).resolves.toBeNull();

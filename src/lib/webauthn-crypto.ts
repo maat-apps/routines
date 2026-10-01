@@ -3,16 +3,13 @@ import { deriveKey as deriveKeyWithInfo } from "@maat-apps/core/crypto";
 export {
   decryptJson,
   encryptJson,
-  fromBase64Url,
   isEncryptedBlob,
   randomBytes,
-  toBase64Url,
-  type EncryptedBlob,
 } from "@maat-apps/core/crypto";
 
 // NEVER change this: it's part of how routines-data is encrypted, so a
 // different value makes every already-encrypted record undecryptable.
-const HKDF_INFO = "routines-data-v1";
+export const HKDF_INFO = "routines-data-v1";
 
 /**
  * Turns a WebAuthn PRF secret into routines' AES-GCM key (see

@@ -94,29 +94,25 @@ own files. Product intent: `PRODUCT.md`.
   string (`"pl"`/`"en"`), which the migration special-cases. Routines-only
   — new apps have nothing to migrate.
 
-- **App lock + encryption.** `@maat-apps/ui`'s `MobileGate` wraps the app;
-  inside it `src/components/app-lock-gate.tsx` requires a WebAuthn
-  platform-authenticator prompt when the lock is on. Unlocked state is
-  per-session memory in `src/lib/app-lock.ts`; enrolling counts as
-  unlocked.
+- **App lock + encryption.** The lock is shared: logic from
+  `@maat-apps/core/lock`, the lock screen from `@maat-apps/ui/app-lock-gate`
+  (inside `MobileGate`). Routines' wiring: `src/lib/app-lock.ts`
+  (`appLock`, with the enrolment in `settings.ts` and rewrite/erase over
+  `storage.ts` + the update snapshot), `src/lib/encryption-key.ts` (the key
+  holder `storage.ts`/`app-update.ts` encrypt with) and
+  `src/components/app-lock-gate.tsx` (settings + translated labels).
   - `LockEnrolment.encryptionSupported` decides the mode, set at enrolment
-    from PRF support (`src/lib/webauthn-crypto.ts`). With PRF, an AES-GCM
-    key is handed to `storage.ts`/`app-update.ts` via `setEncryptionKey`
-    and `routines-data` is encrypted. Without PRF the lock is a UI gate
-    only, and Settings says so (`appLockNotice` vs.
-    `appLockEncryptedNotice`). This split is intentional — don't change it
-    without the owner's decision.
+    from PRF support. With PRF, an AES-GCM key lands in the key holder and
+    `routines-data` is encrypted. Without PRF the lock is a UI gate only,
+    and Settings says so (`appLockNotice` vs. `appLockEncryptedNotice`).
+    This split is intentional — don't change it without the owner's
+    decision.
   - **Never change `HKDF_INFO` (`"routines-data-v1"`)** in
-    `webauthn-crypto.ts` — the one routines-specific input to core's
-    `deriveKey`; changing it makes all existing encrypted data unreadable.
-  - The lock itself (`app-lock.ts`, `app-lock-gate.tsx`) is still
-    routines-only, not in core — see maat-core#61.
-  - Escape hatch when the authenticator fails: `disableAppLock()` (nothing
-    encrypted, or key still in memory) vs. `disableAppLockAndEraseData()`
-    (ciphertext is unrecoverable, so it warns then wipes — the
-    `confirmErase` step).
-  - `enrolAppLock()` runs a second WebAuthn ceremony right after creating
-    the credential, to obtain the PRF secret.
+    `webauthn-crypto.ts` — the lock's `keyInfo`; changing it makes all
+    existing encrypted data unreadable.
+  - Escape hatch when the authenticator fails: `appLock.disable()` (nothing
+    encrypted) vs. `appLock.disableAndErase()` (ciphertext is
+    unrecoverable, so the gate warns, then wipes).
 
 - **Service worker.** `src/sw.ts` is the vite-plugin-pwa `injectManifest`
   entry calling core's `registerAppWorker` (`/sw`): precache, network-first

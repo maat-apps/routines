@@ -1,17 +1,16 @@
+import { parseLockEnrolment, type LockEnrolment } from "@maat-apps/core/lock";
 import { createPersistedStore } from "@maat-apps/core/persisted";
 
 import { keyValueStore, kvDelete } from "@/lib/idb-store";
-import { parseLockEnrolment, type LockEnrolment } from "@/lib/schemas";
 import { PREFERENCE_KEYS, SETTINGS_KEY } from "@/lib/storage-keys";
 
 /**
  * What we keep about the app lock. The credential id is a handle the platform
  * authenticator gives back — it is not a secret and unlocks nothing on its own.
  * `prfSalt`/`encryptionSupported` are not secret either — they're metadata
- * about whether/how routine data is encrypted (see src/lib/webauthn-crypto.ts),
- * not the key itself, which is never stored. Defined as a schema in
- * @/lib/schemas (LockEnrolmentSchema) rather than a parallel hand-written
- * type, so this type and parseLockEnrolment below can't drift apart.
+ * about whether/how routine data is encrypted (see src/lib/app-lock.ts),
+ * not the key itself, which is never stored. Schema and type come from
+ * @maat-apps/core/lock.
  */
 export type { LockEnrolment };
 

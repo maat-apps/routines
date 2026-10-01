@@ -2,11 +2,7 @@ import { useEffect, useState } from "react";
 
 import { useAppSettings } from "@/hooks/use-store";
 import { useTranslation } from "@/i18n/use-translation";
-import {
-  disableAppLock,
-  enrolAppLock,
-  isAppLockSupported,
-} from "@/lib/app-lock";
+import { appLock } from "@/lib/app-lock";
 import {
   SettingsRow,
   SettingsSection,
@@ -23,7 +19,7 @@ export function SecuritySection() {
 
   useEffect(() => {
     let active = true;
-    void isAppLockSupported().then((supported) => {
+    void appLock.isSupported().then((supported) => {
       if (active) setLockSupported(supported);
     });
     return () => {
@@ -34,11 +30,11 @@ export function SecuritySection() {
   async function toggleAppLock(enabled: boolean) {
     setLockError(null);
     if (!enabled) {
-      disableAppLock();
+      appLock.disable();
       return;
     }
     try {
-      await enrolAppLock();
+      await appLock.enrol();
     } catch {
       // Cancelling the platform prompt lands here too; leave the lock off.
       setLockError(t("appLockFailed"));
