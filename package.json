@@ -33,7 +33,7 @@
     "@dnd-kit/modifiers": "^9.0.0",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
-    "@maat-apps/core": "^0.4.0",
+    "@maat-apps/core": "^0.4.1",
     "@maat-apps/ui": "^0.9.0",
     "@phosphor-icons/react": "^2.1.10",
     "class-variance-authority": "^0.7.1",
