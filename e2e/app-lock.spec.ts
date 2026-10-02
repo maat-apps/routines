@@ -1,7 +1,10 @@
 import { expect, test } from "@playwright/test";
 
-import { en, openSettings, seedData } from "./utils";
+import { en, openSettings, seedData, waitForStoredLock } from "./utils";
 
+// Wiring only: the app's enrolment persists and its gate renders. The lock
+// screen's own behavior (escape hatch, erase warning) is tested in
+// @maat-apps/ui, the lock logic in @maat-apps/core.
 test.describe("app lock", () => {
   test("enrolling turns the lock on and unlocking with the same authenticator works", async ({
     page,
@@ -25,6 +28,7 @@ test.describe("app lock", () => {
     // Enrolling counts as unlocked (per CLAUDE.md's app-lock notes) — a
     // reload should still show the locked screen, since being unlocked is
     // per-session memory state, not persisted.
+    await waitForStoredLock(page);
     await page.reload();
     await expect(
       page.getByRole("heading", { name: en.lockedTitle }),
@@ -34,57 +38,6 @@ test.describe("app lock", () => {
     await expect(
       page.getByRole("heading", { name: en.lockedTitle }),
     ).toHaveCount(0);
-    await expect(page.getByRole("heading", { name: en.appName })).toBeVisible();
-  });
-
-  test("the escape hatch turns the lock off when no authenticator is available", async ({
-    page,
-  }) => {
-    // Force "no platform authenticator" deterministically: the real host
-    // machine running this test may (or may not) have one configured (e.g.
-    // Windows Hello), which isAppLockSupported() would otherwise honestly
-    // report — that's environment-dependent, not what this test wants to
-    // exercise.
-    await page.addInitScript(() => {
-      window.PublicKeyCredential = window.PublicKeyCredential ?? ({} as never);
-      window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable =
-        () => Promise.resolve(false);
-      // Settings live in IndexedDB (src/lib/idb-store.ts), not localStorage —
-      // hand-duplicated store/key names, same reasoning as seedData() in
-      // ./utils.ts, since this init script can't import from src/.
-      const request = indexedDB.open("routines", 1);
-      request.onupgradeneeded = () => {
-        if (!request.result.objectStoreNames.contains("kv")) {
-          request.result.createObjectStore("kv");
-        }
-      };
-      request.onsuccess = () => {
-        const transaction = request.result.transaction("kv", "readwrite");
-        transaction.objectStore("kv").put(
-          {
-            lock: {
-              credentialId: "fake",
-              userId: "fake-user",
-              createdAt: new Date().toISOString(),
-              encryptionSupported: false,
-            },
-          },
-          "routines-settings",
-        );
-      };
-    });
-    await seedData(page, [], {});
-    await page.goto("");
-
-    await expect(
-      page.getByRole("heading", { name: en.lockedTitle }),
-    ).toBeVisible();
-
-    // isAppLockSupported() resolving false shows the escape hatch on mount
-    // (app-lock-gate.tsx), without needing a failed unlock attempt first.
-    const escapeHatch = page.getByRole("button", { name: en.turnOffLock });
-    await expect(escapeHatch).toBeVisible();
-    await escapeHatch.click();
     await expect(page.getByRole("heading", { name: en.appName })).toBeVisible();
   });
 });
