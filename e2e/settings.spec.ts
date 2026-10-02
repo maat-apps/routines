@@ -39,7 +39,7 @@ test.describe("settings", () => {
     // it, but Base UI marks background content aria-hidden/inert while a
     // dialog is open (correct accessibility behavior) — getByRole can't see
     // it until the drawer closes. Close it first (phone back gesture, same
-    // as drawer-dismissal.spec.ts) rather than querying past aria-hidden.
+    // as @maat-apps/ui's drawer tests) rather than querying past aria-hidden.
     await page.goBack();
     // exact: true — with an empty routine list, the empty state's own
     // Polish heading ("Zacznij od jednej rutyny") ends with "rutyny" and

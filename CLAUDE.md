@@ -164,8 +164,9 @@ own files. Product intent: `PRODUCT.md`.
 - **Tests** (conventions: maat-core `docs/testing-*.md`). Unit coverage
   covers `src/lib/**`, `src/hooks/**`, `src/i18n/**` at 95%; the test
   database is `"routines"`. E2E: `mobile-chromium` + `mobile-iphone`;
-  `drawer-dismissal.spec.ts` (raw CDP) is excluded from `mobile-iphone`,
-  `a11y.spec.ts` runs on chromium only. Lighthouse baseline: performance
+  `a11y.spec.ts` runs on chromium only. Shared components' behavior
+  (MobileGate, drawer swipe/back, the lock screen, the font) is tested in
+  `@maat-apps/ui`, not here — e2e only checks routines wired them in. Lighthouse baseline: performance
   96, others 100; thresholds 85 / 100.
 
 ## Automation

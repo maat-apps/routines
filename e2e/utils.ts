@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-import { type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 
 const DATA_KEY = "routines-data";
 
@@ -108,45 +108,33 @@ export function todayIso(): string {
 }
 
 /**
- * Base UI's drawer swipe-to-dismiss reacts to real touch events, not
- * synthetic mouse drags (see CLAUDE.md's Drawer notes) — Playwright has no
- * high-level touch-drag API, so this drives the CDP Input domain directly.
- *
- * Base UI dismisses on either a fast flick (average velocity past
- * `FAST_SWIPE_VELOCITY`) or a plain drag past 50% of the popup's own
- * height (`getBaseSwipeThreshold`, DrawerViewport.js) — a ~16ms per-step
- * delay just gives the gesture a realistic touch cadence for the former;
- * it isn't load-bearing for dismissal itself as long as the total drag
- * distance clears the latter, distance-only threshold.
+ * Resolves once the app-lock enrolment has reached IndexedDB. Settings
+ * persist in the background, so a reload right after enrolling can lose
+ * it and the app comes back unlocked.
  */
-export async function swipeDown(
-  page: Page,
-  x: number,
-  startY: number,
-  endY: number,
-  steps = 8,
-): Promise<void> {
-  const client = await page.context().newCDPSession(page);
-  const point = (y: number) => [{ x, y, id: 1 }];
-  const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-  await client.send("Input.dispatchTouchEvent", {
-    type: "touchStart",
-    touchPoints: point(startY),
-  });
-
-  for (let i = 1; i <= steps; i++) {
-    const y = startY + ((endY - startY) * i) / steps;
-    await wait(16);
-    await client.send("Input.dispatchTouchEvent", {
-      type: "touchMove",
-      touchPoints: point(y),
-    });
-  }
-
-  await wait(16);
-  await client.send("Input.dispatchTouchEvent", {
-    type: "touchEnd",
-    touchPoints: [],
-  });
+export async function waitForStoredLock(page: Page) {
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          new Promise<boolean>((resolve) => {
+            const request = indexedDB.open("routines");
+            request.onerror = () => resolve(false);
+            request.onsuccess = () => {
+              const read = request.result
+                .transaction("kv")
+                .objectStore("kv")
+                .get("routines-settings");
+              read.onerror = () => resolve(false);
+              read.onsuccess = () =>
+                resolve(
+                  Boolean(
+                    (read.result as { lock?: unknown } | undefined)?.lock,
+                  ),
+                );
+            };
+          }),
+      ),
+    )
+    .toBe(true);
 }

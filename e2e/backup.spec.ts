@@ -74,7 +74,7 @@ test.describe("backup export / import", () => {
 
     await expect(page.getByText(en.importDone)).toBeVisible();
     // Close the settings drawer via the phone back gesture (see
-    // drawer-dismissal.spec.ts) and check the list underneath — not
+    // @maat-apps/ui's drawer tests) and check the list underneath — not
     // Escape, which has no equivalent on a phone with no hardware keyboard.
     await page.goBack();
     await expect(

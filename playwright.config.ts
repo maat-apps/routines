@@ -33,9 +33,7 @@ export default defineConfig({
       use: { ...devices["Galaxy A55"] },
     },
     {
-      // drawer-dismissal.spec.ts is the one spec still on the CDP-only
-      // touch-event path (no native replacement exists yet). a11y.spec.ts
-      // runs its axe-core checks against the DOM/ARIA tree, which doesn't
+      // a11y.spec.ts runs its axe-core checks against the DOM/ARIA tree, which doesn't
       // meaningfully differ by rendering engine, so running it on both
       // devices would just be redundant (same reasoning CLAUDE.md gives for
       // not adding a third device). lighthouse.spec.ts has its own
@@ -46,11 +44,7 @@ export default defineConfig({
       // app-lock.spec.ts moved to context.credentials, which is
       // cross-browser (unlike newCDPSession), so it runs here too.
       name: "mobile-iphone",
-      testIgnore: [
-        /drawer-dismissal\.spec\.ts$/,
-        /a11y\.spec\.ts$/,
-        /lighthouse\.spec\.ts$/,
-      ],
+      testIgnore: [/a11y\.spec\.ts$/, /lighthouse\.spec\.ts$/],
       use: { ...devices["iPhone 13"] },
     },
     {
