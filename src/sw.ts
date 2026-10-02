@@ -14,7 +14,7 @@ declare const self: ServiceWorkerGlobalScope & {
 
 registerAppWorker(self, {
   // Bump whenever the app shell changes — activation deletes every other cache.
-  cacheName: "routines-v7",
+  cacheName: "routines-v8",
   manifest: self.__WB_MANIFEST,
   // Not a hardcoded "/routines/": a PR preview under "/routines/pr-<n>/"
   // precaches and falls back to its own shell.
