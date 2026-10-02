@@ -3,13 +3,13 @@ import { startTransition } from "react";
 import { useNavigate } from "react-router";
 
 import { RoutineRowContent } from "@/components/routine-row-content";
-import { useSmartBack } from "@/hooks/use-smart-back";
 import { useRoutines, useRoutineState } from "@/hooks/use-store";
 import { useTranslation } from "@/i18n/use-translation";
 import { isRoutineActiveToday } from "@/lib/routine-utils";
 import { AppBar } from "@maat-apps/ui/app-bar";
 import { EmptyState } from "@maat-apps/ui/empty-state";
 import { ListRow } from "@maat-apps/ui/list-row";
+import { useSmartBack } from "@maat-apps/ui/smart-back";
 
 // A lookup/access point for a routine home.tsx's own today-only filter hides
 // (routine-day-scheduling) — not a second home screen, so it deliberately
