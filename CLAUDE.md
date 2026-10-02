@@ -136,7 +136,8 @@ own files. Product intent: `PRODUCT.md`.
 - **Routing.** `<BrowserRouter basename="/routines">`: `/` → `/:id` →
   `/:id/edit`, `/` → `/new`, plus `/all-routines` (reached from a Settings
   row; home only lists routines active today, `isRoutineActiveToday`).
-  `new-routine-view.tsx`'s onComplete replaces the `/new` entry instead of
+  Back is `useSmartBack` from `@maat-apps/ui/smart-back` (maat-core
+  STRUCTURE.md's Routing pattern). `new-routine-view.tsx`'s onComplete replaces the `/new` entry instead of
   `useSmartBack` — creating is a forward transition. Settings is a drawer,
   not a route: `src/views/home/settings-panel.tsx` composes one
   `settings-<name>-section.tsx` per card.
