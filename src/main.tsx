@@ -1,4 +1,5 @@
 import "@/app/globals.css";
+import "@maat-apps/ui/font";
 
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
