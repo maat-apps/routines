@@ -3,10 +3,10 @@ import { useNavigate, useParams } from "react-router";
 
 import { MissingRoutine } from "@/components/missing-routine";
 import { RoutineEditForm } from "@/components/routine-edit-form";
-import { useSmartBack } from "@/hooks/use-smart-back";
 import { useRoutines } from "@/hooks/use-store";
 import { useTranslation } from "@/i18n/use-translation";
 import { deleteRoutine, saveRoutine } from "@/lib/storage";
+import { useSmartBack } from "@maat-apps/ui/smart-back";
 
 export function RoutineEditView() {
   const navigate = useNavigate();

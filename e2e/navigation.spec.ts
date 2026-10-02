@@ -120,7 +120,7 @@ test.describe("native back button", () => {
       await page.getByRole("button", { name: en.done }).click();
 
       // Confirming pops back to the same "routine" entry each time
-      // (use-smart-back.ts) instead of pushing a duplicate, so repeating
+      // (@maat-apps/ui/smart-back) instead of pushing a duplicate, so repeating
       // this doesn't grow the back-stack.
       await expect(page).toHaveURL(/\/routines\/r1$/);
       await expect(

@@ -2,10 +2,10 @@ import { startTransition } from "react";
 import { useNavigate, useParams } from "react-router";
 
 import { MissingRoutine } from "@/components/missing-routine";
-import { useSmartBack } from "@/hooks/use-smart-back";
 import { useRoutines, useRoutineState } from "@/hooks/use-store";
 import { resetRoutine, toggleStep } from "@/lib/storage";
 import { RoutineDetail } from "@/views/routine/routine-detail";
+import { useSmartBack } from "@maat-apps/ui/smart-back";
 
 export function RoutineView() {
   const navigate = useNavigate();

@@ -2,13 +2,13 @@ import { startTransition, useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 
 import { RoutineEditForm } from "@/components/routine-edit-form";
-import { useSmartBack } from "@/hooks/use-smart-back";
 import { useRoutines } from "@/hooks/use-store";
 import { useTranslation } from "@/i18n/use-translation";
 import { createId } from "@/lib/routine-utils";
 import { ALL_DAYS } from "@/lib/schemas";
 import { saveRoutine } from "@/lib/storage";
 import type { Routine } from "@/types";
+import { useSmartBack } from "@maat-apps/ui/smart-back";
 
 export function NewRoutineView() {
   const navigate = useNavigate();
