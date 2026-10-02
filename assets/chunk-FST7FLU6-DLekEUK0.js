@@ -1,1 +1,0 @@
-import{A as a,G as e,U as r}from"./index-DEbf6BSa.js";function i({disabled:t,onClick:n,className:s,children:o}){return a.jsx(e,{variant:"outline",disabled:t,onClick:n,className:r("min-h-13 rounded-lg px-4.5",s),children:o})}export{i as R};
