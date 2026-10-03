@@ -1,13 +1,14 @@
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
+  arrangeForThumb,
   createId,
   isRoutineActiveToday,
   sortSteps,
   weekdayLabels,
   weekOrder,
 } from "@/lib/routine-utils";
-import type { Routine } from "@/types";
+import type { Routine, RoutineStep } from "@/types";
 
 function routine(activeDays: number[]): Routine {
   return { id: "r1", name: "Morning", order: 0, activeDays, steps: [] };
@@ -150,5 +151,29 @@ describe("weekOrder — firstDayOfWeek branches", () => {
       throw new Error("not supported");
     };
     expect(weekOrder("en")).toEqual([0, 1, 2, 3, 4, 5, 6]);
+  });
+});
+
+describe("arrangeForThumb", () => {
+  const steps: RoutineStep[] = [
+    { id: "a", text: "A", order: 0 },
+    { id: "b", text: "B", order: 1 },
+    { id: "c", text: "C", order: 2 },
+  ];
+
+  it("reverses unfinished steps so the first one comes last", () => {
+    const { open } = arrangeForThumb(steps, []);
+    expect(open.map((step) => step.id)).toEqual(["c", "b", "a"]);
+  });
+
+  it("moves finished steps to done, in routine order", () => {
+    const { open, done } = arrangeForThumb(steps, ["c", "a"]);
+    expect(open.map((step) => step.id)).toEqual(["b"]);
+    expect(done.map((step) => step.id)).toEqual(["a", "c"]);
+  });
+
+  it("ignores checked ids that match no step", () => {
+    const { done } = arrangeForThumb(steps, ["gone"]);
+    expect(done).toEqual([]);
   });
 });

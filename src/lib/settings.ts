@@ -23,9 +23,18 @@ export type AppSettings = {
    * browser tab has no other way to tell — see `useInstallPrompt`.
    */
   installed: boolean;
+  /**
+   * Routine view layout for one-handed use: the next step sits at the bottom,
+   * nearest the thumb, and finished steps collect in a group on top.
+   */
+  thumbLayout: boolean;
 };
 
-const defaultSettings: AppSettings = { lock: null, installed: false };
+const defaultSettings: AppSettings = {
+  lock: null,
+  installed: false,
+  thumbLayout: false,
+};
 
 // @maat-apps/core/persisted: in memory once loaded, IndexedDB behind it. Its
 // "ready" signal is load-bearing here, not just for tests: AppLockGate must
@@ -40,6 +49,7 @@ const settingsStore = createPersistedStore<AppSettings>({
     return {
       lock: parseLockEnrolment(value.lock),
       installed: value.installed === true,
+      thumbLayout: value.thumbLayout === true,
     };
   },
 });
@@ -63,6 +73,10 @@ export function setLockEnrolment(lock: LockEnrolment): void {
 
 export function clearLockEnrolment(): void {
   settingsStore.set({ lock: null });
+}
+
+export function setThumbLayout(thumbLayout: boolean): void {
+  settingsStore.set({ thumbLayout });
 }
 
 export function markInstalled(): void {
