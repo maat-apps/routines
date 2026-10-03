@@ -2,8 +2,8 @@ import { useRef, useState } from "react";
 
 import { useTranslation } from "@/i18n/use-translation";
 import {
-  applyBackup,
   downloadBackup,
+  mergeBackup,
   parseBackup,
   shareBackup,
   type Backup,
@@ -36,7 +36,7 @@ export function DataSection({
 
   function confirmImport() {
     if (!pendingImport) return;
-    applyBackup(pendingImport);
+    mergeBackup(pendingImport);
     setPendingImport(null);
     onStatus(t("importDone"));
   }

@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   createId,
   isRoutineActiveToday,
+  mergeAppData,
   sortSteps,
   weekdayLabels,
   weekOrder,
@@ -150,5 +151,42 @@ describe("weekOrder — firstDayOfWeek branches", () => {
       throw new Error("not supported");
     };
     expect(weekOrder("en")).toEqual([0, 1, 2, 3, 4, 5, 6]);
+  });
+});
+
+describe("mergeAppData", () => {
+  const mine = { ...routine([1]), id: "a", name: "Mine" };
+  const theirs = { ...routine([2]), id: "b", name: "Theirs", order: 1 };
+  const progress = { checkedStepIds: ["s1"], lastResetDate: "2026-10-01" };
+
+  it("adds an incoming routine the device lacks, with its progress", () => {
+    const merged = mergeAppData(
+      { routines: [mine], state: {} },
+      { routines: [theirs], state: { b: progress } },
+    );
+    expect(merged).toEqual({
+      routines: [mine, theirs],
+      state: { b: progress },
+    });
+  });
+
+  it("leaves a routine the device already has exactly as it is", () => {
+    const changed = { ...mine, name: "Changed" };
+    const merged = mergeAppData(
+      { routines: [mine], state: { a: progress } },
+      {
+        routines: [changed],
+        state: { a: { ...progress, checkedStepIds: [] } },
+      },
+    );
+    expect(merged).toEqual({ routines: [mine], state: { a: progress } });
+  });
+
+  it("keeps routines missing from the backup", () => {
+    const merged = mergeAppData(
+      { routines: [mine], state: {} },
+      { routines: [], state: {} },
+    );
+    expect(merged.routines).toEqual([mine]);
   });
 });
