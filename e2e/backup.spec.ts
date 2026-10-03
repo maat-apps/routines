@@ -34,7 +34,7 @@ test.describe("backup export / import", () => {
     await expect(page.getByText(en.exportDone)).toBeVisible();
   });
 
-  test("importing a valid backup replaces the current routines after confirmation", async ({
+  test("importing a valid backup adds its routines to the current ones after confirmation", async ({
     page,
   }) => {
     await seedData(page, [
@@ -80,9 +80,9 @@ test.describe("backup export / import", () => {
     await expect(
       page.getByRole("button", { name: /Imported routine/ }),
     ).toBeVisible();
-    await expect(page.getByRole("button", { name: /Old routine/ })).toHaveCount(
-      0,
-    );
+    await expect(
+      page.getByRole("button", { name: /Old routine/ }),
+    ).toBeVisible();
   });
 
   test("importing a malformed file is rejected without touching existing data", async ({

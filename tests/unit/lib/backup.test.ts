@@ -371,3 +371,53 @@ describe("shareBackup", () => {
     vi.unstubAllGlobals();
   });
 });
+
+describe("mergeBackup", () => {
+  const routine = (id: string, name: string, order: number) => ({
+    id,
+    name,
+    order,
+    activeDays: [0, 1, 2, 3, 4, 5, 6],
+    steps: [],
+  });
+
+  it("adds the backup's routines after the ones on the device", async () => {
+    const { backup, storage } = await freshBackup();
+    storage.replaceAllData({ routines: [routine("r1", "Mine", 0)], state: {} });
+
+    backup.mergeBackup({
+      app: "routines",
+      version: 1,
+      exportedAt: "2026-09-17T12:00:00.000Z",
+      locale: null,
+      data: {
+        routines: [routine("r1", "Theirs", 0), routine("r2", "Added", 0)],
+        state: {},
+      },
+    });
+
+    expect(
+      storage
+        .getRawData()
+        .routines.map((item) => [item.id, item.name, item.order]),
+    ).toEqual([
+      ["r1", "Mine", 0],
+      ["r2", "Added", 1],
+    ]);
+  });
+
+  it("leaves the current language alone", async () => {
+    const { backup, localeStore, idbStore } = await freshBackup();
+    localeStore.setStoredLocale("en");
+
+    backup.mergeBackup({
+      app: "routines",
+      version: 1,
+      exportedAt: "2026-09-17T12:00:00.000Z",
+      locale: "pl",
+      data: { routines: [], state: {} },
+    });
+
+    await expect(idbStore.kvGet(LOCALE_KEY)).resolves.toBe("en");
+  });
+});

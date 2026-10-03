@@ -14,7 +14,7 @@ import {
   setStoredLocale,
 } from "@/lib/locale-store";
 import { parseBackupEnvelope, parseRoutines, parseState } from "@/lib/schemas";
-import { getRawData, replaceAllData } from "@/lib/storage";
+import { getRawData, mergeIntoData, replaceAllData } from "@/lib/storage";
 import type { AppData } from "@/types";
 
 // Routines' backup format on top of @maat-apps/core/backup, which handles
@@ -88,7 +88,15 @@ export function parseBackupValue(parsed: unknown): Backup {
   };
 }
 
-/** Overwrites the current routines with the backup's. */
+/**
+ * Import from Settings: keeps the routines on the device and adds the
+ * backup's. The language is a setting of this device, so it stays as is.
+ */
+export function mergeBackup(backup: Backup): void {
+  mergeIntoData(backup.data);
+}
+
+/** Overwrites the current routines with the backup's (restoring the update snapshot). */
 export function applyBackup(backup: Backup): void {
   replaceAllData(backup.data);
   if (isLocale(backup.locale)) {

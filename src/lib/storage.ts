@@ -1,6 +1,6 @@
 import { encryptionKey } from "@/lib/encryption-key";
 import { kvGet, kvSet } from "@/lib/idb-store";
-import { formatDateStamp } from "@/lib/routine-utils";
+import { formatDateStamp, mergeAppData } from "@/lib/routine-utils";
 import { parseRoutines, parseState } from "@/lib/schemas";
 import {
   getSettingsSnapshot,
@@ -190,6 +190,16 @@ export function replaceAllData(data: AppData): void {
   writeData({
     routines: withOrderedRoutines(data.routines),
     state: data.state,
+  });
+  emitChange();
+}
+
+/** Adds the routines the device lacks; the ones it has stay as they are. */
+export function mergeIntoData(incoming: AppData): void {
+  const merged = mergeAppData(readData(), incoming);
+  writeData({
+    routines: withOrderedRoutines(merged.routines),
+    state: merged.state,
   });
   emitChange();
 }

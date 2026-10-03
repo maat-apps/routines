@@ -1,4 +1,4 @@
-import type { Routine, RoutineStep } from "@/types";
+import type { AppData, Routine, RoutineStep } from "@/types";
 
 export function createId(): string {
   return crypto.randomUUID();
@@ -70,4 +70,24 @@ function firstDayOfWeek(locale: string): number {
 export function weekOrder(locale: string): number[] {
   const first = firstDayOfWeek(locale) % 7; // spec's 7 (Sunday) -> day index 0
   return Array.from({ length: 7 }, (_, i) => (first + i) % 7);
+}
+
+/**
+ * `current` plus the `incoming` routines it lacks, with their progress. A
+ * routine that is already there (same id) is left exactly as it is: routines
+ * carry no edit time to say which copy is newer, so the device's wins. A
+ * merge never deletes.
+ */
+export function mergeAppData(current: AppData, incoming: AppData): AppData {
+  const state = { ...current.state };
+  const knownIds = new Set(current.routines.map((routine) => routine.id));
+  const added: Routine[] = [];
+  for (const routine of incoming.routines) {
+    if (knownIds.has(routine.id)) continue;
+    knownIds.add(routine.id);
+    added.push(routine);
+    const progress = incoming.state[routine.id];
+    if (progress) state[routine.id] = progress;
+  }
+  return { routines: [...current.routines, ...added], state };
 }

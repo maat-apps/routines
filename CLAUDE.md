@@ -126,7 +126,10 @@ own files. Product intent: `PRODUCT.md`.
   schemas as storage read-back (`parseRoutines`/`parseState`, per entry,
   via `@maat-apps/core/validation`). The envelope checks, file format and
   share/download come from `@maat-apps/core/backup`; the data, locale and
-  messages are routines' own.
+  messages are routines' own. A Settings import merges (`mergeBackup`:
+  adds missing routines, never touches or deletes existing ones, leaves the
+  language alone); only the pre-update snapshot restore (`applyBackup`)
+  replaces.
   `src/lib/settings.ts` also holds an `installed` flag, set once
   `useInstallPrompt` sees standalone mode or `appinstalled` — Chrome stops
   firing `beforeinstallprompt` after install, so this is how a browser tab
