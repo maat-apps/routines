@@ -32,7 +32,11 @@ beforeEach(async () => {
 describe("getSettingsSnapshot", () => {
   it("defaults to no lock and not installed when nothing is stored", async () => {
     const { getSettingsSnapshot } = await freshSettings();
-    expect(getSettingsSnapshot()).toEqual({ lock: null, installed: false });
+    expect(getSettingsSnapshot()).toEqual({
+      lock: null,
+      installed: false,
+      thumbLayout: false,
+    });
   });
 
   it("parses a validly stored lock-only (unencrypted) enrolment", async () => {
@@ -51,6 +55,7 @@ describe("getSettingsSnapshot", () => {
         encryptionSupported: false,
       },
       installed: false,
+      thumbLayout: false,
     });
   });
 
@@ -96,13 +101,21 @@ describe("getSettingsSnapshot", () => {
   it("parses a stored installed flag", async () => {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify({ installed: true }));
     const { getSettingsSnapshot } = await freshSettings();
-    expect(getSettingsSnapshot()).toEqual({ lock: null, installed: true });
+    expect(getSettingsSnapshot()).toEqual({
+      lock: null,
+      installed: true,
+      thumbLayout: false,
+    });
   });
 
   it("falls back to defaults for malformed JSON", async () => {
     localStorage.setItem(SETTINGS_KEY, "{not json");
     const { getSettingsSnapshot } = await freshSettings();
-    expect(getSettingsSnapshot()).toEqual({ lock: null, installed: false });
+    expect(getSettingsSnapshot()).toEqual({
+      lock: null,
+      installed: false,
+      thumbLayout: false,
+    });
   });
 
   it("drops a lock missing required fields instead of returning it half-formed", async () => {
@@ -111,13 +124,21 @@ describe("getSettingsSnapshot", () => {
       JSON.stringify({ lock: { credentialId: "c1" } }),
     );
     const { getSettingsSnapshot } = await freshSettings();
-    expect(getSettingsSnapshot()).toEqual({ lock: null, installed: false });
+    expect(getSettingsSnapshot()).toEqual({
+      lock: null,
+      installed: false,
+      thumbLayout: false,
+    });
   });
 
   it("drops a lock that isn't an object at all", async () => {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify({ lock: "oops" }));
     const { getSettingsSnapshot } = await freshSettings();
-    expect(getSettingsSnapshot()).toEqual({ lock: null, installed: false });
+    expect(getSettingsSnapshot()).toEqual({
+      lock: null,
+      installed: false,
+      thumbLayout: false,
+    });
   });
 
   it("generates a createdAt when the stored lock is missing one", async () => {
@@ -138,6 +159,7 @@ describe("getServerSettingsSnapshot", () => {
     expect(getServerSettingsSnapshot()).toEqual({
       lock: null,
       installed: false,
+      thumbLayout: false,
     });
   });
 });
@@ -188,6 +210,7 @@ describe("ensureLoaded error handling", () => {
     expect(settings.getSettingsSnapshot()).toEqual({
       lock: null,
       installed: false,
+      thumbLayout: false,
     });
     expect(settings.isSettingsReady()).toBe(true);
   });
@@ -213,6 +236,7 @@ describe("setLockEnrolment / clearLockEnrolment", () => {
         encryptionSupported: false,
       },
       installed: false,
+      thumbLayout: false,
     });
     expect(listener).toHaveBeenCalledTimes(1);
   });
@@ -259,7 +283,11 @@ describe("setLockEnrolment / clearLockEnrolment", () => {
     const listener = vi.fn();
     subscribeToSettings(listener);
     clearLockEnrolment();
-    expect(getSettingsSnapshot()).toEqual({ lock: null, installed: false });
+    expect(getSettingsSnapshot()).toEqual({
+      lock: null,
+      installed: false,
+      thumbLayout: false,
+    });
     expect(listener).toHaveBeenCalledTimes(1);
   });
 });
@@ -271,7 +299,11 @@ describe("markInstalled", () => {
     const listener = vi.fn();
     subscribeToSettings(listener);
     markInstalled();
-    expect(getSettingsSnapshot()).toEqual({ lock: null, installed: true });
+    expect(getSettingsSnapshot()).toEqual({
+      lock: null,
+      installed: true,
+      thumbLayout: false,
+    });
     expect(listener).toHaveBeenCalledTimes(1);
   });
 
@@ -282,6 +314,24 @@ describe("markInstalled", () => {
     subscribeToSettings(listener);
     markInstalled();
     expect(listener).not.toHaveBeenCalled();
+  });
+});
+
+describe("setThumbLayout", () => {
+  it("persists the choice, updates the snapshot, and notifies listeners", async () => {
+    const { setThumbLayout, getSettingsSnapshot, subscribeToSettings } =
+      await freshSettings();
+    const listener = vi.fn();
+    subscribeToSettings(listener);
+    setThumbLayout(true);
+    expect(getSettingsSnapshot().thumbLayout).toBe(true);
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it("reads a stored choice back", async () => {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify({ thumbLayout: true }));
+    const { getSettingsSnapshot } = await freshSettings();
+    expect(getSettingsSnapshot().thumbLayout).toBe(true);
   });
 });
 
@@ -311,7 +361,11 @@ describe("resetPreferences", () => {
     for (const key of PREFERENCE_KEYS) {
       await expect(kvGet(key)).resolves.toBeUndefined();
     }
-    expect(getSettingsSnapshot()).toEqual({ lock: null, installed: false });
+    expect(getSettingsSnapshot()).toEqual({
+      lock: null,
+      installed: false,
+      thumbLayout: false,
+    });
     expect(listener).toHaveBeenCalledTimes(1);
   });
 
