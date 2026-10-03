@@ -70,7 +70,6 @@
     "prettier-plugin-organize-imports": "^4.3.0",
     "prettier-plugin-tailwindcss": "^0.8.1",
     "rollup-plugin-visualizer": "^7.1.1",
-    "shadcn": "^4.21.0",
     "tailwindcss": "^4",
     "typescript": "^5",
     "typescript-eslint": "^8.46.5",

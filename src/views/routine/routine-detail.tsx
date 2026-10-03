@@ -93,7 +93,7 @@ export function RoutineDetail({
                     span is purely decorative. */}
                 <span
                   aria-hidden="true"
-                  className={`flex size-6 shrink-0 items-center justify-center rounded-full border transition-colors ${
+                  className={`flex size-6 shrink-0 items-center justify-center rounded-lg border transition-colors ${
                     checked
                       ? "border-primary bg-primary text-primary-foreground"
                       : "border-input"
