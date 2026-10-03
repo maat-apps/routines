@@ -1,16 +1,10 @@
-import {
-  CaretDown,
-  CaretUp,
-  Check,
-  PencilSimple,
-  Plus,
-} from "@phosphor-icons/react";
-import { useState } from "react";
+import { Check, PencilSimple, Plus } from "@phosphor-icons/react";
 
 import { useAppSettings } from "@/hooks/use-store";
 import { useTranslation } from "@/i18n/use-translation";
-import { arrangeForThumb, sortSteps } from "@/lib/routine-utils";
+import { sortSteps } from "@/lib/routine-utils";
 import type { Routine, RoutineProgress, RoutineStep } from "@/types";
+import { StepCarousel } from "@/views/routine/step-carousel";
 import { AppBar } from "@maat-apps/ui/app-bar";
 import { Button } from "@maat-apps/ui/button";
 import { EmptyState } from "@maat-apps/ui/empty-state";
@@ -34,14 +28,12 @@ export function RoutineDetail({
 }) {
   const { t } = useTranslation();
   const { thumbLayout } = useAppSettings();
-  const [showDone, setShowDone] = useState(false);
   const checkedStepIds = progress?.checkedStepIds ?? [];
   const completed = checkedStepIds.filter((id) =>
     routine.steps.some((step) => step.id === id),
   ).length;
 
-  const { open, done } = arrangeForThumb(routine.steps, checkedStepIds);
-  const steps = thumbLayout ? open : sortSteps(routine.steps);
+  const steps = sortSteps(routine.steps);
 
   function renderStep(step: RoutineStep) {
     return (
@@ -55,7 +47,7 @@ export function RoutineDetail({
   }
 
   return (
-    <div className="mx-auto flex min-h-dvh w-[min(100%,480px)] flex-col px-5 pt-27 pb-[calc(116px+env(safe-area-inset-bottom))]">
+    <div className="mx-auto min-h-dvh w-[min(100%,480px)] px-5 pt-27 pb-[calc(116px+env(safe-area-inset-bottom))]">
       <AppBar
         title={routine.name || t("unnamed")}
         backLabel={t("back")}
@@ -85,29 +77,18 @@ export function RoutineDetail({
           }}
           className="pt-10"
         />
+      ) : thumbLayout ? (
+        <StepCarousel
+          steps={steps}
+          checkedStepIds={checkedStepIds}
+          label={t("routineSteps")}
+          onToggle={(stepId) => onToggle(routine.id, stepId)}
+        />
       ) : (
         <section
-          className={`grid grid-cols-[minmax(0,1fr)] ${
-            thumbLayout ? "flex-1 content-end" : ""
-          }`}
+          className="grid grid-cols-[minmax(0,1fr)]"
           aria-label={t("routineSteps")}
         >
-          {thumbLayout && done.length > 0 && (
-            <div className="border-border border-b">
-              <button
-                type="button"
-                className="text-muted-foreground flex min-h-12 w-full items-center justify-between px-4 text-left text-sm"
-                aria-expanded={showDone}
-                onClick={() => setShowDone((value) => !value)}
-              >
-                <span>
-                  {t("doneSteps")} ({done.length})
-                </span>
-                {showDone ? <CaretUp /> : <CaretDown />}
-              </button>
-              {showDone && done.map(renderStep)}
-            </div>
-          )}
           {steps.map(renderStep)}
         </section>
       )}

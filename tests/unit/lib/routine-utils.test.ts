@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
-  arrangeForThumb,
   createId,
   isRoutineActiveToday,
+  nextOpenIndex,
   sortSteps,
   weekdayLabels,
   weekOrder,
@@ -154,26 +154,26 @@ describe("weekOrder — firstDayOfWeek branches", () => {
   });
 });
 
-describe("arrangeForThumb", () => {
+describe("nextOpenIndex", () => {
   const steps: RoutineStep[] = [
     { id: "a", text: "A", order: 0 },
     { id: "b", text: "B", order: 1 },
     { id: "c", text: "C", order: 2 },
   ];
 
-  it("reverses unfinished steps so the first one comes last", () => {
-    const { open } = arrangeForThumb(steps, []);
-    expect(open.map((step) => step.id)).toEqual(["c", "b", "a"]);
+  it("returns the next unchecked step after the given index", () => {
+    expect(nextOpenIndex(steps, ["a"], 0)).toBe(1);
   });
 
-  it("moves finished steps to done, in routine order", () => {
-    const { open, done } = arrangeForThumb(steps, ["c", "a"]);
-    expect(open.map((step) => step.id)).toEqual(["b"]);
-    expect(done.map((step) => step.id)).toEqual(["a", "c"]);
+  it("skips steps that are already checked", () => {
+    expect(nextOpenIndex(steps, ["a", "b"], 0)).toBe(2);
   });
 
-  it("ignores checked ids that match no step", () => {
-    const { done } = arrangeForThumb(steps, ["gone"]);
-    expect(done).toEqual([]);
+  it("wraps to the first unchecked step when none follow", () => {
+    expect(nextOpenIndex(steps, ["b", "c"], 2)).toBe(0);
+  });
+
+  it("returns -1 when every step is checked", () => {
+    expect(nextOpenIndex(steps, ["a", "b", "c"], 1)).toBe(-1);
   });
 });

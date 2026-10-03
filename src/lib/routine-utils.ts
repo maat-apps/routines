@@ -9,20 +9,20 @@ export function sortSteps(steps: RoutineStep[]): RoutineStep[] {
 }
 
 /**
- * Splits steps for the thumb layout: unfinished ones reversed, so the first
- * step ends up last (at the bottom of the screen), and finished ones in their
- * routine order.
+ * Index of the step the carousel should move to after `fromIndex` was
+ * checked: the next unchecked one, wrapping to the start, or -1 when every
+ * step is checked.
  */
-export function arrangeForThumb(
+export function nextOpenIndex(
   steps: RoutineStep[],
   checkedStepIds: string[],
-): { open: RoutineStep[]; done: RoutineStep[] } {
-  const sorted = sortSteps(steps);
-  const isDone = (step: RoutineStep) => checkedStepIds.includes(step.id);
-  return {
-    open: sorted.filter((step) => !isDone(step)).reverse(),
-    done: sorted.filter(isDone),
-  };
+  fromIndex: number,
+): number {
+  const isOpen = (step: RoutineStep) => !checkedStepIds.includes(step.id);
+  const after = steps.findIndex(
+    (step, index) => index > fromIndex && isOpen(step),
+  );
+  return after !== -1 ? after : steps.findIndex(isOpen);
 }
 
 /** `YYYY-MM-DD`, zero-padded, in the local timezone. */

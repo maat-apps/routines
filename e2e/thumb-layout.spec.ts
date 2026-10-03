@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 import { en, openSettings, seedData } from "./utils";
 
 test.describe("thumb layout", () => {
-  test("puts the next step at the bottom and groups finished ones on top", async ({
+  test("shows steps as swipeable cards and moves to the next one after a tap", async ({
     page,
   }) => {
     await seedData(page, [
@@ -14,6 +14,7 @@ test.describe("thumb layout", () => {
         steps: [
           { id: "s1", text: "Stretch", order: 0 },
           { id: "s2", text: "Coffee", order: 1 },
+          { id: "s3", text: "Shower", order: 2 },
         ],
       },
     ]);
@@ -25,13 +26,10 @@ test.describe("thumb layout", () => {
 
     const stretch = page.getByRole("checkbox", { name: "Stretch" });
     const coffee = page.getByRole("checkbox", { name: "Coffee" });
-    const stretchBox = await stretch.boundingBox();
-    const coffeeBox = await coffee.boundingBox();
-    expect(stretchBox!.y).toBeGreaterThan(coffeeBox!.y);
+    await expect(stretch).toBeInViewport({ ratio: 1 });
 
     await stretch.click();
-    await expect(stretch).toHaveCount(0);
-    await page.getByRole("button", { name: new RegExp(en.doneSteps) }).click();
     await expect(stretch).toHaveAttribute("aria-checked", "true");
+    await expect(coffee).toBeInViewport({ ratio: 1 });
   });
 });
