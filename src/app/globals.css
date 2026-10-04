@@ -1,5 +1,4 @@
 @import "tailwindcss";
-@import "./data-variants.css";
 /* The Ma'at Apps theme — true black + white on Outfit, the tokens, base
    styles, the phone-sized variant (MobileGate) and ProgressRing's
    check-pop animation. Every app shares it; don't redefine those here. */
