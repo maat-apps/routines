@@ -1,37 +1,15 @@
-import js from "@eslint/js";
-import prettier from "eslint-plugin-prettier/recommended";
-import reactHooks from "eslint-plugin-react-hooks";
-import reactRefresh from "eslint-plugin-react-refresh";
+// Extends the shared base from @maat-apps/config. Add repo-specific
+// overrides after baseConfig.
+import { baseConfig } from "@maat-apps/config/eslint";
 import { defineConfig, globalIgnores } from "eslint/config";
 import globals from "globals";
-import tseslint from "typescript-eslint";
 
-const eslintConfig = defineConfig([
-  js.configs.recommended,
-  tseslint.configs.recommended,
-  reactHooks.configs.flat["recommended-latest"],
-  reactRefresh.configs.vite,
-  prettier,
-  {
-    files: ["**/*.{ts,tsx}"],
-    languageOptions: {
-      globals: globals.browser,
-    },
-    rules: {
-      "prettier/prettier": "error",
-    },
-  },
+export default defineConfig([
+  ...baseConfig,
   {
     files: ["src/sw.ts"],
     languageOptions: {
       globals: globals.serviceworker,
-    },
-  },
-  {
-    // Node-run scripts: root config files and the Claude Code hook scripts.
-    files: ["**/*.{js,mjs,cjs}"],
-    languageOptions: {
-      globals: globals.node,
     },
   },
   {
@@ -45,7 +23,5 @@ const eslintConfig = defineConfig([
   },
   // Claude Code worktrees each carry their own tsconfig, which makes
   // typescript-eslint fail every file with "multiple candidate TSConfigRootDirs".
-  globalIgnores(["dist/**", "build/**", ".claude/worktrees/**"]),
+  globalIgnores([".claude/worktrees/**"]),
 ]);
-
-export default eslintConfig;
