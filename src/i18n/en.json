@@ -48,6 +48,8 @@
   "viewAllRoutinesAction": "View",
   "allRoutinesTitle": "All routines",
   "allRoutinesDescription": "See every routine, including ones not scheduled for today.",
+  "thumbLayout": "Thumb layout",
+  "thumbLayoutDescription": "One step at a time: swipe up and down to browse, tap a card to check it.",
   "notScheduledToday": "Not today",
   "sectionData": "Data",
   "sectionApp": "App",

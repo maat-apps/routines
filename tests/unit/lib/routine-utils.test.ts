@@ -3,11 +3,12 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   createId,
   isRoutineActiveToday,
+  nextOpenIndex,
   sortSteps,
   weekdayLabels,
   weekOrder,
 } from "@/lib/routine-utils";
-import type { Routine } from "@/types";
+import type { Routine, RoutineStep } from "@/types";
 
 function routine(activeDays: number[]): Routine {
   return { id: "r1", name: "Morning", order: 0, activeDays, steps: [] };
@@ -150,5 +151,29 @@ describe("weekOrder — firstDayOfWeek branches", () => {
       throw new Error("not supported");
     };
     expect(weekOrder("en")).toEqual([0, 1, 2, 3, 4, 5, 6]);
+  });
+});
+
+describe("nextOpenIndex", () => {
+  const steps: RoutineStep[] = [
+    { id: "a", text: "A", order: 0 },
+    { id: "b", text: "B", order: 1 },
+    { id: "c", text: "C", order: 2 },
+  ];
+
+  it("returns the next unchecked step after the given index", () => {
+    expect(nextOpenIndex(steps, ["a"], 0)).toBe(1);
+  });
+
+  it("skips steps that are already checked", () => {
+    expect(nextOpenIndex(steps, ["a", "b"], 0)).toBe(2);
+  });
+
+  it("wraps to the first unchecked step when none follow", () => {
+    expect(nextOpenIndex(steps, ["b", "c"], 2)).toBe(0);
+  });
+
+  it("returns -1 when every step is checked", () => {
+    expect(nextOpenIndex(steps, ["a", "b", "c"], 1)).toBe(-1);
   });
 });

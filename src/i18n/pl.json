@@ -48,6 +48,8 @@
   "viewAllRoutinesAction": "Zobacz",
   "allRoutinesTitle": "Wszystkie rutyny",
   "allRoutinesDescription": "Zobacz każdą rutynę, także te niezaplanowane na dziś.",
+  "thumbLayout": "Układ pod kciuk",
+  "thumbLayoutDescription": "Jeden krok naraz: przewijaj w górę i w dół, dotknij karty, żeby ją odhaczyć.",
   "notScheduledToday": "Nie dzisiaj",
   "sectionData": "Dane",
   "sectionApp": "Aplikacja",
