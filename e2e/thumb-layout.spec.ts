@@ -20,7 +20,8 @@ test.describe("thumb layout", () => {
     ]);
     await page.goto("");
     await openSettings(page);
-    await page.getByRole("switch", { name: en.thumbLayout }).click();
+    await page.getByRole("combobox", { name: en.stepLayout }).click();
+    await page.getByRole("option", { name: en.stepLayoutDeck }).click();
     await page.keyboard.press("Escape");
     await page.getByRole("button", { name: /Morning/ }).click();
 
@@ -57,7 +58,8 @@ test.describe("thumb layout", () => {
     ]);
     await page.goto("");
     await openSettings(page);
-    await page.getByRole("switch", { name: en.thumbLayout }).click();
+    await page.getByRole("combobox", { name: en.stepLayout }).click();
+    await page.getByRole("option", { name: en.stepLayoutDeck }).click();
     await page.keyboard.press("Escape");
     await page.getByRole("button", { name: /Morning/ }).click();
 
@@ -87,7 +89,8 @@ test.describe("thumb layout", () => {
     ]);
     await page.goto("");
     await openSettings(page);
-    await page.getByRole("switch", { name: en.thumbLayout }).click();
+    await page.getByRole("combobox", { name: en.stepLayout }).click();
+    await page.getByRole("option", { name: en.stepLayoutDeck }).click();
     await page.keyboard.press("Escape");
     await page.getByRole("button", { name: /Morning/ }).click();
 
