@@ -50,6 +50,7 @@
   "allRoutinesDescription": "See every routine, including ones not scheduled for today.",
   "thumbLayout": "Thumb layout",
   "thumbLayoutDescription": "One step at a time: swipe the bottom card right to finish it, left to put it at the end of the list.",
+  "undo": "Undo",
   "allStepsDone": "All done",
   "swipeHint": "Swipe right to finish, left to do it later",
   "notScheduledToday": "Not today",
