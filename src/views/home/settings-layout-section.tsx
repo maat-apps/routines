@@ -32,7 +32,7 @@ export function LayoutSection() {
             onValueChange={(value) => setThumbLayout(value === "deck")}
           >
             <SelectTrigger
-              className="h-8.5 w-auto min-w-26 text-sm"
+              className="w-auto min-w-26 text-sm"
               aria-label={t("stepLayout")}
             >
               <SelectValue>
