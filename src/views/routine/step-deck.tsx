@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { useTranslation } from "@/i18n/use-translation";
 import { moveToEnd } from "@/lib/routine-utils";
-import type { RoutineStep } from "@/types";
+import type { RoutineDeck, RoutineStep } from "@/types";
 import { Button } from "@maat-apps/ui/button";
 
 const SWIPE_THRESHOLD_PX = 96;
@@ -15,46 +15,64 @@ const FLY_OUT_MS = 180;
 // Farther steps stay hidden so the active card is always on screen.
 const VISIBLE_UPCOMING = 4;
 
-/** `previousOrder` is set for a skip and absent for a check. */
-type DeckMove = { stepId: string; previousOrder?: string[] };
+/** The saved order minus deleted steps, with steps added since at the end. */
+function reconcileOrder(saved: string[] | undefined, steps: RoutineStep[]) {
+  const known = new Set(steps.map((step) => step.id));
+  const kept = (saved ?? []).filter((id) => known.has(id));
+  const added = steps
+    .map((step) => step.id)
+    .filter((id) => !kept.includes(id));
+  return [...kept, ...added];
+}
 
 /**
  * Open steps stacked above one active card at the bottom, within thumb
  * reach: swipe it right to check it, left to send it to the end of the
  * list. The next step in line sits right above the active card, dimmed.
+ * The order and the undo history live in `deck`, so they outlast the view.
  */
 export function StepDeck({
   steps,
   checkedStepIds,
+  deck,
   label,
   onToggle,
+  onDeckChange,
 }: {
   steps: RoutineStep[];
   checkedStepIds: string[];
+  deck?: RoutineDeck;
   label: string;
   onToggle: (stepId: string) => void;
+  onDeckChange: (deck: RoutineDeck) => void;
 }) {
   const { t } = useTranslation();
-  const [order, setOrder] = useState(() => steps.map((step) => step.id));
-  const [moves, setMoves] = useState<DeckMove[]>([]);
+  const order = reconcileOrder(deck?.order, steps);
+  const moves = deck?.moves ?? [];
 
   function finish(stepId: string) {
-    setMoves((previous) => [...previous, { stepId }]);
+    onDeckChange({ order, moves: [...moves, { stepId }] });
     onToggle(stepId);
   }
 
   function skip(stepId: string) {
-    setMoves((previous) => [...previous, { stepId, previousOrder: order }]);
-    setOrder(moveToEnd(order, stepId));
+    onDeckChange({
+      order: moveToEnd(order, stepId),
+      moves: [...moves, { stepId, previousOrder: order }],
+    });
   }
 
   function undo() {
     const last = moves.at(-1);
     if (last === undefined) return;
-    setMoves(moves.slice(0, -1));
-    if (last.previousOrder) setOrder(last.previousOrder);
-    // A reset in between already unchecked it; toggling would check it again.
-    else if (checkedStepIds.includes(last.stepId)) onToggle(last.stepId);
+    onDeckChange({
+      order: last.previousOrder ?? order,
+      moves: moves.slice(0, -1),
+    });
+    // Toggling an unchecked step would check it, so only undo a live check.
+    if (!last.previousOrder && checkedStepIds.includes(last.stepId)) {
+      onToggle(last.stepId);
+    }
   }
 
   const stepsById = new Map(steps.map((step) => [step.id, step]));

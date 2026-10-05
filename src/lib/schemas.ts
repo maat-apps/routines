@@ -42,9 +42,25 @@ export const RoutineSchema = v.object({
   steps: v.array(StepSchema),
 });
 
+// What the thumb layout's card deck needs to survive leaving the view: the
+// order after "later" swipes and the moves its undo button walks back through.
+// Lenient (v.fallback) because it's only a convenience: a malformed deck is
+// dropped rather than costing the entry its checked steps. Cleared with the
+// checked steps by the daily reset and by every reset.
+const DeckSchema = v.object({
+  order: v.array(v.string()),
+  moves: v.array(
+    v.object({
+      stepId: v.string(),
+      previousOrder: v.optional(v.array(v.string())),
+    }),
+  ),
+});
+
 export const ProgressSchema = v.object({
   checkedStepIds: v.array(v.string()),
   lastResetDate: v.string(),
+  deck: v.fallback(v.optional(DeckSchema), undefined),
 });
 
 export const StateSchema = v.record(v.string(), ProgressSchema);
@@ -71,6 +87,7 @@ const BackupEnvelopeSchema = v.object({
 
 export type RoutineStep = v.InferOutput<typeof StepSchema>;
 export type Routine = v.InferOutput<typeof RoutineSchema>;
+export type RoutineDeck = NonNullable<RoutineProgress["deck"]>;
 export type RoutineProgress = v.InferOutput<typeof ProgressSchema>;
 export type RoutineState = v.InferOutput<typeof StateSchema>;
 export type AppData = v.InferOutput<typeof AppDataSchema>;

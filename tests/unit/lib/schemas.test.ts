@@ -143,6 +143,33 @@ describe("parseState", () => {
     });
   });
 
+  it("keeps a valid deck", () => {
+    const state = {
+      r1: {
+        checkedStepIds: [],
+        lastResetDate: "2026-09-17",
+        deck: {
+          order: ["s2", "s1"],
+          moves: [{ stepId: "s1", previousOrder: ["s1", "s2"] }],
+        },
+      },
+    };
+    expect(parseState(state)).toEqual(state);
+  });
+
+  it("drops a malformed deck but keeps the checked steps", () => {
+    const state = {
+      r1: {
+        checkedStepIds: ["s1"],
+        lastResetDate: "2026-09-17",
+        deck: { order: "nope", moves: [] },
+      },
+    };
+    expect(parseState(state)).toEqual({
+      r1: { checkedStepIds: ["s1"], lastResetDate: "2026-09-17" },
+    });
+  });
+
   it("drops an entry with wrong-typed checkedStepIds instead of coercing it", () => {
     const state = {
       r1: { checkedStepIds: "s1", lastResetDate: "2026-09-17" },

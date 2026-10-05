@@ -72,4 +72,34 @@ test.describe("thumb layout", () => {
     await expect(page.getByRole("group", { name: "Stretch" })).toBeVisible();
     await expect(undo).toBeDisabled();
   });
+
+  test("keeps the undo history after leaving the routine", async ({ page }) => {
+    await seedData(page, [
+      {
+        id: "r1",
+        name: "Morning",
+        order: 0,
+        steps: [
+          { id: "s1", text: "Stretch", order: 0 },
+          { id: "s2", text: "Coffee", order: 1 },
+        ],
+      },
+    ]);
+    await page.goto("");
+    await openSettings(page);
+    await page.getByRole("switch", { name: en.thumbLayout }).click();
+    await page.keyboard.press("Escape");
+    await page.getByRole("button", { name: /Morning/ }).click();
+
+    await page.getByRole("group", { name: "Stretch" }).focus();
+    await page.keyboard.press("ArrowLeft");
+    await expect(page.getByRole("group", { name: "Coffee" })).toBeVisible();
+
+    await page.getByRole("button", { name: en.back }).click();
+    await page.getByRole("button", { name: /Morning/ }).click();
+    await expect(page.getByRole("group", { name: "Coffee" })).toBeVisible();
+
+    await page.getByRole("button", { name: en.undo }).click();
+    await expect(page.getByRole("group", { name: "Stretch" })).toBeVisible();
+  });
 });
