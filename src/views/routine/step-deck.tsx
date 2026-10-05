@@ -19,9 +19,7 @@ const VISIBLE_UPCOMING = 4;
 function reconcileOrder(saved: string[] | undefined, steps: RoutineStep[]) {
   const known = new Set(steps.map((step) => step.id));
   const kept = (saved ?? []).filter((id) => known.has(id));
-  const added = steps
-    .map((step) => step.id)
-    .filter((id) => !kept.includes(id));
+  const added = steps.map((step) => step.id).filter((id) => !kept.includes(id));
   return [...kept, ...added];
 }
 
