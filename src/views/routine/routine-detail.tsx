@@ -3,8 +3,13 @@ import { Check, PencilSimple, Plus } from "@phosphor-icons/react";
 import { useAppSettings } from "@/hooks/use-store";
 import { useTranslation } from "@/i18n/use-translation";
 import { sortSteps } from "@/lib/routine-utils";
-import type { Routine, RoutineProgress, RoutineStep } from "@/types";
-import { StepCarousel } from "@/views/routine/step-carousel";
+import type {
+  Routine,
+  RoutineDeck,
+  RoutineProgress,
+  RoutineStep,
+} from "@/types";
+import { StepDeck } from "@/views/routine/step-deck";
 import { AppBar } from "@maat-apps/ui/app-bar";
 import { Button } from "@maat-apps/ui/button";
 import { EmptyState } from "@maat-apps/ui/empty-state";
@@ -17,6 +22,7 @@ export function RoutineDetail({
   onBack,
   onEdit,
   onToggle,
+  onDeckChange,
   onReset,
 }: {
   routine: Routine;
@@ -24,6 +30,7 @@ export function RoutineDetail({
   onBack: () => void;
   onEdit: () => void;
   onToggle: (routineId: string, stepId: string) => void;
+  onDeckChange: (routineId: string, deck: RoutineDeck) => void;
   onReset: () => void;
 }) {
   const { t } = useTranslation();
@@ -78,11 +85,13 @@ export function RoutineDetail({
           className="pt-10"
         />
       ) : thumbLayout ? (
-        <StepCarousel
+        <StepDeck
           steps={steps}
           checkedStepIds={checkedStepIds}
+          deck={progress?.deck}
           label={t("routineSteps")}
           onToggle={(stepId) => onToggle(routine.id, stepId)}
+          onDeckChange={(deck) => onDeckChange(routine.id, deck)}
         />
       ) : (
         <section

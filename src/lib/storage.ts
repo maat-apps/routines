@@ -12,7 +12,7 @@ import {
   encryptJson,
   isEncryptedBlob,
 } from "@/lib/webauthn-crypto";
-import type { AppData, Routine, RoutineState } from "@/types";
+import type { AppData, Routine, RoutineDeck, RoutineState } from "@/types";
 
 const emptyData: AppData = { routines: [], state: {} };
 
@@ -258,12 +258,22 @@ export function toggleStep(routineId: string, stepId: string): RoutineState {
     : [...routineState.checkedStepIds, stepId];
   const state = {
     ...data.state,
-    [routineId]: { checkedStepIds, lastResetDate: today() },
+    [routineId]: { ...routineState, checkedStepIds, lastResetDate: today() },
   };
 
   writeData({ ...data, state });
   emitChange();
   return state;
+}
+
+/** Saves the card deck's order and undo history; a no-op for an unknown routine. */
+export function setDeck(routineId: string, deck: RoutineDeck): void {
+  const data = normalizeState(readData());
+  const routineState = data.state[routineId];
+  if (!routineState) return;
+  const state = { ...data.state, [routineId]: { ...routineState, deck } };
+  writeData({ ...data, state });
+  emitChange();
 }
 
 export function resetRoutine(routineId: string): RoutineState {

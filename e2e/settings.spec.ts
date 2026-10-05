@@ -22,9 +22,11 @@ test.describe("settings", () => {
     // "Language" (becomes "Język" once the locale switches), so match its
     // displayed value directly rather than the ambiguous, locale-dependent
     // accessible name.
-    await expect(page.locator('[data-slot="select-value"]')).toHaveText(
-      "Polski",
-    );
+    await expect(
+      page
+        .locator('[data-slot="select-value"]')
+        .filter({ hasText: /^Polski$/ }),
+    ).toBeVisible();
     // Not just the select's own value: confirm already-rendered UI outside
     // the select actually re-rendered too — the settings drawer's own
     // title here, and the home screen underneath it below. A bug that

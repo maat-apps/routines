@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 import { en, openSettings, seedData } from "./utils";
 
 test.describe("thumb layout", () => {
-  test("shows steps as swipeable cards and moves to the next one after a tap", async ({
+  test("checks the bottom card by swiping right and sends it to the end by swiping left", async ({
     page,
   }) => {
     await seedData(page, [
@@ -20,16 +20,89 @@ test.describe("thumb layout", () => {
     ]);
     await page.goto("");
     await openSettings(page);
-    await page.getByRole("switch", { name: en.thumbLayout }).click();
+    await page.getByRole("combobox", { name: en.stepLayout }).click();
+    await page.getByRole("option", { name: en.stepLayoutDeck }).click();
     await page.keyboard.press("Escape");
     await page.getByRole("button", { name: /Morning/ }).click();
 
-    const stretch = page.getByRole("checkbox", { name: "Stretch" });
-    const coffee = page.getByRole("checkbox", { name: "Coffee" });
-    await expect(stretch).toBeInViewport({ ratio: 1 });
+    const stretch = page.getByRole("group", { name: "Stretch" });
+    await expect(stretch).toBeVisible();
+    await stretch.focus();
+    await page.keyboard.press("ArrowLeft");
 
-    await stretch.click();
-    await expect(stretch).toHaveAttribute("aria-checked", "true");
-    await expect(coffee).toBeInViewport({ ratio: 1 });
+    const coffee = page.getByRole("group", { name: "Coffee" });
+    await expect(coffee).toBeVisible();
+    await coffee.focus();
+    await page.keyboard.press("ArrowRight");
+
+    const shower = page.getByRole("group", { name: "Shower" });
+    await expect(shower).toBeVisible();
+    await shower.focus();
+    await page.keyboard.press("ArrowRight");
+
+    await expect(page.getByRole("group", { name: "Stretch" })).toBeVisible();
+    await expect(page.getByText("Coffee")).toHaveCount(0);
+  });
+
+  test("undoes the last swipe", async ({ page }) => {
+    await seedData(page, [
+      {
+        id: "r1",
+        name: "Morning",
+        order: 0,
+        steps: [
+          { id: "s1", text: "Stretch", order: 0 },
+          { id: "s2", text: "Coffee", order: 1 },
+        ],
+      },
+    ]);
+    await page.goto("");
+    await openSettings(page);
+    await page.getByRole("combobox", { name: en.stepLayout }).click();
+    await page.getByRole("option", { name: en.stepLayoutDeck }).click();
+    await page.keyboard.press("Escape");
+    await page.getByRole("button", { name: /Morning/ }).click();
+
+    const undo = page.getByRole("button", { name: en.undo });
+    await expect(undo).toBeDisabled();
+
+    await page.getByRole("group", { name: "Stretch" }).focus();
+    await page.keyboard.press("ArrowRight");
+    await expect(page.getByRole("group", { name: "Coffee" })).toBeVisible();
+
+    await undo.click();
+    await expect(page.getByRole("group", { name: "Stretch" })).toBeVisible();
+    await expect(undo).toBeDisabled();
+  });
+
+  test("keeps the undo history after leaving the routine", async ({ page }) => {
+    await seedData(page, [
+      {
+        id: "r1",
+        name: "Morning",
+        order: 0,
+        steps: [
+          { id: "s1", text: "Stretch", order: 0 },
+          { id: "s2", text: "Coffee", order: 1 },
+        ],
+      },
+    ]);
+    await page.goto("");
+    await openSettings(page);
+    await page.getByRole("combobox", { name: en.stepLayout }).click();
+    await page.getByRole("option", { name: en.stepLayoutDeck }).click();
+    await page.keyboard.press("Escape");
+    await page.getByRole("button", { name: /Morning/ }).click();
+
+    await page.getByRole("group", { name: "Stretch" }).focus();
+    await page.keyboard.press("ArrowLeft");
+    await expect(page.getByRole("group", { name: "Coffee" })).toBeVisible();
+
+    await page.getByRole("button", { name: en.back }).click();
+    await page.getByRole("button", { name: /Morning/ }).click();
+    await expect(page.getByRole("group", { name: "Coffee" })).toBeVisible();
+
+    await page.getByRole("button", { name: en.undo }).click();
+    await expect(page.getByRole("group", { name: "Stretch" })).toBeVisible();
   });
 });
