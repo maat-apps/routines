@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 import { en, openSettings, seedData } from "./utils";
 
 test.describe("thumb layout", () => {
-  test("shows steps as swipeable cards and moves to the next one after a tap", async ({
+  test("checks the bottom card by swiping right and sends it to the end by swiping left", async ({
     page,
   }) => {
     await seedData(page, [
@@ -24,12 +24,22 @@ test.describe("thumb layout", () => {
     await page.keyboard.press("Escape");
     await page.getByRole("button", { name: /Morning/ }).click();
 
-    const stretch = page.getByRole("checkbox", { name: "Stretch" });
-    const coffee = page.getByRole("checkbox", { name: "Coffee" });
-    await expect(stretch).toBeInViewport({ ratio: 1 });
+    const stretch = page.getByRole("group", { name: "Stretch" });
+    await expect(stretch).toBeVisible();
+    await stretch.focus();
+    await page.keyboard.press("ArrowLeft");
 
-    await stretch.click();
-    await expect(stretch).toHaveAttribute("aria-checked", "true");
-    await expect(coffee).toBeInViewport({ ratio: 1 });
+    const coffee = page.getByRole("group", { name: "Coffee" });
+    await expect(coffee).toBeVisible();
+    await coffee.focus();
+    await page.keyboard.press("ArrowRight");
+
+    const shower = page.getByRole("group", { name: "Shower" });
+    await expect(shower).toBeVisible();
+    await shower.focus();
+    await page.keyboard.press("ArrowRight");
+
+    await expect(page.getByRole("group", { name: "Stretch" })).toBeVisible();
+    await expect(page.getByText("Coffee")).toHaveCount(0);
   });
 });

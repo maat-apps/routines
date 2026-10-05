@@ -3,12 +3,12 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   createId,
   isRoutineActiveToday,
-  nextOpenIndex,
+  moveToEnd,
   sortSteps,
   weekdayLabels,
   weekOrder,
 } from "@/lib/routine-utils";
-import type { Routine, RoutineStep } from "@/types";
+import type { Routine } from "@/types";
 
 function routine(activeDays: number[]): Routine {
   return { id: "r1", name: "Morning", order: 0, activeDays, steps: [] };
@@ -154,26 +154,16 @@ describe("weekOrder — firstDayOfWeek branches", () => {
   });
 });
 
-describe("nextOpenIndex", () => {
-  const steps: RoutineStep[] = [
-    { id: "a", text: "A", order: 0 },
-    { id: "b", text: "B", order: 1 },
-    { id: "c", text: "C", order: 2 },
-  ];
-
-  it("returns the next unchecked step after the given index", () => {
-    expect(nextOpenIndex(steps, ["a"], 0)).toBe(1);
+describe("moveToEnd", () => {
+  it("moves the id to the end and keeps the rest in order", () => {
+    expect(moveToEnd(["a", "b", "c"], "a")).toEqual(["b", "c", "a"]);
   });
 
-  it("skips steps that are already checked", () => {
-    expect(nextOpenIndex(steps, ["a", "b"], 0)).toBe(2);
+  it("leaves the end id where it is", () => {
+    expect(moveToEnd(["a", "b"], "b")).toEqual(["a", "b"]);
   });
 
-  it("wraps to the first unchecked step when none follow", () => {
-    expect(nextOpenIndex(steps, ["b", "c"], 2)).toBe(0);
-  });
-
-  it("returns -1 when every step is checked", () => {
-    expect(nextOpenIndex(steps, ["a", "b", "c"], 1)).toBe(-1);
+  it("returns the ids unchanged when the id is unknown", () => {
+    expect(moveToEnd(["a", "b"], "x")).toEqual(["a", "b"]);
   });
 });

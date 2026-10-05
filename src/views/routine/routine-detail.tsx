@@ -4,7 +4,7 @@ import { useAppSettings } from "@/hooks/use-store";
 import { useTranslation } from "@/i18n/use-translation";
 import { sortSteps } from "@/lib/routine-utils";
 import type { Routine, RoutineProgress, RoutineStep } from "@/types";
-import { StepCarousel } from "@/views/routine/step-carousel";
+import { StepDeck } from "@/views/routine/step-deck";
 import { AppBar } from "@maat-apps/ui/app-bar";
 import { Button } from "@maat-apps/ui/button";
 import { EmptyState } from "@maat-apps/ui/empty-state";
@@ -78,7 +78,7 @@ export function RoutineDetail({
           className="pt-10"
         />
       ) : thumbLayout ? (
-        <StepCarousel
+        <StepDeck
           steps={steps}
           checkedStepIds={checkedStepIds}
           label={t("routineSteps")}
