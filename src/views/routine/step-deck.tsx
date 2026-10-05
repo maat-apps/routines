@@ -84,9 +84,10 @@ export function StepDeck({
   const upcoming = rest.slice(0, VISIBLE_UPCOMING).reverse();
 
   return (
+    // Clipped so a card flying out sideways can't widen the page.
     <section
       aria-label={label}
-      className="flex min-h-[calc(100dvh-6.75rem-116px-env(safe-area-inset-bottom))] flex-col justify-end gap-2"
+      className="-mx-5 flex min-h-[calc(100dvh-6.75rem-116px-env(safe-area-inset-bottom))] flex-col justify-end gap-2 overflow-x-clip px-5"
     >
       {active === undefined ? (
         <p className="text-muted-foreground m-auto text-center text-lg">
