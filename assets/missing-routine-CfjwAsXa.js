@@ -1,0 +1,1 @@
+import{B as n,X as i,A as s,G as a,r}from"./index-C5hqvTuH.js";function c(){const{t}=n(),e=i();return s.jsxs("div",{className:"grid min-h-dvh place-items-center gap-4 px-5 text-center",children:[s.jsx("p",{className:"m-0",children:t("routineNotFound")}),s.jsx(a,{size:"lg",onClick:()=>r.startTransition(()=>e("/all-routines")),children:t("viewAllRoutines")})]})}export{c as M};
