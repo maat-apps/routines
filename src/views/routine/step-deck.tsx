@@ -108,6 +108,7 @@ export function StepDeck({
           <SwipeCard
             key={active.id}
             text={active.text}
+            canSkip={rest.length > 0}
             onDone={() => finish(active.id)}
             onSkip={() => skip(active.id)}
           />
@@ -132,10 +133,13 @@ export function StepDeck({
 
 function SwipeCard({
   text,
+  canSkip,
   onDone,
   onSkip,
 }: {
   text: string;
+  // The last open card has nowhere to go, so skipping it would only hide it.
+  canSkip: boolean;
   onDone: () => void;
   onSkip: () => void;
 }) {
@@ -149,8 +153,12 @@ function SwipeCard({
 
   function flyOut(direction: 1 | -1) {
     if (settled.current) return;
-    settled.current = true;
     setDragging(false);
+    if (direction === -1 && !canSkip) {
+      setOffset(0);
+      return;
+    }
+    settled.current = true;
     setOffset(direction * window.innerWidth);
     timer.current = window.setTimeout(
       direction === 1 ? onDone : onSkip,
@@ -211,7 +219,7 @@ function SwipeCard({
       <SkipForward
         aria-hidden="true"
         className="absolute right-5 size-7"
-        style={{ opacity: offset < 0 ? pull : 0 }}
+        style={{ opacity: offset < 0 && canSkip ? pull : 0 }}
       />
     </div>
   );
