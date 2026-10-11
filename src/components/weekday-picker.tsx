@@ -2,6 +2,7 @@ import { CalendarDots } from "@phosphor-icons/react";
 
 import { weekdayLabels, weekOrder } from "@/lib/routine-utils";
 import { Button } from "@maat-apps/ui/button";
+import { SectionTitle } from "@maat-apps/ui/page-header";
 
 /** The seven day chips of the routine edit form, in the locale's week order. */
 export function WeekdayPicker({
@@ -26,7 +27,7 @@ export function WeekdayPicker({
   return (
     <section className="mb-7.5 grid gap-2.25">
       <div className="flex items-center justify-between">
-        <h2 className="m-0 text-sm font-semibold">{title}</h2>
+        <SectionTitle>{title}</SectionTitle>
         <CalendarDots
           className="text-muted-foreground size-4"
           aria-hidden="true"
