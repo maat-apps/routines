@@ -14,7 +14,7 @@ import {
 } from "@maat-apps/ui/drawer";
 import { EmptyState } from "@maat-apps/ui/empty-state";
 import { FabButton } from "@maat-apps/ui/fab-button";
-import { PageHeader } from "@maat-apps/ui/page-header";
+import { PageHeader, PageTitle } from "@maat-apps/ui/page-header";
 import { ResetButton } from "@maat-apps/ui/reset-button";
 import { SortableList, SortableListRow } from "@maat-apps/ui/sortable-list";
 
@@ -54,12 +54,10 @@ export function RoutineList({
     : null;
 
   return (
-    <div className="mx-auto flex min-h-dvh w-[min(100%,480px)] flex-col px-5 pt-27 pb-[calc(96px+env(safe-area-inset-bottom))]">
+    <div className="mx-auto flex min-h-dvh w-[min(100%,480px)] flex-col px-5 pt-27 pb-[calc(128px+env(safe-area-inset-bottom))]">
       <PageHeader>
         <div className="min-w-0">
-          <h1 className="font-heading m-0 text-3xl leading-[1.05] font-bold tracking-tight">
-            {t("appName")}
-          </h1>
+          <PageTitle>{t("appName")}</PageTitle>
           {todayLabel && (
             <p className="text-muted-foreground m-0 mt-2 overflow-hidden text-sm leading-tight text-ellipsis whitespace-nowrap">
               {todayLabel}

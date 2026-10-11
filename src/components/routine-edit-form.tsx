@@ -20,6 +20,7 @@ import { Button } from "@maat-apps/ui/button";
 import { ConfirmDrawer } from "@maat-apps/ui/confirm-drawer";
 import { Input } from "@maat-apps/ui/input";
 import { SortableList } from "@maat-apps/ui/sortable-list";
+import { SectionTitle } from "@maat-apps/ui/page-header";
 
 // Shared by the "/new" and "/:id/edit" views — the only difference between
 // creating and editing a routine is what happens on save/back/delete.
@@ -122,7 +123,7 @@ export function RoutineEditForm({
       />
       <section className="grid gap-2.25">
         <div className="flex items-center justify-between">
-          <h2 className="m-0 text-sm font-semibold">{t("stepsTitle")}</h2>
+          <SectionTitle>{t("stepsTitle")}</SectionTitle>
           <span className="text-muted-foreground text-sm">{steps.length}</span>
         </div>
         <SortableList
