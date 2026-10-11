@@ -1,1 +1,0 @@
-var t="bg-card text-card-foreground flex min-h-18 w-full items-center rounded-lg text-left transition-colors",e="[&>svg]:text-muted-foreground flex min-h-18 min-w-0 flex-1 items-center gap-3.5 rounded-lg border-0 bg-transparent py-3.5 text-left text-inherit";export{t as a,e as l};
