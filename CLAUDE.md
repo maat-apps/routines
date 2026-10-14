@@ -107,6 +107,10 @@ own files. Product intent: `PRODUCT.md`.
     and Settings says so (`appLockNotice` vs. `appLockEncryptedNotice`).
     This split is intentional — don't change it without the owner's
     decision.
+  - Leaving the app relocks it after `settings.ts`'s `relockAfter` (Settings
+    → Security: right away / 30 s / on close; `relockAfterMs` feeds
+    `createAppLock`). The gate prompts by itself and covers the app rather
+    than unmounting it.
   - **Never change `HKDF_INFO` (`"routines-data-v1"`)** in
     `webauthn-crypto.ts` — the lock's `keyInfo`; changing it makes all
     existing encrypted data unreadable.

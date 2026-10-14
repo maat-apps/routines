@@ -25,19 +25,14 @@ test.describe("app lock", () => {
     await expect(lockSwitch).toBeChecked();
     await expect(page.getByText(en.appLockDescription)).toBeVisible();
 
+    await expect(page.getByText(en.relockAfterDescription)).toBeVisible();
+
     // Enrolling counts as unlocked (per CLAUDE.md's app-lock notes) — a
-    // reload should still show the locked screen, since being unlocked is
-    // per-session memory state, not persisted.
+    // reload locks again, since being unlocked is per-session memory state,
+    // and the lock screen prompts the authenticator by itself.
     await waitForStoredLock(page);
     await page.reload();
-    await expect(
-      page.getByRole("heading", { name: en.lockedTitle }),
-    ).toBeVisible();
-
-    await page.getByRole("button", { name: en.unlock }).click();
-    await expect(
-      page.getByRole("heading", { name: en.lockedTitle }),
-    ).toHaveCount(0);
+    await expect(page.getByRole("button", { name: en.unlock })).toHaveCount(0);
     await expect(page.getByRole("heading", { name: en.appName })).toBeVisible();
   });
 });
