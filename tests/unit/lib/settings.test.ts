@@ -35,6 +35,7 @@ describe("getSettingsSnapshot", () => {
     expect(getSettingsSnapshot()).toEqual({
       lock: null,
       installed: false,
+      relockAfter: "30s",
       thumbLayout: false,
     });
   });
@@ -55,6 +56,7 @@ describe("getSettingsSnapshot", () => {
         encryptionSupported: false,
       },
       installed: false,
+      relockAfter: "30s",
       thumbLayout: false,
     });
   });
@@ -104,6 +106,7 @@ describe("getSettingsSnapshot", () => {
     expect(getSettingsSnapshot()).toEqual({
       lock: null,
       installed: true,
+      relockAfter: "30s",
       thumbLayout: false,
     });
   });
@@ -114,6 +117,7 @@ describe("getSettingsSnapshot", () => {
     expect(getSettingsSnapshot()).toEqual({
       lock: null,
       installed: false,
+      relockAfter: "30s",
       thumbLayout: false,
     });
   });
@@ -127,6 +131,7 @@ describe("getSettingsSnapshot", () => {
     expect(getSettingsSnapshot()).toEqual({
       lock: null,
       installed: false,
+      relockAfter: "30s",
       thumbLayout: false,
     });
   });
@@ -137,6 +142,7 @@ describe("getSettingsSnapshot", () => {
     expect(getSettingsSnapshot()).toEqual({
       lock: null,
       installed: false,
+      relockAfter: "30s",
       thumbLayout: false,
     });
   });
@@ -159,6 +165,7 @@ describe("getServerSettingsSnapshot", () => {
     expect(getServerSettingsSnapshot()).toEqual({
       lock: null,
       installed: false,
+      relockAfter: "30s",
       thumbLayout: false,
     });
   });
@@ -210,6 +217,7 @@ describe("ensureLoaded error handling", () => {
     expect(settings.getSettingsSnapshot()).toEqual({
       lock: null,
       installed: false,
+      relockAfter: "30s",
       thumbLayout: false,
     });
     expect(settings.isSettingsReady()).toBe(true);
@@ -236,6 +244,7 @@ describe("setLockEnrolment / clearLockEnrolment", () => {
         encryptionSupported: false,
       },
       installed: false,
+      relockAfter: "30s",
       thumbLayout: false,
     });
     expect(listener).toHaveBeenCalledTimes(1);
@@ -286,6 +295,7 @@ describe("setLockEnrolment / clearLockEnrolment", () => {
     expect(getSettingsSnapshot()).toEqual({
       lock: null,
       installed: false,
+      relockAfter: "30s",
       thumbLayout: false,
     });
     expect(listener).toHaveBeenCalledTimes(1);
@@ -302,6 +312,7 @@ describe("markInstalled", () => {
     expect(getSettingsSnapshot()).toEqual({
       lock: null,
       installed: true,
+      relockAfter: "30s",
       thumbLayout: false,
     });
     expect(listener).toHaveBeenCalledTimes(1);
@@ -364,6 +375,7 @@ describe("resetPreferences", () => {
     expect(getSettingsSnapshot()).toEqual({
       lock: null,
       installed: false,
+      relockAfter: "30s",
       thumbLayout: false,
     });
     expect(listener).toHaveBeenCalledTimes(1);
@@ -375,6 +387,36 @@ describe("resetPreferences", () => {
     await resetPreferences();
     expect(localStorage.getItem("routines-data")).toBe(
       JSON.stringify({ keep: true }),
+    );
+  });
+});
+
+describe("relockAfterMs", () => {
+  it("defaults to 30 seconds", async () => {
+    const { relockAfterMs } = await freshSettings();
+    expect(relockAfterMs()).toBe(30_000);
+  });
+
+  it("follows the chosen setting", async () => {
+    const { relockAfterMs, setRelockAfter } = await freshSettings();
+    setRelockAfter("now");
+    expect(relockAfterMs()).toBe(0);
+    setRelockAfter("close");
+    expect(relockAfterMs()).toBeNull();
+  });
+
+  it("loads a stored choice and ignores an unknown one", async () => {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify({ relockAfter: "now" }));
+    expect((await freshSettings()).relockAfterMs()).toBe(0);
+
+    localStorage.clear();
+    await resetIndexedDb();
+    localStorage.setItem(
+      SETTINGS_KEY,
+      JSON.stringify({ relockAfter: "never" }),
+    );
+    expect((await freshSettings()).getSettingsSnapshot().relockAfter).toBe(
+      "30s",
     );
   });
 });

@@ -98,6 +98,7 @@ describe("useAppSettings", () => {
     expect(result.current).toEqual({
       lock: null,
       installed: false,
+      relockAfter: "30s",
       thumbLayout: false,
     });
 

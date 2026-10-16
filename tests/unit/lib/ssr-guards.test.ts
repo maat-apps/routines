@@ -21,6 +21,7 @@ describe('typeof window === "undefined" guards', () => {
     expect(getSettingsSnapshot()).toEqual({
       lock: null,
       installed: false,
+      relockAfter: "30s",
       thumbLayout: false,
     });
   });

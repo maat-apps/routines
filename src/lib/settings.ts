@@ -1,4 +1,8 @@
-import { parseLockEnrolment, type LockEnrolment } from "@maat-apps/core/lock";
+import {
+  DEFAULT_RELOCK_AFTER_MS,
+  parseLockEnrolment,
+  type LockEnrolment,
+} from "@maat-apps/core/lock";
 import { createPersistedStore } from "@maat-apps/core/persisted";
 
 import { keyValueStore, kvDelete } from "@/lib/idb-store";
@@ -14,8 +18,20 @@ import { PREFERENCE_KEYS, SETTINGS_KEY } from "@/lib/storage-keys";
  */
 export type { LockEnrolment };
 
+/** Right away, after 30 seconds in the background, or only once closed. */
+export const RELOCK_CHOICES = ["now", "30s", "close"] as const;
+export type RelockAfter = (typeof RELOCK_CHOICES)[number];
+
+const RELOCK_AFTER_MS: Record<RelockAfter, number | null> = {
+  now: 0,
+  "30s": DEFAULT_RELOCK_AFTER_MS,
+  close: null,
+};
+
 export type AppSettings = {
   lock: LockEnrolment | null;
+  /** How soon the lock comes back once the app is left. */
+  relockAfter: RelockAfter;
   /**
    * Whether this browser has ever reported the app as installed (standalone
    * launch or the `appinstalled` event). Chrome stops re-offering
@@ -32,6 +48,7 @@ export type AppSettings = {
 
 const defaultSettings: AppSettings = {
   lock: null,
+  relockAfter: "30s",
   installed: false,
   thumbLayout: false,
 };
@@ -48,6 +65,8 @@ const settingsStore = createPersistedStore<AppSettings>({
     const value = stored as Record<string, unknown>;
     return {
       lock: parseLockEnrolment(value.lock),
+      relockAfter:
+        RELOCK_CHOICES.find((choice) => choice === value.relockAfter) ?? "30s",
       installed: value.installed === true,
       thumbLayout: value.thumbLayout === true,
     };
@@ -77,6 +96,15 @@ export function clearLockEnrolment(): void {
 
 export function setThumbLayout(thumbLayout: boolean): void {
   settingsStore.set({ thumbLayout });
+}
+
+export function setRelockAfter(relockAfter: RelockAfter): void {
+  settingsStore.set({ relockAfter });
+}
+
+/** The lock's `relockAfterMs`: read on every hide, so a change applies at once. */
+export function relockAfterMs(): number | null {
+  return RELOCK_AFTER_MS[getSettingsSnapshot().relockAfter];
 }
 
 export function markInstalled(): void {
