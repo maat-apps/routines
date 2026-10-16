@@ -40,9 +40,7 @@ afterEach(() => {
 
 describe("isShareTargetRequest", () => {
   it("matches a POST to the share target path", () => {
-    expect(isShareTargetRequest(shareRequest(new FormData()), BASE)).toBe(
-      true,
-    );
+    expect(isShareTargetRequest(shareRequest(new FormData()), BASE)).toBe(true);
   });
 
   it("ignores a GET to the same path", () => {
