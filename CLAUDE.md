@@ -131,6 +131,13 @@ own files. Product intent: `PRODUCT.md`.
   via `@maat-apps/core/validation`). The envelope checks, file format and
   share/download come from `@maat-apps/core/backup`; the data, locale and
   messages are routines' own.
+  Import also takes a file shared from another app: `manifest.json`'s
+  `share_target` (Android, installed PWA only) POSTs to `share-target`,
+  `sw.ts` hands it to `src/lib/shared-backup.ts`, which parks it in the
+  `routines-shared-backup` cache and redirects to `?shared-backup`; home's
+  `shared-backup-import.tsx` takes it and confirms like Settings → Import.
+  A worker's activation deletes that cache with every other, so a share
+  landing during an update is lost (re-share it).
   `src/lib/settings.ts` also holds an `installed` flag, set once
   `useInstallPrompt` sees standalone mode or `appinstalled` — Chrome stops
   firing `beforeinstallprompt` after install, so this is how a browser tab
