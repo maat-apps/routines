@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 import { en, openSettings, seedData } from "./utils";
 
@@ -100,6 +100,89 @@ test.describe("backup export / import", () => {
 
     await expect(page.getByText(en.importFailed)).toBeVisible();
     await page.goBack();
+    await expect(page.getByRole("button", { name: /Keep me/ })).toBeVisible();
+  });
+});
+
+// A backup shared from another app (manifest.json's share_target): the
+// service worker parks the file in a cache and redirects to
+// `?shared-backup`. Headless Chromium has no share sheet, so these park the
+// file themselves — cache name and key hand-duplicated from
+// src/lib/shared-backup.ts, same reasoning as seedData — and cover the app
+// side; the worker's half is unit-tested (shared-backup.test.ts).
+async function parkSharedBackup(page: Page, text: string) {
+  await page.evaluate(async (body) => {
+    // A worker's activation deletes every cache but its own, so wait it out
+    // first or it can take the parked file with it.
+    if ("serviceWorker" in navigator) {
+      const worker = (await navigator.serviceWorker.ready).active;
+      if (worker && worker.state !== "activated") {
+        await new Promise<void>((resolve) => {
+          worker.addEventListener("statechange", () => {
+            if (worker.state === "activated") resolve();
+          });
+        });
+      }
+    }
+    const cache = await caches.open("routines-shared-backup");
+    await cache.put(
+      new URL("shared-backup", document.baseURI).href,
+      new Response(body),
+    );
+  }, text);
+}
+
+test.describe("backup shared from another app", () => {
+  test("imports after confirmation", async ({ page }) => {
+    await seedData(page, [
+      { id: "r1", name: "Old routine", order: 0, steps: [] },
+    ]);
+    await page.goto("");
+    await parkSharedBackup(
+      page,
+      JSON.stringify({
+        app: "routines",
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        locale: null,
+        data: {
+          routines: [
+            { id: "shared-1", name: "Shared routine", order: 0, steps: [] },
+          ],
+          state: {},
+        },
+      }),
+    );
+    await page.goto("?shared-backup");
+
+    const dialog = page.getByRole("dialog");
+    await expect(
+      dialog.getByRole("heading", { name: en.importTitle }),
+    ).toBeVisible();
+    await expect(page).not.toHaveURL(/shared-backup/);
+    await dialog.getByRole("button", { name: en.importConfirm }).click();
+
+    await expect(
+      page.getByRole("button", { name: /Shared routine/ }),
+    ).toBeVisible();
+    await expect(page.getByRole("button", { name: /Old routine/ })).toHaveCount(
+      0,
+    );
+  });
+
+  test("a file that isn't a backup is rejected without touching data", async ({
+    page,
+  }) => {
+    await seedData(page, [{ id: "r1", name: "Keep me", order: 0, steps: [] }]);
+    await page.goto("");
+    await parkSharedBackup(page, "this is not json");
+    await page.goto("?shared-backup");
+
+    const dialog = page.getByRole("dialog");
+    await expect(
+      dialog.getByRole("heading", { name: en.importFailed }),
+    ).toBeVisible();
+    await dialog.getByRole("button", { name: en.done }).click();
     await expect(page.getByRole("button", { name: /Keep me/ })).toBeVisible();
   });
 });

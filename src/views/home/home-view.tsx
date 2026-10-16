@@ -7,6 +7,7 @@ import { prefetchRouteChunks } from "@/lib/prefetch-routes";
 import { isRoutineActiveToday } from "@/lib/routine-utils";
 import { reorderRoutines, resetAll } from "@/lib/storage";
 import { RoutineList } from "@/views/home/routine-list";
+import { SharedBackupImport } from "@/views/home/shared-backup-import";
 import { ConfirmDrawer } from "@maat-apps/ui/confirm-drawer";
 
 export function HomeView() {
@@ -63,6 +64,7 @@ export function HomeView() {
         confirmLabel={t("reset")}
         onConfirm={handleResetAll}
       />
+      <SharedBackupImport />
     </>
   );
 }
