@@ -54,7 +54,7 @@ export function RoutineList({
     : null;
 
   return (
-    <div className="mx-auto flex min-h-dvh w-[min(100%,480px)] flex-col px-5 pt-27 pb-[calc(128px+env(safe-area-inset-bottom))]">
+    <div className="mx-auto flex min-h-dvh w-[min(100%,480px)] flex-col px-5 pt-27 pb-[calc(96px+env(safe-area-inset-bottom))]">
       <PageHeader>
         <div className="min-w-0">
           <PageTitle>{t("appName")}</PageTitle>
@@ -133,11 +133,12 @@ export function RoutineList({
         </ResetButton>
       )}
       <FabButton
-        className="fixed right-[max(20px,calc((100vw-480px)/2+20px))] bottom-[calc(20px+env(safe-area-inset-bottom))] z-20"
+        // 56px, as notes' FAB — not FabButton's own 88px.
+        className="fixed right-[max(20px,calc((100vw-480px)/2+20px))] bottom-[calc(20px+env(safe-area-inset-bottom))] z-20 h-14 w-14 rounded-2xl"
         ariaLabel={t("newRoutine")}
         onClick={onCreate}
       >
-        <Plus className="size-6" />
+        <Plus className="size-7" />
       </FabButton>
       <Drawer
         open={settingsOpen}
