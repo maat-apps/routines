@@ -135,7 +135,9 @@ own files. Product intent: `PRODUCT.md`.
   over `dataStore` (envelope checks, file format, share/download, the
   pre-update snapshot); the data's validation, the `locale` extra and the
   messages are routines' own. `app-lock.ts` wires store and snapshot into
-  the lock with `lockData`.
+  the lock with `lockData`. An import merges (`mergeBackup`: adds missing
+  routines, never touches or deletes existing ones, leaves the language
+  alone); only the pre-update snapshot restore (`applyBackup`) replaces.
   Import also takes a file shared from another app: `manifest.json`'s
   `share_target` (Android, installed PWA only) POSTs to `share-target`,
   `sw.ts` hands it to `src/lib/shared-backup.ts`, which parks it in the

@@ -13,7 +13,7 @@ import {
   setStoredLocale,
 } from "@/lib/locale-store";
 import { parseRoutines, parseState } from "@/lib/schemas";
-import { dataStore } from "@/lib/storage";
+import { dataStore, mergeIntoData } from "@/lib/storage";
 import { SNAPSHOT_KEY } from "@/lib/storage-keys";
 import type { AppData } from "@/types";
 
@@ -80,7 +80,19 @@ export const parseBackup = backups.parse;
  */
 export const parseBackupValue = backups.parseValue;
 
-/** Overwrites the current routines (and the language) with the backup's. */
+/**
+ * Import (Settings, or a file shared from another app): keeps the routines
+ * on the device and adds the backup's. The language is a setting of this
+ * device, so it stays as is.
+ */
+export function mergeBackup(backup: Backup): void {
+  mergeIntoData(backup.data);
+}
+
+/**
+ * Overwrites the current routines (and the language) with the backup's —
+ * restoring the pre-update snapshot.
+ */
 export const applyBackup = backups.apply;
 
 /** `routines-backup-YYYY-MM-DD.txt` (plain text: see core's backupFileName). */

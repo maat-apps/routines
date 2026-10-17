@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router";
 
 import { useTranslation } from "@/i18n/use-translation";
-import { applyBackup, parseBackup, type Backup } from "@/lib/backup";
+import { mergeBackup, parseBackup, type Backup } from "@/lib/backup";
 import { SHARED_BACKUP_PARAM, takeSharedBackup } from "@/lib/shared-backup";
 import { Button } from "@maat-apps/ui/button";
 import { ConfirmDrawer } from "@maat-apps/ui/confirm-drawer";
@@ -40,7 +40,7 @@ export function SharedBackupImport() {
 
   function confirmImport() {
     if (!pendingImport) return;
-    applyBackup(pendingImport);
+    mergeBackup(pendingImport);
     setPendingImport(null);
   }
 

@@ -34,7 +34,7 @@ test.describe("backup export / import", () => {
     await expect(page.getByText(en.exportDone)).toBeVisible();
   });
 
-  test("importing a valid backup replaces the current routines after confirmation", async ({
+  test("importing a valid backup adds its routines to the current ones after confirmation", async ({
     page,
   }) => {
     await seedData(page, [
@@ -80,9 +80,9 @@ test.describe("backup export / import", () => {
     await expect(
       page.getByRole("button", { name: /Imported routine/ }),
     ).toBeVisible();
-    await expect(page.getByRole("button", { name: /Old routine/ })).toHaveCount(
-      0,
-    );
+    await expect(
+      page.getByRole("button", { name: /Old routine/ }),
+    ).toBeVisible();
   });
 
   test("importing a malformed file is rejected without touching existing data", async ({
@@ -133,7 +133,7 @@ async function parkSharedBackup(page: Page, text: string) {
 }
 
 test.describe("backup shared from another app", () => {
-  test("imports after confirmation", async ({ page }) => {
+  test("adds its routines after confirmation", async ({ page }) => {
     await seedData(page, [
       { id: "r1", name: "Old routine", order: 0, steps: [] },
     ]);
@@ -165,9 +165,10 @@ test.describe("backup shared from another app", () => {
     await expect(
       page.getByRole("button", { name: /Shared routine/ }),
     ).toBeVisible();
-    await expect(page.getByRole("button", { name: /Old routine/ })).toHaveCount(
-      0,
-    );
+    // An import merges: what was there stays.
+    await expect(
+      page.getByRole("button", { name: /Old routine/ }),
+    ).toBeVisible();
   });
 
   test("a file that isn't a backup is rejected without touching data", async ({
