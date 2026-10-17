@@ -15,8 +15,8 @@ test.describe("route navigation", () => {
     // meaningfully present rather than the page going blank mid-transition
     // (the startTransition + idle-prefetch change this suite exists to
     // guard, per the task's own motivation).
-    // Two "New routine" buttons exist when the list is empty (the bottom
-    // bar's and the empty state's own) — either works identically here.
+    // Two "New routine" buttons exist when the list is empty (the FAB and
+    // the empty state's own) — either works identically here.
     await page.getByRole("button", { name: en.newRoutine }).first().click();
     await expect(page).toHaveURL(/\/routines\/new$/);
     await expect(

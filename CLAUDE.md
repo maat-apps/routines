@@ -154,9 +154,10 @@ own files. Product intent: `PRODUCT.md`.
   row; home only lists routines active today, `isRoutineActiveToday`).
   Back is `useSmartBack` from `@maat-apps/ui/smart-back` (maat-core
   STRUCTURE.md's Routing pattern). `new-routine-view.tsx`'s onComplete replaces the `/new` entry instead of
-  `useSmartBack` — creating is a forward transition. Home has no header:
-  a title + date that scroll away, and `@maat-apps/ui`'s `BottomBar` with
-  settings, "Reset all" and New routine. Settings is a drawer,
+  `useSmartBack` — creating is a forward transition. Home keeps its own
+  layout by the owner's choice (not maat-core STRUCTURE.md's `BottomBar`):
+  a fixed header with the title, date and the settings gear, "Reset all"
+  bottom left and the New routine FAB bottom right. Settings is a drawer,
   not a route: `src/views/home/settings-panel.tsx` composes one
   `settings-<name>-section.tsx` per card.
 
