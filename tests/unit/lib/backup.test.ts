@@ -146,7 +146,7 @@ describe("parseBackupValue", () => {
 });
 
 describe("applyBackup", () => {
-  it("writes the backup's data via replaceAllData", async () => {
+  it("writes the backup's data to storage", async () => {
     const { backup, storage } = await freshBackup();
     backup.applyBackup({
       app: "routines",

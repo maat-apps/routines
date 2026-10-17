@@ -69,10 +69,13 @@ own files. Product intent: `PRODUCT.md`.
   from [`@maat-apps/core`](https://github.com/maat-apps/maat-core/tree/main/packages/core);
   routines' `src/lib/` modules are thin wrappers that keep their own
   exports (tests import those, not core): `idb-store.ts` (`/storage`, the
-  `"routines"` database) under `storage.ts` (routines/progress),
-  `locale-store.ts` (`/locale`), `settings.ts` (`/persisted`: lock
-  enrolment, installed flag) and `app-update.ts` (`/update`: pre-update
-  snapshot, the one async API). Tests that need a failing read/write spy
+  `"routines"` database) under `storage.ts` (routines/progress: `/local`'s
+  `createLocalStore` as `dataStore`, with the derived snapshots and
+  mutations on top), `locale-store.ts` (`/locale`), `settings.ts`
+  (`/persisted`: lock enrolment, installed flag) and `app-update.ts`
+  (`/local`'s backup kit: pre-update snapshot, the one async API).
+  Routines stays on the local pattern only — no repository (maat-core
+  STRUCTURE.md's rule). Tests that need a failing read/write spy
   on `keyValueStore`'s `get`/`set`, which is what the wrappers call.
   Routines-specific:
   - **Daily reset is a side effect of reading**: `storage.ts`'s
@@ -128,9 +131,11 @@ own files. Product intent: `PRODUCT.md`.
 - **Backup + settings.** `src/lib/backup.ts` writes routines, progress and
   language to versioned JSON and validates imports through the same
   schemas as storage read-back (`parseRoutines`/`parseState`, per entry,
-  via `@maat-apps/core/validation`). The envelope checks, file format and
-  share/download come from `@maat-apps/core/backup`; the data, locale and
-  messages are routines' own.
+  via `@maat-apps/core/validation`). It is `/local`'s `createLocalBackup`
+  over `dataStore` (envelope checks, file format, share/download, the
+  pre-update snapshot); the data's validation, the `locale` extra and the
+  messages are routines' own. `app-lock.ts` wires store and snapshot into
+  the lock with `lockData`.
   Import also takes a file shared from another app: `manifest.json`'s
   `share_target` (Android, installed PWA only) POSTs to `share-target`,
   `sw.ts` hands it to `src/lib/shared-backup.ts`, which parks it in the
