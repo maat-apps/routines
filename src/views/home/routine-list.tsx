@@ -5,7 +5,7 @@ import { RoutineRowContent } from "@/components/routine-row-content";
 import { useTranslation } from "@/i18n/use-translation";
 import type { Routine, RoutineProgress } from "@/types";
 import { SettingsPanel } from "@/views/home/settings-panel";
-import { BottomBar, BottomBarButton } from "@maat-apps/ui/bottom-bar";
+import { Button } from "@maat-apps/ui/button";
 import {
   Drawer,
   DrawerContent,
@@ -13,7 +13,8 @@ import {
   DrawerTitle,
 } from "@maat-apps/ui/drawer";
 import { EmptyState } from "@maat-apps/ui/empty-state";
-import { PageTitle } from "@maat-apps/ui/page-header";
+import { FabButton } from "@maat-apps/ui/fab-button";
+import { PageHeader, PageTitle } from "@maat-apps/ui/page-header";
 import { ResetButton } from "@maat-apps/ui/reset-button";
 import { SortableList, SortableListRow } from "@maat-apps/ui/sortable-list";
 
@@ -53,15 +54,25 @@ export function RoutineList({
     : null;
 
   return (
-    <div className="mx-auto flex min-h-dvh w-[min(100%,480px)] flex-col gap-5 px-5 pt-10">
-      <div className="min-w-0">
-        <PageTitle>{t("appName")}</PageTitle>
-        {todayLabel && (
-          <p className="text-muted-foreground m-0 mt-2 overflow-hidden text-sm leading-tight text-ellipsis whitespace-nowrap">
-            {todayLabel}
-          </p>
-        )}
-      </div>
+    <div className="mx-auto flex min-h-dvh w-[min(100%,480px)] flex-col px-5 pt-27 pb-[calc(128px+env(safe-area-inset-bottom))]">
+      <PageHeader>
+        <div className="min-w-0">
+          <PageTitle>{t("appName")}</PageTitle>
+          {todayLabel && (
+            <p className="text-muted-foreground m-0 mt-2 overflow-hidden text-sm leading-tight text-ellipsis whitespace-nowrap">
+              {todayLabel}
+            </p>
+          )}
+        </div>
+        <Button
+          variant="ghost"
+          size="icon-lg"
+          aria-label={t("settings")}
+          onClick={() => setSettingsOpen(true)}
+        >
+          <Gear className="size-6" />
+        </Button>
+      </PageHeader>
       {routines.length === 0 ? (
         hasAnyRoutines ? (
           <EmptyState
@@ -111,36 +122,23 @@ export function RoutineList({
           }}
         />
       )}
-      <BottomBar
-        settings={
-          <BottomBarButton
-            label={t("settings")}
-            onClick={() => setSettingsOpen(true)}
-          >
-            <Gear />
-          </BottomBarButton>
-        }
-        action={
-          <BottomBarButton
-            label={t("newRoutine")}
-            variant="primary"
-            onClick={onCreate}
-          >
-            <Plus />
-          </BottomBarButton>
-        }
+      {routines.length > 0 && (
+        <ResetButton
+          className="fixed bottom-[calc(20px+env(safe-area-inset-bottom))] left-[max(20px,calc((100vw-480px)/2+20px))] z-20"
+          disabled={!hasCheckedSteps}
+          onClick={onResetAll}
+        >
+          <ArrowCounterClockwise aria-hidden="true" />
+          {t("resetAll")}
+        </ResetButton>
+      )}
+      <FabButton
+        className="fixed right-[max(20px,calc((100vw-480px)/2+20px))] bottom-[calc(20px+env(safe-area-inset-bottom))] z-20"
+        ariaLabel={t("newRoutine")}
+        onClick={onCreate}
       >
-        {routines.length > 0 && (
-          <ResetButton
-            className="h-14 rounded-2xl text-base"
-            disabled={!hasCheckedSteps}
-            onClick={onResetAll}
-          >
-            <ArrowCounterClockwise aria-hidden="true" />
-            {t("resetAll")}
-          </ResetButton>
-        )}
-      </BottomBar>
+        <Plus className="size-6" />
+      </FabButton>
       <Drawer
         open={settingsOpen}
         onOpenChange={setSettingsOpen}
