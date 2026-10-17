@@ -36,7 +36,10 @@ This project — and this stack in general — is guided by a few core goals:
   choice is remembered on the device.
 - **Reorder routines.** Drag routines on the main list into the order you want.
 - **Export and import.** Save every routine to a JSON file and restore it
-  later — the way to move your data to another device or browser.
+  later — the way to move your data to another device or browser. On
+  Android, an installed Routines also appears in the share sheet, so a
+  backup can be shared to it straight from a cloud drive app (e.g. Proton
+  Drive) whose files the file picker can't reach.
 - **Install and update from Settings.** An install button (where the browser
   offers one) and an update button that clears caches, takes an automatic
   backup first, and reloads.
@@ -181,6 +184,9 @@ The app is deployed to **GitHub Pages** as a static site.
   `src/lib/settings.ts` stores preferences (the lock enrolment). Every
   storage key the app owns is declared in `src/lib/storage-keys.ts`, so
   backup, reset, and the one-time IndexedDB migration all stay in step.
+  `src/lib/shared-backup.ts` is the share-target half: the service worker
+  parks a shared file and redirects to `?shared-backup`, where home asks
+  before importing it.
 
 ## Product
 

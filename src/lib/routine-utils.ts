@@ -8,6 +8,11 @@ export function sortSteps(steps: RoutineStep[]): RoutineStep[] {
   return [...steps].sort((left, right) => left.order - right.order);
 }
 
+/** `ids` with `id` moved to the end; unchanged when `id` isn't in it. */
+export function moveToEnd(ids: string[], id: string): string[] {
+  return ids.includes(id) ? [...ids.filter((item) => item !== id), id] : ids;
+}
+
 /** `YYYY-MM-DD`, zero-padded, in the local timezone. */
 export function formatDateStamp(date: Date): string {
   const year = date.getFullYear();

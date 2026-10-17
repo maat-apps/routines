@@ -95,7 +95,12 @@ describe("useAppSettings", () => {
   it("returns the current settings and updates after a lock change", async () => {
     const { useAppSettings, settings } = await freshUseStore();
     const { result } = renderHook(() => useAppSettings());
-    expect(result.current).toEqual({ lock: null, installed: false });
+    expect(result.current).toEqual({
+      lock: null,
+      installed: false,
+      relockAfter: "30s",
+      thumbLayout: false,
+    });
 
     act(() => {
       settings.setLockEnrolment({

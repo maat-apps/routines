@@ -1,131 +1,109 @@
 import {
   BackupError,
-  backupFileName as coreBackupFileName,
-  downloadBackup as coreDownloadBackup,
-  shareBackup as coreShareBackup,
-  readBackupEnvelope,
-  readBackupJson,
-  type ShareResult,
-} from "@maat-apps/core/backup";
+  createLocalBackup,
+  type LocalBackup,
+} from "@maat-apps/core/local";
+import { isRecord } from "@maat-apps/core/validation";
 
+import { encryptionKey } from "@/lib/encryption-key";
+import { keyValueStore } from "@/lib/idb-store";
 import {
   getLocaleSnapshot,
   isLocale,
   setStoredLocale,
 } from "@/lib/locale-store";
-import { parseBackupEnvelope, parseRoutines, parseState } from "@/lib/schemas";
-import { getRawData, mergeIntoData, replaceAllData } from "@/lib/storage";
+import { parseRoutines, parseState } from "@/lib/schemas";
+import { dataStore, mergeIntoData } from "@/lib/storage";
+import { SNAPSHOT_KEY } from "@/lib/storage-keys";
 import type { AppData } from "@/types";
 
-// Routines' backup format on top of @maat-apps/core/backup, which handles
-// the envelope checks, the backup file and getting it to the user. What's
-// routines' own: the data (routines + progress), the locale, and the
-// messages.
+// Routines' backup and pre-update snapshot (@maat-apps/core/local): the
+// routines and progress as `data`, plus the language. Import runs on a
+// user-supplied file, so anything unrecognised is dropped rather than
+// trusted — per routine, through the same schemas as storage read-back.
 
 export { BackupError };
 
 export const BACKUP_VERSION = 1;
 
-export type Backup = {
-  app: "routines";
-  version: number;
-  exportedAt: string;
-  locale: string | null;
-  data: AppData;
-};
+/** A backup: routines + progress as `data`, the language as `locale`. */
+export type Backup = LocalBackup<AppData>;
 
-const messages = {
-  notJson: "The file is not valid JSON.",
-  wrongApp: "The file is not a Routines backup.",
-  wrongVersion: "The backup was made by a different app version.",
-};
+export const backups = createLocalBackup({
+  app: "routines",
+  version: BACKUP_VERSION,
+  store: dataStore,
+  exactVersion: true,
+  messages: {
+    notJson: "The file is not valid JSON.",
+    wrongApp: "The file is not a Routines backup.",
+    wrongVersion: "The backup was made by a different app version.",
+  },
+  parseData: (data) => {
+    if (!isRecord(data) || !Array.isArray(data.routines)) {
+      throw new BackupError("The backup does not contain any routines.");
+    }
+    return {
+      routines: parseRoutines(data.routines),
+      state: parseState(data.state),
+    };
+  },
+  extras: {
+    create: () => ({ locale: getLocaleSnapshot() }),
+    parse: ({ locale }) => ({
+      locale: typeof locale === "string" ? locale : null,
+    }),
+    apply: ({ locale }) => {
+      // Goes through the locale store so its cached snapshot and listeners
+      // update in the same tick — otherwise the UI keeps showing the old
+      // language until a manual reload.
+      if (isLocale(locale)) setStoredLocale(locale);
+    },
+  },
+  snapshot: {
+    storage: keyValueStore,
+    key: SNAPSHOT_KEY,
+    keyHolder: encryptionKey,
+  },
+});
 
 /** Snapshots everything worth keeping, ready to be serialised to a file. */
-export function createBackup(): Backup {
-  return {
-    app: "routines",
-    version: BACKUP_VERSION,
-    exportedAt: new Date().toISOString(),
-    locale: getLocaleSnapshot(),
-    data: getRawData(),
-  };
-}
+export const createBackup = backups.create;
 
-/**
- * Validates a backup file. Import runs on a user-supplied file, so anything
- * unrecognised is dropped rather than trusted.
- */
-export function parseBackup(text: string): Backup {
-  return parseBackupValue(readBackupJson(text, messages));
-}
+/** Validates a backup file. */
+export const parseBackup = backups.parse;
 
 /**
  * Same validation as `parseBackup`, for a value that's already an object —
  * e.g. one read back from IndexedDB, which stores structured-cloned values
  * rather than JSON text.
  */
-export function parseBackupValue(parsed: unknown): Backup {
-  const envelope = parseBackupEnvelope(
-    readBackupEnvelope(parsed, {
-      app: "routines",
-      version: BACKUP_VERSION,
-      messages,
-    }),
-  );
-  if (!envelope) {
-    throw new BackupError("The backup does not contain any routines.");
-  }
-
-  return {
-    app: "routines",
-    version: BACKUP_VERSION,
-    exportedAt: envelope.exportedAt,
-    locale: envelope.locale,
-    data: {
-      routines: parseRoutines(envelope.data.routines),
-      state: parseState(envelope.data.state),
-    },
-  };
-}
+export const parseBackupValue = backups.parseValue;
 
 /**
- * Import from Settings: keeps the routines on the device and adds the
- * backup's. The language is a setting of this device, so it stays as is.
+ * Import (Settings, or a file shared from another app): keeps the routines
+ * on the device and adds the backup's. The language is a setting of this
+ * device, so it stays as is.
  */
 export function mergeBackup(backup: Backup): void {
   mergeIntoData(backup.data);
 }
 
-/** Overwrites the current routines with the backup's (restoring the update snapshot). */
-export function applyBackup(backup: Backup): void {
-  replaceAllData(backup.data);
-  if (isLocale(backup.locale)) {
-    // Goes through the locale store so its cached snapshot and listeners
-    // update in the same tick — otherwise the UI keeps showing the old
-    // language until a manual reload.
-    setStoredLocale(backup.locale);
-  }
-}
+/**
+ * Overwrites the current routines (and the language) with the backup's —
+ * restoring the pre-update snapshot.
+ */
+export const applyBackup = backups.apply;
 
 /** `routines-backup-YYYY-MM-DD.txt` (plain text: see core's backupFileName). */
-export function backupFileName(date = new Date()): string {
-  return coreBackupFileName("routines", date);
-}
+export const backupFileName = backups.fileName;
 
 /** Hands the browser the backup file to save. */
-export function downloadBackup(backup: Backup = createBackup()): void {
-  coreDownloadBackup(backup);
-}
-
-export type ShareBackupResult = ShareResult;
+export const downloadBackup = backups.download;
 
 /**
  * Offers the backup file to the OS share sheet (e.g. straight to a cloud
  * drive). `"cancelled"` is a normal outcome; on `"unavailable"`, fall back
  * to `downloadBackup`.
  */
-export function shareBackup(
-  backup: Backup = createBackup(),
-): Promise<ShareBackupResult> {
-  return coreShareBackup(backup);
-}
+export const shareBackup = backups.share;

@@ -42,9 +42,25 @@ export const RoutineSchema = v.object({
   steps: v.array(StepSchema),
 });
 
+// What the thumb layout's card deck needs to survive leaving the view: the
+// order after "later" swipes and the moves its undo button walks back through.
+// Lenient (v.fallback) because it's only a convenience: a malformed deck is
+// dropped rather than costing the entry its checked steps. Cleared with the
+// checked steps by the daily reset and by every reset.
+const DeckSchema = v.object({
+  order: v.array(v.string()),
+  moves: v.array(
+    v.object({
+      stepId: v.string(),
+      previousOrder: v.optional(v.array(v.string())),
+    }),
+  ),
+});
+
 export const ProgressSchema = v.object({
   checkedStepIds: v.array(v.string()),
   lastResetDate: v.string(),
+  deck: v.fallback(v.optional(DeckSchema), undefined),
 });
 
 export const StateSchema = v.record(v.string(), ProgressSchema);
@@ -58,23 +74,12 @@ export const AppDataSchema = v.object({
 // routines/state inside `data` — those are validated independently by
 // parseRoutines/parseState so one malformed routine doesn't invalidate an
 // otherwise-valid backup file.
-const BackupEnvelopeSchema = v.object({
-  app: v.literal("routines"),
-  version: v.number(),
-  exportedAt: v.fallback(v.string(), () => new Date().toISOString()),
-  locale: v.fallback(v.nullable(v.string()), null),
-  data: v.object({
-    routines: v.array(v.unknown()),
-    state: v.optional(v.unknown()),
-  }),
-});
-
 export type RoutineStep = v.InferOutput<typeof StepSchema>;
 export type Routine = v.InferOutput<typeof RoutineSchema>;
+export type RoutineDeck = NonNullable<RoutineProgress["deck"]>;
 export type RoutineProgress = v.InferOutput<typeof ProgressSchema>;
 export type RoutineState = v.InferOutput<typeof StateSchema>;
 export type AppData = v.InferOutput<typeof AppDataSchema>;
-export type BackupEnvelope = v.InferOutput<typeof BackupEnvelopeSchema>;
 
 // --- Lenient parsing -------------------------------------------------------------
 // Applied to both a user-supplied backup import and whatever's actually in
@@ -100,10 +105,4 @@ export function parseRoutines(value: unknown): Routine[] {
 
 export function parseState(value: unknown): RoutineState {
   return parseRecordEach(ProgressSchema, value);
-}
-
-/** Validates the shape of a backup envelope; `null` on anything malformed. */
-export function parseBackupEnvelope(value: unknown): BackupEnvelope | null {
-  const result = v.safeParse(BackupEnvelopeSchema, value);
-  return result.success ? result.output : null;
 }

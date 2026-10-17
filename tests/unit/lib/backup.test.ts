@@ -146,7 +146,7 @@ describe("parseBackupValue", () => {
 });
 
 describe("applyBackup", () => {
-  it("writes the backup's data via replaceAllData", async () => {
+  it("writes the backup's data to storage", async () => {
     const { backup, storage } = await freshBackup();
     backup.applyBackup({
       app: "routines",
@@ -383,7 +383,10 @@ describe("mergeBackup", () => {
 
   it("adds the backup's routines after the ones on the device", async () => {
     const { backup, storage } = await freshBackup();
-    storage.replaceAllData({ routines: [routine("r1", "Mine", 0)], state: {} });
+    void storage.dataStore.replace({
+      routines: [routine("r1", "Mine", 0)],
+      state: {},
+    });
 
     backup.mergeBackup({
       app: "routines",

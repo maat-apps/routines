@@ -242,6 +242,70 @@ describe("toggleStep", () => {
   });
 });
 
+describe("setDeck", () => {
+  const routine = {
+    id: "r1",
+    name: "Morning",
+    order: 0,
+    activeDays: [0, 1, 2, 3, 4, 5, 6],
+    steps: [
+      { id: "s1", text: "A", order: 0 },
+      { id: "s2", text: "B", order: 1 },
+    ],
+  };
+  const deck = { order: ["s2", "s1"], moves: [{ stepId: "s1" }] };
+
+  it("stores the deck next to the checked steps", async () => {
+    const { saveRoutine, toggleStep, setDeck, getStateSnapshot } =
+      await freshStorage();
+    saveRoutine(routine);
+    toggleStep("r1", "s1");
+    setDeck("r1", deck);
+    expect(getStateSnapshot().r1).toEqual({
+      checkedStepIds: ["s1"],
+      lastResetDate: todayStr(),
+      deck,
+    });
+  });
+
+  it("keeps the deck when a step is toggled afterwards", async () => {
+    const { saveRoutine, toggleStep, setDeck } = await freshStorage();
+    saveRoutine(routine);
+    setDeck("r1", deck);
+    expect(toggleStep("r1", "s2").r1.deck).toEqual(deck);
+  });
+
+  it("is cleared by resetRoutine and resetAll", async () => {
+    const { saveRoutine, setDeck, resetRoutine, resetAll } =
+      await freshStorage();
+    saveRoutine(routine);
+    setDeck("r1", deck);
+    expect(resetRoutine("r1").r1.deck).toBeUndefined();
+    setDeck("r1", deck);
+    expect(resetAll().r1.deck).toBeUndefined();
+  });
+
+  it("is cleared by the daily reset", async () => {
+    localStorage.setItem(
+      DATA_KEY,
+      JSON.stringify({
+        routines: [routine],
+        state: {
+          r1: { checkedStepIds: [], lastResetDate: "2000-01-01", deck },
+        },
+      }),
+    );
+    const { getStateSnapshot } = await freshStorage();
+    expect(getStateSnapshot().r1.deck).toBeUndefined();
+  });
+
+  it("ignores an unknown routine", async () => {
+    const { setDeck, getStateSnapshot } = await freshStorage();
+    setDeck("ghost", deck);
+    expect(getStateSnapshot()).toEqual({});
+  });
+});
+
 describe("reorderRoutines", () => {
   it("applies order from the given id list", async () => {
     const { saveRoutine, reorderRoutines, getRoutinesSnapshot } =

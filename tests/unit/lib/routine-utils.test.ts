@@ -4,6 +4,7 @@ import {
   createId,
   isRoutineActiveToday,
   mergeAppData,
+  moveToEnd,
   sortSteps,
   weekdayLabels,
   weekOrder,
@@ -188,5 +189,19 @@ describe("mergeAppData", () => {
       { routines: [], state: {} },
     );
     expect(merged.routines).toEqual([mine]);
+  });
+});
+
+describe("moveToEnd", () => {
+  it("moves the id to the end and keeps the rest in order", () => {
+    expect(moveToEnd(["a", "b", "c"], "a")).toEqual(["b", "c", "a"]);
+  });
+
+  it("leaves the end id where it is", () => {
+    expect(moveToEnd(["a", "b"], "b")).toEqual(["a", "b"]);
+  });
+
+  it("returns the ids unchanged when the id is unknown", () => {
+    expect(moveToEnd(["a", "b"], "x")).toEqual(["a", "b"]);
   });
 });

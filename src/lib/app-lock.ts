@@ -1,9 +1,14 @@
+import { lockData } from "@maat-apps/core/local";
 import { createAppLock } from "@maat-apps/core/lock";
 
-import { discardUpdateSnapshot } from "@/lib/app-update";
+import { backups } from "@/lib/backup";
 import { encryptionKey } from "@/lib/encryption-key";
-import { clearLockEnrolment, setLockEnrolment } from "@/lib/settings";
-import { getRawData, replaceAllData } from "@/lib/storage";
+import {
+  clearLockEnrolment,
+  relockAfterMs,
+  setLockEnrolment,
+} from "@/lib/settings";
+import { dataStore } from "@/lib/storage";
 import { HKDF_INFO } from "@/lib/webauthn-crypto";
 
 // routines' app lock (@maat-apps/core/lock): a WebAuthn gate that encrypts
@@ -14,13 +19,8 @@ export const appLock = createAppLock({
   name: "Routines",
   keyInfo: HKDF_INFO,
   keyHolder: encryptionKey,
+  relockAfterMs,
   saveEnrolment: (lock) =>
     lock ? setLockEnrolment(lock) : clearLockEnrolment(),
-  data: {
-    rewrite: () => replaceAllData(getRawData()),
-    erase: async () => {
-      replaceAllData({ routines: [], state: {} });
-      await discardUpdateSnapshot();
-    },
-  },
+  data: lockData(dataStore, backups.lockPart),
 });

@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router";
 
 import { MissingRoutine } from "@/components/missing-routine";
 import { useRoutines, useRoutineState } from "@/hooks/use-store";
-import { resetRoutine, toggleStep } from "@/lib/storage";
+import { resetRoutine, setDeck, toggleStep } from "@/lib/storage";
 import { RoutineDetail } from "@/views/routine/routine-detail";
 import { useSmartBack } from "@maat-apps/ui/smart-back";
 
@@ -29,6 +29,7 @@ export function RoutineView() {
         )
       }
       onToggle={(_, stepId) => toggleStep(routine.id, stepId)}
+      onDeckChange={(_, deck) => setDeck(routine.id, deck)}
       onReset={() => resetRoutine(routine.id)}
     />
   );

@@ -5,6 +5,7 @@
 export type {
   AppData,
   Routine,
+  RoutineDeck,
   RoutineProgress,
   RoutineState,
   RoutineStep,

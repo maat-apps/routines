@@ -69,10 +69,13 @@ own files. Product intent: `PRODUCT.md`.
   from [`@maat-apps/core`](https://github.com/maat-apps/maat-core/tree/main/packages/core);
   routines' `src/lib/` modules are thin wrappers that keep their own
   exports (tests import those, not core): `idb-store.ts` (`/storage`, the
-  `"routines"` database) under `storage.ts` (routines/progress),
-  `locale-store.ts` (`/locale`), `settings.ts` (`/persisted`: lock
-  enrolment, installed flag) and `app-update.ts` (`/update`: pre-update
-  snapshot, the one async API). Tests that need a failing read/write spy
+  `"routines"` database) under `storage.ts` (routines/progress: `/local`'s
+  `createLocalStore` as `dataStore`, with the derived snapshots and
+  mutations on top), `locale-store.ts` (`/locale`), `settings.ts`
+  (`/persisted`: lock enrolment, installed flag) and `app-update.ts`
+  (`/local`'s backup kit: pre-update snapshot, the one async API).
+  Routines stays on the local pattern only — no repository (maat-core
+  STRUCTURE.md's rule). Tests that need a failing read/write spy
   on `keyValueStore`'s `get`/`set`, which is what the wrappers call.
   Routines-specific:
   - **Daily reset is a side effect of reading**: `storage.ts`'s
@@ -107,6 +110,10 @@ own files. Product intent: `PRODUCT.md`.
     and Settings says so (`appLockNotice` vs. `appLockEncryptedNotice`).
     This split is intentional — don't change it without the owner's
     decision.
+  - Leaving the app relocks it after `settings.ts`'s `relockAfter` (Settings
+    → Security: right away / 30 s / on close; `relockAfterMs` feeds
+    `createAppLock`). The gate prompts by itself and covers the app rather
+    than unmounting it.
   - **Never change `HKDF_INFO` (`"routines-data-v1"`)** in
     `webauthn-crypto.ts` — the lock's `keyInfo`; changing it makes all
     existing encrypted data unreadable.
@@ -124,12 +131,20 @@ own files. Product intent: `PRODUCT.md`.
 - **Backup + settings.** `src/lib/backup.ts` writes routines, progress and
   language to versioned JSON and validates imports through the same
   schemas as storage read-back (`parseRoutines`/`parseState`, per entry,
-  via `@maat-apps/core/validation`). The envelope checks, file format and
-  share/download come from `@maat-apps/core/backup`; the data, locale and
-  messages are routines' own. A Settings import merges (`mergeBackup`:
-  adds missing routines, never touches or deletes existing ones, leaves the
-  language alone); only the pre-update snapshot restore (`applyBackup`)
-  replaces.
+  via `@maat-apps/core/validation`). It is `/local`'s `createLocalBackup`
+  over `dataStore` (envelope checks, file format, share/download, the
+  pre-update snapshot); the data's validation, the `locale` extra and the
+  messages are routines' own. `app-lock.ts` wires store and snapshot into
+  the lock with `lockData`. An import merges (`mergeBackup`: adds missing
+  routines, never touches or deletes existing ones, leaves the language
+  alone); only the pre-update snapshot restore (`applyBackup`) replaces.
+  Import also takes a file shared from another app: `manifest.json`'s
+  `share_target` (Android, installed PWA only) POSTs to `share-target`,
+  `sw.ts` hands it to `src/lib/shared-backup.ts`, which parks it in the
+  `routines-shared-backup` cache and redirects to `?shared-backup`; home's
+  `shared-backup-import.tsx` takes it and confirms like Settings → Import.
+  A worker's activation deletes that cache with every other, so a share
+  landing during an update is lost (re-share it).
   `src/lib/settings.ts` also holds an `installed` flag, set once
   `useInstallPrompt` sees standalone mode or `appinstalled` — Chrome stops
   firing `beforeinstallprompt` after install, so this is how a browser tab
@@ -141,7 +156,10 @@ own files. Product intent: `PRODUCT.md`.
   row; home only lists routines active today, `isRoutineActiveToday`).
   Back is `useSmartBack` from `@maat-apps/ui/smart-back` (maat-core
   STRUCTURE.md's Routing pattern). `new-routine-view.tsx`'s onComplete replaces the `/new` entry instead of
-  `useSmartBack` — creating is a forward transition. Settings is a drawer,
+  `useSmartBack` — creating is a forward transition. Home keeps its own
+  layout by the owner's choice (not maat-core STRUCTURE.md's `BottomBar`):
+  a fixed header with the title, date and the settings gear, "Reset all"
+  bottom left and the New routine FAB bottom right. Settings is a drawer,
   not a route: `src/views/home/settings-panel.tsx` composes one
   `settings-<name>-section.tsx` per card.
 

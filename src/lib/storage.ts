@@ -1,5 +1,8 @@
+import { createLocalStore } from "@maat-apps/core/local";
+import { isRecord } from "@maat-apps/core/validation";
+
 import { encryptionKey } from "@/lib/encryption-key";
-import { kvGet, kvSet } from "@/lib/idb-store";
+import { keyValueStore } from "@/lib/idb-store";
 import { formatDateStamp, mergeAppData } from "@/lib/routine-utils";
 import { parseRoutines, parseState } from "@/lib/schemas";
 import {
@@ -7,25 +10,38 @@ import {
   whenLoaded as whenSettingsLoaded,
 } from "@/lib/settings";
 import { DATA_KEY } from "@/lib/storage-keys";
-import {
-  decryptJson,
-  encryptJson,
-  isEncryptedBlob,
-} from "@/lib/webauthn-crypto";
-import type { AppData, Routine, RoutineState } from "@/types";
+import type { AppData, Routine, RoutineDeck, RoutineState } from "@/types";
 
 const emptyData: AppData = { routines: [], state: {} };
 
 // --- Central store -----------------------------------------------------------
-// An in-memory copy of `AppData` is the real source of truth once loaded;
-// IndexedDB is the write-through backing store — read once in the background
-// at startup, written to in the background on every mutation. Every read below
-// only ever touches the in-memory copy, so the whole module stays synchronous
-// from a caller's point of view even though the storage engine underneath it
-// isn't. React screens need to react to mutations that happen on other screens
-// (e.g. checking a step in the detail view should update the counter on the
-// list), so we expose a tiny pub/sub with cached snapshots components can
-// subscribe to via `useSyncExternalStore`.
+// `AppData` lives in @maat-apps/core/local's store: in memory once loaded,
+// IndexedDB the write-through backing store, encrypted with the lock's key
+// (maat-core's docs/storage.md). On top of it, this module derives the
+// snapshots screens read — routines in order, today's state after the daily
+// reset — and exposes them through a tiny pub/sub for useSyncExternalStore,
+// so a mutation on one screen (checking a step) updates another (the list).
+
+/** Whether the enrolled lock encrypts — then the first read waits for its key. */
+async function lockEncrypts(): Promise<boolean> {
+  await whenSettingsLoaded();
+  return getSettingsSnapshot().lock?.encryptionSupported === true;
+}
+
+export const dataStore = createLocalStore<AppData>({
+  storage: keyValueStore,
+  key: DATA_KEY,
+  empty: emptyData,
+  parse: (stored) =>
+    isRecord(stored)
+      ? {
+          routines: parseRoutines(stored.routines),
+          state: parseState(stored.state),
+        }
+      : emptyData,
+  encryption: { keyHolder: encryptionKey, encrypts: lockEncrypts },
+});
+
 const listeners = new Set<() => void>();
 const serverRoutines: Routine[] = [];
 const serverState: RoutineState = {};
@@ -34,60 +50,33 @@ let routinesSnapshot: Routine[] = serverRoutines;
 let stateSnapshot: RoutineState = serverState;
 let snapshotStale = true;
 
-let dbData: AppData = emptyData;
-let loaded: Promise<void> | null = null;
-
-async function loadData(): Promise<void> {
-  await whenSettingsLoaded();
-  const lock = getSettingsSnapshot().lock;
-  if (lock?.encryptionSupported) {
-    // The whole app is gated behind AppLockGate until unlock succeeds, so
-    // real data is never needed — and never readable — before that. The
-    // unlock may already have happened by the time this runs; whenSet()
-    // resolves immediately then.
-    await encryptionKey.whenSet();
-  }
-  try {
-    const stored = await kvGet<unknown>(DATA_KEY);
-    if (stored) {
-      const key = encryptionKey.get();
-      const raw =
-        key && isEncryptedBlob(stored)
-          ? await decryptJson<Partial<AppData>>(key, stored)
-          : (stored as Partial<AppData>);
-      dbData = {
-        routines: parseRoutines(raw.routines),
-        state: parseState(raw.state),
-      };
-    }
-  } catch {
-    // Keep emptyData — same fallback as a corrupt/missing stored blob.
-  } finally {
-    emitChange();
-  }
-}
-
-function ensureLoaded(): void {
-  if (loaded) return;
-  loaded = loadData();
-}
+// The daily reset writes while a snapshot is being derived; that write
+// mustn't notify listeners mid-read.
+let refreshing = false;
+dataStore.subscribe(() => {
+  if (!refreshing) emitChange();
+});
 
 /**
  * Resolves once the initial background read from IndexedDB has finished.
- * Real screens never need this (they just re-render on the `emitChange()`
- * this fires) — it exists so tests can await readiness deterministically
- * instead of polling.
+ * Real screens never need this (they just re-render on the change it fires)
+ * — it exists so tests can await readiness deterministically instead of
+ * polling.
  */
 export function whenLoaded(): Promise<void> {
-  ensureLoaded();
-  return loaded ?? Promise.resolve();
+  return dataStore.whenLoaded();
 }
 
 function refreshSnapshots(): void {
-  const normalized = normalizeState(readData());
-  routinesSnapshot = withOrderedRoutines(normalized.routines);
-  stateSnapshot = normalized.state;
-  snapshotStale = false;
+  refreshing = true;
+  try {
+    const normalized = normalizeState(readData());
+    routinesSnapshot = withOrderedRoutines(normalized.routines);
+    stateSnapshot = normalized.state;
+    snapshotStale = false;
+  } finally {
+    refreshing = false;
+  }
 }
 
 export function emitChange(): void {
@@ -134,23 +123,11 @@ function readData(): AppData {
   if (typeof window === "undefined") {
     return emptyData;
   }
-  ensureLoaded();
-  return dbData;
+  return dataStore.getSnapshot();
 }
 
 function writeData(data: AppData): void {
-  dbData = data;
-  void persist(data);
-}
-
-async function persist(data: AppData): Promise<void> {
-  try {
-    const key = encryptionKey.get();
-    const toStore = key ? await encryptJson(key, data) : data;
-    await kvSet(DATA_KEY, toStore);
-  } catch {
-    // Best-effort — the in-memory copy (and this tab) already reflects it.
-  }
+  void dataStore.replace(data);
 }
 
 function normalizeState(data: AppData): AppData {
@@ -185,15 +162,6 @@ export function getRawData(): AppData {
   return readData();
 }
 
-/** Replaces everything — used by backup import and by "reset all data". */
-export function replaceAllData(data: AppData): void {
-  writeData({
-    routines: withOrderedRoutines(data.routines),
-    state: data.state,
-  });
-  emitChange();
-}
-
 /** Adds the routines the device lacks; the ones it has stay as they are. */
 export function mergeIntoData(incoming: AppData): void {
   const merged = mergeAppData(readData(), incoming);
@@ -201,7 +169,6 @@ export function mergeIntoData(incoming: AppData): void {
     routines: withOrderedRoutines(merged.routines),
     state: merged.state,
   });
-  emitChange();
 }
 
 export function saveRoutine(routine: Routine): void {
@@ -218,7 +185,6 @@ export function saveRoutine(routine: Routine): void {
   }
 
   writeData({ ...data, routines: withOrderedRoutines(routines) });
-  emitChange();
 }
 
 export function reorderRoutines(orderedIds: string[]): void {
@@ -242,7 +208,6 @@ export function reorderRoutines(orderedIds: string[]): void {
   }
 
   writeData({ ...data, routines: withOrderedRoutines(reordered) });
-  emitChange();
 }
 
 export function deleteRoutine(routineId: string): void {
@@ -253,7 +218,6 @@ export function deleteRoutine(routineId: string): void {
   const state = { ...data.state };
   delete state[routineId];
   writeData({ routines, state });
-  emitChange();
 }
 
 export function toggleStep(routineId: string, stepId: string): RoutineState {
@@ -268,12 +232,20 @@ export function toggleStep(routineId: string, stepId: string): RoutineState {
     : [...routineState.checkedStepIds, stepId];
   const state = {
     ...data.state,
-    [routineId]: { checkedStepIds, lastResetDate: today() },
+    [routineId]: { ...routineState, checkedStepIds, lastResetDate: today() },
   };
 
   writeData({ ...data, state });
-  emitChange();
   return state;
+}
+
+/** Saves the card deck's order and undo history; a no-op for an unknown routine. */
+export function setDeck(routineId: string, deck: RoutineDeck): void {
+  const data = normalizeState(readData());
+  const routineState = data.state[routineId];
+  if (!routineState) return;
+  const state = { ...data.state, [routineId]: { ...routineState, deck } };
+  writeData({ ...data, state });
 }
 
 export function resetRoutine(routineId: string): RoutineState {
@@ -283,7 +255,6 @@ export function resetRoutine(routineId: string): RoutineState {
     [routineId]: { checkedStepIds: [], lastResetDate: today() },
   };
   writeData({ ...data, state });
-  emitChange();
   return state;
 }
 
@@ -297,6 +268,5 @@ export function resetAll(): RoutineState {
     ]),
   );
   writeData({ ...data, state });
-  emitChange();
   return state;
 }
