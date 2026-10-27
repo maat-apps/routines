@@ -109,11 +109,11 @@ test.describe("backup export / import", () => {
 // `?shared-backup`. Headless Chromium has no share sheet, so these park the
 // file themselves — cache name and key hand-duplicated from
 // src/lib/shared-backup.ts, same reasoning as seedData — and cover the app
-// side; the worker's half is unit-tested (shared-backup.test.ts).
+// side; the worker's half is unit-tested in @maat-apps/core.
 async function parkSharedBackup(page: Page, text: string) {
   await page.evaluate(async (body) => {
-    // A worker's activation deletes every cache but its own, so wait it out
-    // first or it can take the parked file with it.
+    // Let a worker still activating settle before parking the file, so it
+    // doesn't race the write.
     if ("serviceWorker" in navigator) {
       const worker = (await navigator.serviceWorker.ready).active;
       if (worker && worker.state !== "activated") {

@@ -3,11 +3,7 @@ import { createAppLock } from "@maat-apps/core/lock";
 
 import { backups } from "@/lib/backup";
 import { encryptionKey } from "@/lib/encryption-key";
-import {
-  clearLockEnrolment,
-  relockAfterMs,
-  setLockEnrolment,
-} from "@/lib/settings";
+import { appSettings } from "@/lib/settings";
 import { dataStore } from "@/lib/storage";
 import { HKDF_INFO } from "@/lib/webauthn-crypto";
 
@@ -19,8 +15,7 @@ export const appLock = createAppLock({
   name: "Routines",
   keyInfo: HKDF_INFO,
   keyHolder: encryptionKey,
-  relockAfterMs,
-  saveEnrolment: (lock) =>
-    lock ? setLockEnrolment(lock) : clearLockEnrolment(),
+  relockAfterMs: appSettings.relockAfterMs,
+  saveEnrolment: appSettings.setLockEnrolment,
   data: lockData(dataStore, backups.lockPart),
 });

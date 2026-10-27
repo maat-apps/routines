@@ -72,7 +72,8 @@ own files. Product intent: `PRODUCT.md`.
   `"routines"` database) under `storage.ts` (routines/progress: `/local`'s
   `createLocalStore` as `dataStore`, with the derived snapshots and
   mutations on top), `locale-store.ts` (`/locale`), `settings.ts`
-  (`/persisted`: lock enrolment, installed flag) and `app-update.ts`
+  (`/app-settings`: lock enrolment, relock choice, installed flag, plus
+  `thumbLayout`) and `app-update.ts`
   (`/local`'s backup kit: pre-update snapshot, the one async API).
   Routines stays on the local pattern only — no repository (maat-core
   STRUCTURE.md's rule). Tests that need a failing read/write spy
@@ -140,11 +141,11 @@ own files. Product intent: `PRODUCT.md`.
   alone); only the pre-update snapshot restore (`applyBackup`) replaces.
   Import also takes a file shared from another app: `manifest.json`'s
   `share_target` (Android, installed PWA only) POSTs to `share-target`,
-  `sw.ts` hands it to `src/lib/shared-backup.ts`, which parks it in the
-  `routines-shared-backup` cache and redirects to `?shared-backup`; home's
-  `shared-backup-import.tsx` takes it and confirms like Settings → Import.
-  A worker's activation deletes that cache with every other, so a share
-  landing during an update is lost (re-share it).
+  where core's worker (`sw.ts`'s `shareTarget`, `@maat-apps/core/share-target`)
+  parks it in the `routines-shared-backup` cache (`src/lib/shared-backup.ts`)
+  — kept when a new worker activates — and redirects to `?shared-backup`;
+  home's `shared-backup-import.tsx` (`@maat-apps/ui/shared-backup-import`)
+  takes it and confirms like Settings → Import.
   `src/lib/settings.ts` also holds an `installed` flag, set once
   `useInstallPrompt` sees standalone mode or `appinstalled` — Chrome stops
   firing `beforeinstallprompt` after install, so this is how a browser tab
@@ -160,8 +161,10 @@ own files. Product intent: `PRODUCT.md`.
   layout by the owner's choice (not maat-core STRUCTURE.md's `BottomBar`):
   a fixed header with the title, date and the settings gear, "Reset all"
   bottom left and the New routine FAB bottom right. Settings is a drawer,
-  not a route: `src/views/home/settings-panel.tsx` composes one
-  `settings-<name>-section.tsx` per card.
+  not a route (`@maat-apps/ui/settings-sections`' `SettingsDrawer`):
+  `src/views/home/settings-panel.tsx` puts ui's Language, Security, Data
+  and App sections (labels from `t()`) with routines' own
+  `settings-<name>-section.tsx` cards (layout, navigation, reset).
 
 - **i18n.** `src/i18n/use-translation.ts` (core's `createTranslation` over
   `locale-store.ts`); choice remembered under `routines-locale`. Catalogs

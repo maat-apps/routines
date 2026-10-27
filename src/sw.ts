@@ -8,26 +8,19 @@
 
 import { registerAppWorker } from "@maat-apps/core/sw";
 
-import { isShareTargetRequest, receiveSharedBackup } from "./lib/shared-backup";
+import { SHARED_BACKUP } from "./lib/shared-backup";
 
 declare const self: ServiceWorkerGlobalScope & {
   __WB_MANIFEST: Array<{ url: string; revision: string | null } | string>;
 };
 
-// A backup shared from another app (manifest.json's share_target). The core
-// worker only handles GETs, so this POST is left to this listener.
-self.addEventListener("fetch", (event) => {
-  if (!isShareTargetRequest(event.request, import.meta.env.BASE_URL)) return;
-  event.respondWith(
-    receiveSharedBackup(event.request, import.meta.env.BASE_URL),
-  );
-});
-
 registerAppWorker(self, {
   // Bump whenever the app shell changes — activation deletes every other cache.
-  cacheName: "routines-v9",
+  cacheName: "routines-v10",
   manifest: self.__WB_MANIFEST,
   // Not a hardcoded "/routines/": a PR preview under "/routines/pr-<n>/"
   // precaches and falls back to its own shell.
   baseUrl: import.meta.env.BASE_URL,
+  // A backup shared from another app (manifest.json's share_target).
+  shareTarget: { cacheName: SHARED_BACKUP.cacheName },
 });
