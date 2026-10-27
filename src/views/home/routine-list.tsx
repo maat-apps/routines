@@ -6,16 +6,11 @@ import { useTranslation } from "@/i18n/use-translation";
 import type { Routine, RoutineProgress } from "@/types";
 import { SettingsPanel } from "@/views/home/settings-panel";
 import { Button } from "@maat-apps/ui/button";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-} from "@maat-apps/ui/drawer";
 import { EmptyState } from "@maat-apps/ui/empty-state";
 import { FabButton } from "@maat-apps/ui/fab-button";
 import { PageHeader, PageTitle } from "@maat-apps/ui/page-header";
 import { ResetButton } from "@maat-apps/ui/reset-button";
+import { SettingsDrawer } from "@maat-apps/ui/settings-sections";
 import { SortableList, SortableListRow } from "@maat-apps/ui/sortable-list";
 
 export function RoutineList({
@@ -140,26 +135,13 @@ export function RoutineList({
       >
         <Plus className="size-7" />
       </FabButton>
-      <Drawer
+      <SettingsDrawer
         open={settingsOpen}
         onOpenChange={setSettingsOpen}
-        showSwipeHandle
+        title={t("settings")}
       >
-        <DrawerContent
-          // `--popover` and `--card` are the same colour, so on the default
-          // drawer surface the settings rows would lose their card edges. The
-          // bleed below the drawer has to match, or it shows through on
-          // overscroll.
-          className="bg-background [--drawer-bleed-background:var(--color-background)]"
-        >
-          <DrawerHeader className="group-data-[swipe-axis=y]/drawer-popup:text-left">
-            <DrawerTitle>{t("settings")}</DrawerTitle>
-          </DrawerHeader>
-          <div className="overflow-y-auto px-4 pb-[calc(16px+env(safe-area-inset-bottom))]">
-            <SettingsPanel />
-          </div>
-        </DrawerContent>
-      </Drawer>
+        <SettingsPanel />
+      </SettingsDrawer>
     </div>
   );
 }
