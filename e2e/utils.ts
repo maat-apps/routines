@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
+import { readStored } from "@maat-apps/config/playwright";
 import { expect, type Page } from "@playwright/test";
 
 const DATA_KEY = "routines-data";
@@ -114,27 +115,13 @@ export function todayIso(): string {
  */
 export async function waitForStoredLock(page: Page) {
   await expect
-    .poll(() =>
-      page.evaluate(
-        () =>
-          new Promise<boolean>((resolve) => {
-            const request = indexedDB.open("routines");
-            request.onerror = () => resolve(false);
-            request.onsuccess = () => {
-              const read = request.result
-                .transaction("kv")
-                .objectStore("kv")
-                .get("routines-settings");
-              read.onerror = () => resolve(false);
-              read.onsuccess = () =>
-                resolve(
-                  Boolean(
-                    (read.result as { lock?: unknown } | undefined)?.lock,
-                  ),
-                );
-            };
-          }),
-      ),
-    )
+    .poll(async () => {
+      const settings = (await readStored(
+        page,
+        "routines",
+        "routines-settings",
+      )) as { lock?: unknown } | undefined;
+      return Boolean(settings?.lock);
+    })
     .toBe(true);
 }

@@ -29,8 +29,8 @@ What follows is what's specific to routines.
 - `npm run format:check` / `format` — Prettier.
 - `npm run typecheck` — `tsc -b` (project references: `tsconfig.app.json`,
   `tsconfig.node.json`, `tsconfig.e2e.json`).
-- `npm run test:unit` / `test:unit:watch` / `test:coverage` — Vitest; the
-  coverage threshold is in `vitest.config.ts`.
+- `npm run test:unit` / `test:unit:watch` / `test:coverage` — Vitest, on
+  `@maat-apps/config/vitest`'s preset (95% threshold, shared setup).
 - `npm run test:e2e` — Playwright against the production build;
   `test:a11y` runs only `e2e/a11y.spec.ts`; `test:e2e:report` opens the
   last report.
@@ -47,7 +47,9 @@ device. The only network traffic is the service worker fetching the app's
 own files. Product intent: `PRODUCT.md`.
 
 - **Deploy and base path.** Static SPA on GitHub Pages. `vite.config.ts`
-  takes `base` from `DEPLOY_BASE_PATH` (default `/routines/`). Every
+  (`@maat-apps/config/vite`'s preset, plus the bundle visualizer; Tailwind
+  from `postcss.config.mjs`) takes `base` from `DEPLOY_BASE_PATH` (default
+  `/routines/`). Every
   absolute in-app URL (SW registration, router `basename`, `sw.ts`'s
   precache/fallback paths) reads `import.meta.env.BASE_URL` — never
   hardcode `/routines/`. Exception: `public/manifest.json` (copied as-is),
